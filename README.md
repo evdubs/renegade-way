@@ -1,4 +1,4 @@
-# maverick-way
+# renegade-way
 
 The intended way to launch this application is by doing the following:
 
