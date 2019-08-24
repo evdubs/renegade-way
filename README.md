@@ -10,8 +10,9 @@ $ racket main.rkt -u db-username -n db-name -p db-password
 `db-password` must be provided.
 
 You will need to either use data from these projects or provide a database schema that mirrors the schema provided by:
-* [nasdaq-symbols](https://github.com/evdubs/nasdaq-symbols)
 * [iex-stocks](https://github.com/evdubs/iex-stocks)
+* [nasdaq-symbols](https://github.com/evdubs/nasdaq-symbols)
+* [oic-options-chains](https://github.com/evdubs/oic-options-chains)
 * [yahoo-dividends-splits](https://github.com/evdubs/yahoo-dividends-splits)
 
 Requires Racket 7.0 or greater.
