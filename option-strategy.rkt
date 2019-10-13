@@ -12,6 +12,7 @@
                   time-duration
                   time-utc->date)
          "db-queries.rkt"
+         "position-order-manager.rkt"
          "pricing-risk.rkt"
          "structs.rkt")
 
@@ -219,7 +220,19 @@
                                      [label k]
                                      [style (list 'single 'column-headers 'vertical-label)]
                                      [columns option-columns]
-                                     [choices (list "")])])
+                                     [choices (list "")]
+                                     [callback (λ (b e)
+                                                 (set-order-data (map (λ (o)
+                                                                        (list (option-symbol o)
+                                                                              (option-expiration o)
+                                                                              (real->decimal-string (option-strike o))
+                                                                              (option-call-put o)
+                                                                              "1"
+                                                                              (real->decimal-string (option-mid o))
+                                                                              (send ref-price-field get-value)
+                                                                              (send ref-price-field get-value)
+                                                                              (send ref-price-field get-value)))
+                                                                      v)))])])
                      (send table set
                            (map (λ (o) (option-symbol o)) v)
                            (map (λ (o) (option-expiration o)) v)

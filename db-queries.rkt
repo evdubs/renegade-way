@@ -2,9 +2,10 @@
 
 (require db
          db/util/datetime
-         plot
          (only-in racket/date date->seconds)
          racket/list
+         srfi/19 ; Time and Date Functions
+         "../interactive-brokers-api/response-messages.rkt"
          "cmd-line.rkt"
          "structs.rkt")
 
@@ -12,7 +13,8 @@
          get-date-ohlc
          get-options
          get-msis
-         get-security-name)
+         get-security-name
+         insert-execution)
 
 (define dbc (postgresql-connect #:user (db-user) #:database (db-name) #:password (db-pass)))
 
@@ -304,3 +306,94 @@ where
   date = (select max(date) from ust.yield_curve where date < $1::text::date)
 "
                date))
+
+(define (insert-execution execution)
+  (query-exec dbc "
+insert into ibkr.execution (
+  order_id,
+  contract_id,
+  act_symbol,
+  security_type,
+  expiry,
+  strike,
+  \"right\",
+  multiplier,
+  exchange,
+  currency,
+  local_symbol,
+  trading_class,
+  execution_id,
+  \"timestamp\",
+  account,
+  executing_exchange,
+  side,
+  shares,
+  price,
+  perm_id,
+  client_id,
+  liquidation,
+  cumulative_quantity,
+  average_price,
+  order_reference,
+  ev_rule,
+  ev_multiplier,
+  model_code
+) values (
+  $1,
+  $2,
+  $3,
+  $4::text::ibkr.security_type,
+  $5::text::date,
+  $6,
+  $7::text::ibkr.right,
+  $8,
+  $9,
+  $10,
+  $11,
+  $12,
+  $13,
+  $14::text::timestamptz,
+  $15,
+  $16,
+  $17,
+  $18,
+  $19,
+  $20,
+  $21,
+  $22,
+  $23,
+  $24,
+  $25,
+  $26,
+  $27,
+  $28
+) on conflict (execution_id) do nothing;
+"
+              (execution-rsp-order-id execution)
+              (execution-rsp-contract-id execution)
+              (execution-rsp-symbol execution)
+              (string-upcase (symbol->string (execution-rsp-security-type execution)))
+              (if (execution-rsp-expiry execution) (date->string (execution-rsp-expiry execution) "~1") sql-null)
+              (execution-rsp-strike execution)
+              (string-upcase (symbol->string (execution-rsp-right execution)))
+              (if (execution-rsp-multiplier execution) (execution-rsp-multiplier execution) sql-null)
+              (execution-rsp-exchange execution)
+              (execution-rsp-currency execution)
+              (execution-rsp-local-symbol execution)
+              (execution-rsp-trading-class execution)
+              (execution-rsp-execution-id execution)
+              (date->string (execution-rsp-timestamp execution) "~5")
+              (execution-rsp-account execution)
+              (execution-rsp-executing-exchange execution)
+              (execution-rsp-side execution)
+              (execution-rsp-shares execution)
+              (execution-rsp-price execution)
+              (execution-rsp-perm-id execution)
+              (execution-rsp-client-id execution)
+              (execution-rsp-liquidation execution)
+              (execution-rsp-cumulative-quantity execution)
+              (execution-rsp-average-price execution)
+              (execution-rsp-order-reference execution)
+              (execution-rsp-ev-rule execution)
+              (if (execution-rsp-ev-multiplier execution) (execution-rsp-ev-multiplier execution) sql-null)
+              (execution-rsp-model-code execution)))
