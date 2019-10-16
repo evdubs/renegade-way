@@ -19,6 +19,10 @@
 (provide show-option-strategy
          refresh-option-strategy)
 
+(define (add-months d n)
+  (time-utc->date (add-duration (date->time-utc d)
+                                (make-time time-duration 0 (* 60 60 24 30 n)))))
+
 (define strategy-frame
   (new frame% [label "Option Strategy"] [width 1000] [height 600]))
 
@@ -223,15 +227,17 @@
                                      [choices (list "")]
                                      [callback (λ (b e)
                                                  (set-order-data (map (λ (o)
-                                                                        (list (option-symbol o)
-                                                                              (option-expiration o)
-                                                                              (real->decimal-string (option-strike o))
-                                                                              (option-call-put o)
-                                                                              "1"
-                                                                              (real->decimal-string (option-mid o))
-                                                                              (send ref-price-field get-value)
-                                                                              (send ref-price-field get-value)
-                                                                              (send ref-price-field get-value)))
+                                                                        (order (string->symbol (string-replace (string-downcase k) " " "-"))
+                                                                               (option-symbol o)
+                                                                               (string->date (option-expiration o) "~y-~m-~d")
+                                                                               (option-strike o)
+                                                                               (string->symbol (string-downcase (option-call-put o)))
+                                                                               #f
+                                                                               (option-mid o)
+                                                                               (string->number (send ref-price-field get-value))
+                                                                               #f
+                                                                               #f
+                                                                               (add-months (string->date (send date-field get-value) "~Y-~m-~d") 1)))
                                                                       v)))])])
                      (send table set
                            (map (λ (o) (option-symbol o)) v)

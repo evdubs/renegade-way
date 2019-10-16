@@ -2,7 +2,9 @@
 
 (require racket/async-channel
          racket/gui
-         (only-in srfi/19 string->date)
+         (only-in srfi/19
+                  date->string
+                  string->date)
          "../interactive-brokers-api/base-structs.rkt"
          "../interactive-brokers-api/main.rkt"
          "../interactive-brokers-api/request-messages.rkt"
@@ -10,13 +12,130 @@
          "db-queries.rkt")
 
 (provide set-order-data
-         show-position-order-manager)
+         show-position-order-manager
+         (contract-out
+          [struct order
+            ((strategy (or/c 'long-call 'long-put
+                             'bull-call-vertical-spread 'bear-call-vertical-spread
+                             'bull-put-vertical-spread 'bear-put-vertical-spread))
+             (symbol string?)
+             (expiration date?)
+             (strike rational?)
+             (call-put (or/c 'call 'put))
+             (quantity (or/c rational? #f))
+             (price rational?)
+             (stock-entry rational?)
+             (stock-stop (or/c rational? #f))
+             (stock-target (or/c rational? #f))
+             (end-date (or/c date? #f)))]))
+
+(struct order
+  (strategy
+   symbol
+   expiration
+   strike
+   call-put
+   quantity
+   price
+   stock-entry
+   stock-stop
+   stock-target
+   end-date)
+  #:transparent)
 
 (define manager-frame
   (new frame% [label "Position/Order Manager"] [width 600] [height 400]))
 
 (define manager-pane
   (new vertical-pane% [parent manager-frame]))
+
+(define input-pane
+  (new horizontal-pane%
+       [parent manager-pane]
+       [stretchable-height #f]))
+
+(define trade-size-field
+  (new text-field%
+       [parent input-pane]
+       [label "Trade Size"]
+       [init-value "2000.00"]))
+
+(define stop-percent-field
+  (new text-field%
+       [parent input-pane]
+       [label "Stop Pct"]
+       [init-value "0.02"]))
+
+(define target-percent-field
+  (new text-field%
+       [parent input-pane]
+       [label "Target Pct"]
+       [init-value "0.04"]))
+
+(define recalc-button
+  (new button%
+       [parent input-pane]
+       [label "Recalc"]
+       [callback (λ (b e)
+                   (set-order-data
+                    (map (λ (i)
+                           (define ord (send order-box get-data i))
+                           (cond [(equal? 'long-call (order-strategy ord))
+                                  (struct-copy order ord
+                                               [quantity (floor (/ (string->number (send trade-size-field get-value))
+                                                                   (* 100 (order-price ord))))]
+                                               [stock-stop (* (- 1 (string->number (send stop-percent-field get-value)))
+                                                              (order-stock-entry ord))]
+                                               [stock-target (* (+ 1 (string->number (send target-percent-field get-value)))
+                                                                (order-stock-entry ord))])]
+                                 [(equal? 'long-put (order-strategy ord))
+                                  (struct-copy order ord
+                                               [quantity (floor (/ (string->number (send trade-size-field get-value))
+                                                                   (* 100 (order-price ord))))]
+                                               [stock-stop (* (+ 1 (string->number (send stop-percent-field get-value)))
+                                                              (order-stock-entry ord))]
+                                               [stock-target (* (- 1 (string->number (send target-percent-field get-value)))
+                                                                (order-stock-entry ord))])]
+                                 [(equal? 'bull-call-vertical-spread (order-strategy ord))
+                                  (define risk (- (order-price (send order-box get-data 0)) (order-price (send order-box get-data 1))))
+                                  (struct-copy order ord
+                                               [quantity (truncate (/ (string->number (send trade-size-field get-value))
+                                                                      (* 100 risk (if (= i 0) 1 -1))))]
+                                               [stock-stop (* (- 1 (string->number (send stop-percent-field get-value)))
+                                                              (order-stock-entry ord))]
+                                               [stock-target (* (+ 1 (string->number (send target-percent-field get-value)))
+                                                                (order-stock-entry ord))])]
+                                 [(equal? 'bull-put-vertical-spread (order-strategy ord))
+                                  (define risk (- (- (order-strike (send order-box get-data 0)) (order-strike (send order-box get-data 1)))
+                                                  (- (order-price (send order-box get-data 0)) (order-price (send order-box get-data 1)))))
+                                  (struct-copy order ord
+                                               [quantity (truncate (/ (string->number (send trade-size-field get-value))
+                                                                      (* 100 risk (if (= i 1) 1 -1))))]
+                                               [stock-stop (* (- 1 (string->number (send stop-percent-field get-value)))
+                                                              (order-stock-entry ord))]
+                                               [stock-target (* (+ 1 (string->number (send target-percent-field get-value)))
+                                                                (order-stock-entry ord))])]
+                                 [(equal? 'bear-put-vertical-spread (order-strategy ord))
+                                  (define risk (- (order-price (send order-box get-data 0)) (order-price (send order-box get-data 1))))
+                                  (struct-copy order ord
+                                               [quantity (truncate (/ (string->number (send trade-size-field get-value))
+                                                                      (* 100 risk (if (= i 0) 1 -1))))]
+                                               [stock-stop (* (+ 1 (string->number (send stop-percent-field get-value)))
+                                                              (order-stock-entry ord))]
+                                               [stock-target (* (- 1 (string->number (send target-percent-field get-value)))
+                                                                (order-stock-entry ord))])]
+                                 [(equal? 'bear-call-vertical-spread (order-strategy ord))
+                                  (define risk (- (- (order-strike (send order-box get-data 1)) (order-strike (send order-box get-data 0)))
+                                                  (- (order-price (send order-box get-data 0)) (order-price (send order-box get-data 1)))))
+                                  (struct-copy order ord
+                                               [quantity (truncate (/ (string->number (send trade-size-field get-value))
+                                                                      (* 100 risk (if (= i 1) 1 -1))))]
+                                               [stock-stop (* (+ 1 (string->number (send stop-percent-field get-value)))
+                                                              (order-stock-entry ord))]
+                                               [stock-target (* (- 1 (string->number (send target-percent-field get-value)))
+                                                                (order-stock-entry ord))])]
+                                 [else ord]))
+                         (range (send order-box get-number)))))]))
 
 (define order-box-columns (list "Symbol" "Expiry" "Strike" "CallPut" "Qty" "Price" "StkEntry" "StkStop" "StkTgt"))
 
@@ -59,39 +178,46 @@
                      (map (λ (i)
                             (define item (send order-box get-data i))
                             (send ibkr send-msg (new contract-details-req%
-                                                     [symbol (list-ref item 0)]
+                                                     [symbol (order-symbol item)]
                                                      [security-type 'opt]
-                                                     [expiry (string->date (list-ref item 1) "~y-~m-~d")]
-                                                     [strike (string->number (list-ref item 2))]
-                                                     [right (if (equal? (list-ref item 3) "Call") 'call 'put)]
+                                                     [expiry (order-expiration item)]
+                                                     [strike (order-strike item)]
+                                                     [right (order-call-put item)]
                                                      [exchange "SMART"]))
                             (async-channel-get contract-id-channel))
                           (range (send order-box get-number))))
+                   (define first-item (send order-box get-data 0))
+                   (send ibkr send-msg (new contract-details-req%
+                                            [symbol (order-symbol first-item)]
+                                            [security-type 'stk]
+                                            [exchange "SMART"]
+                                            [currency "USD"]))
+                   (define underlying-contract-id (async-channel-get contract-id-channel))
                    (define quantity
-                     (apply gcd (map (λ (i) (string->number (list-ref (send order-box get-data i) 4)))
+                     (apply gcd (map (λ (i) (order-quantity (send order-box get-data i)))
                                      (range (send order-box get-number)))))
                    (define total-price
                      (/ (foldl (λ (i sum)
-                                 (+ sum (* (string->number (list-ref (send order-box get-data i) 4))
-                                           (string->number (list-ref (send order-box get-data i) 5)))))
+                                 (+ sum (* (order-quantity (send order-box get-data i))
+                                           (order-price (send order-box get-data i)))))
                                0
                                (range (send order-box get-number)))
                         quantity))
                    (if (= 1 (length contract-ids))
                        (send ibkr send-msg (new place-order-req%
                                                 [order-id next-order-id]
-                                                [symbol (list-ref (send order-box get-data 0) 0)]
+                                                [symbol (order-symbol first-item)]
                                                 [security-type 'opt]
                                                 [contract-id (first contract-ids)]
                                                 [order-type "LMT"]
-                                                [limit-price (string->number (list-ref (send order-box get-data 0) 5))]
-                                                [action (if (< 0 (string->number (list-ref (send order-box get-data 0) 4))) 'buy 'sell)]
-                                                [total-quantity (abs (string->number (list-ref (send order-box get-data 0) 4)))]
+                                                [limit-price (order-price first-item)]
+                                                [action (if (< 0 (order-quantity first-item)) 'buy 'sell)]
+                                                [total-quantity (abs (order-quantity first-item))]
                                                 [exchange "SMART"]
                                                 [currency "USD"]))
                        (send ibkr send-msg (new place-order-req%
                                                 [order-id next-order-id]
-                                                [symbol (list-ref (send order-box get-data 0) 0)]
+                                                [symbol (order-symbol first-item)]
                                                 [security-type 'bag]
                                                 [order-type "LMT"]
                                                 [limit-price (abs total-price)]
@@ -102,15 +228,27 @@
                                                 [combo-legs (map (λ (i con-id)
                                                                    (define item (send order-box get-data i))
                                                                    (combo-leg con-id
-                                                                              (/ (abs (string->number (list-ref item 4))) quantity)
-                                                                              (if (< 0 (string->number (list-ref item 4))) 'buy 'sell)
+                                                                              (inexact->exact (/ (abs (order-quantity item)) quantity))
+                                                                              (if (< 0 (order-quantity item)) 'buy 'sell)
                                                                               "SMART"
                                                                               'same
                                                                               0
                                                                               ""
                                                                               -1))
                                                                  (range (send order-box get-number))
-                                                                 contract-ids)])))
+                                                                 contract-ids)]
+                                                [conditions (list (condition 'price
+                                                                             'and
+                                                                             (cond [(or (equal? 'bull-call-vertical-spread (order-strategy first-item))
+                                                                                        (equal? 'bull-put-vertical-spread (order-strategy first-item)))
+                                                                                    'greater-than]
+                                                                                   [(or (equal? 'bear-call-vertical-spread (order-strategy first-item))
+                                                                                        (equal? 'bear-put-vertical-spread (order-strategy first-item)))
+                                                                                    'less-than])
+                                                                             (order-stock-entry first-item)
+                                                                             underlying-contract-id
+                                                                             "SMART"
+                                                                             'default))])))
                    (set! next-order-id (add1 next-order-id)))]))
 
 (define save-trades-button
@@ -122,15 +260,15 @@
 
 (define (set-order-data order-data)
   (send order-box set
-        (map (λ (d) (list-ref d 0)) order-data)
-        (map (λ (d) (list-ref d 1)) order-data)
-        (map (λ (d) (list-ref d 2)) order-data)
-        (map (λ (d) (list-ref d 3)) order-data)
-        (map (λ (d) (list-ref d 4)) order-data)
-        (map (λ (d) (list-ref d 5)) order-data)
-        (map (λ (d) (list-ref d 6)) order-data)
-        (map (λ (d) (list-ref d 7)) order-data)
-        (map (λ (d) (list-ref d 8)) order-data))
+        (map (λ (d) (order-symbol d)) order-data)
+        (map (λ (d) (date->string (order-expiration d) "~y-~m-~d")) order-data)
+        (map (λ (d) (real->decimal-string (order-strike d))) order-data)
+        (map (λ (d) (symbol->string (order-call-put d))) order-data)
+        (map (λ (d) (if (order-quantity d) (number->string (order-quantity d)) "")) order-data)
+        (map (λ (d) (real->decimal-string (order-price d))) order-data)
+        (map (λ (d) (real->decimal-string (order-stock-entry d))) order-data)
+        (map (λ (d) (if (order-stock-stop d) (real->decimal-string (order-stock-stop d)) "")) order-data)
+        (map (λ (d) (if (order-stock-stop d) (real->decimal-string (order-stock-target d)) "")) order-data))
   (for-each (λ (d i)
               (send order-box set-data i d))
             order-data (range (length order-data))))
