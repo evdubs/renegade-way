@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require racket/gui
+(require math/statistics
+         racket/gui
          (only-in srfi/19 
                   add-duration
                   current-date
@@ -45,22 +46,43 @@
 ;; Looks at price relative to moving averages
 ;; Scales from -3 to 3
 (define (msi-rating symbol)
-  (let* ([dohlc (list->vector (get-date-ohlc symbol (send start-date-field get-value) (send end-date-field get-value)))]
+  (let* ([end-date (string->date (send end-date-field get-value) "~Y-~m-~d")]
+         [start-date (subtract-months end-date 15)]
+         [dohlc (list->vector (get-date-ohlc symbol (date->string start-date "~1") (date->string end-date "~1")))]
          [sma-20 (simple-moving-average dohlc 20)]
          [sma-50 (simple-moving-average dohlc 50)]
-         [close-above-20 (cond [(= (vector-length dohlc) 0) 0]
-                               [(> (dohlc-close (vector-last dohlc)) (dv-value (vector-last sma-20))) 1]
-                               [(< (dohlc-close (vector-last dohlc)) (dv-value (vector-last sma-20))) -1]
-                               [else 0])]
-         [close-above-50 (cond [(= (vector-length dohlc) 0) 0]
-                               [(> (dohlc-close (vector-last dohlc)) (dv-value (vector-last sma-50))) 1]
-                               [(< (dohlc-close (vector-last dohlc)) (dv-value (vector-last sma-50))) -1]
-                               [else 0])]
-         [20-above-50 (cond [(= (vector-length dohlc) 0) 0]
-                            [(> (dv-value (vector-last sma-20)) (dv-value (vector-last sma-50))) 1]
-                            [(< (dv-value (vector-last sma-20)) (dv-value (vector-last sma-50))) -1]
-                            [else 0])])
-    (+ close-above-20 close-above-50 20-above-50)))
+         [sma-20-distance (* 1/2
+                             (statistics-stddev
+                              (foldl (λ (d s r)
+                                       (update-statistics r (- (dohlc-close d) (dv-value s))))
+                                     empty-statistics
+                                     (vector->list (vector-drop dohlc (- (vector-length dohlc)
+                                                                         (vector-length sma-20))))
+                                     (vector->list sma-20))))]
+         [sma-50-distance (* 1/2
+                             (statistics-stddev
+                              (foldl (λ (d s r)
+                                       (update-statistics r (- (dohlc-close d) (dv-value s))))
+                                     empty-statistics
+                                     (vector->list (vector-drop dohlc (- (vector-length dohlc)
+                                                                         (vector-length sma-50))))
+                                     (vector->list sma-50))))])
+    (+ (cond [(> (dohlc-close (vector-last dohlc))
+                 (+ (dv-value (vector-last sma-20)) sma-20-distance)) 1]
+             [(< (dohlc-close (vector-last dohlc))
+                 (- (dv-value (vector-last sma-20)) sma-20-distance)) -1]
+             [else 0])
+       (cond [(> (dohlc-close (vector-last dohlc))
+                 (+ (dv-value (vector-last sma-50)) sma-50-distance)) 1]
+             [(< (dohlc-close (vector-last dohlc))
+                 (- (dv-value (vector-last sma-50)) sma-50-distance)) -1]
+             [else 0])
+       (cond [(> (dv-value (vector-ref sma-20 (- (vector-length sma-20) 2)))
+                 (dv-value (vector-ref sma-20 (- (vector-length sma-20) 1)))) -1/2]
+             [else 1/2])
+       (cond [(> (dv-value (vector-ref sma-50 (- (vector-length sma-50) 2)))
+                 (dv-value (vector-ref sma-50 (- (vector-length sma-50) 1)))) -1/2]
+             [else 1/2]))))
 
 (define (stock-patterns symbol)
   (let* ([dohlc-list (get-date-ohlc symbol (send start-date-field get-value) (send end-date-field get-value))])
@@ -145,6 +167,8 @@
                    (let ([new-msis-list (get-msis (send market-field get-value) (send sector-field get-value)
                                                   (send start-date-field get-value) (send end-date-field get-value))]
                          [new-analysis-hash (make-hash)])
+                     ; this lets us avoid calling (msi-rating) with an empty symbol
+                     (hash-set! new-analysis-hash "" 0)
                      (for-each (λ (msis)
                                  (cond [(not (hash-has-key? new-analysis-hash (msis-market msis)))
                                         (hash-set! new-analysis-hash (msis-market msis) (msi-rating (msis-market msis)))])
