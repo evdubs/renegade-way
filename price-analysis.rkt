@@ -1,17 +1,12 @@
 #lang racket/base
 
-(require math/statistics
-         racket/gui
-         (only-in srfi/19 
-                  add-duration
-                  current-date
-                  date->string
-                  date->time-utc
-                  make-time
-                  string->date
-                  subtract-duration
-                  time-duration
-                  time-utc->date)
+(require gregor
+         math/statistics
+         racket/class
+         racket/list
+         racket/gui/base
+         racket/string
+         racket/vector
          "chart.rkt"
          "db-queries.rkt"
          "option-strategy.rkt"
@@ -28,14 +23,6 @@
 
 (provide show-price-analysis)
 
-(define (add-months d n)
-  (time-utc->date (add-duration (date->time-utc d)
-                                (make-time time-duration 0 (* 60 60 24 30 n)))))
-
-(define (subtract-months d n)
-  (time-utc->date (subtract-duration (date->time-utc d)
-                                     (make-time time-duration 0 (* 60 60 24 30 n)))))
-
 (define (vector-first v)
   (vector-ref v 0))
 
@@ -46,9 +33,9 @@
 ;; Looks at price relative to moving averages
 ;; Scales from -3 to 3
 (define (msi-rating symbol)
-  (let* ([end-date (string->date (send end-date-field get-value) "~Y-~m-~d")]
-         [start-date (subtract-months end-date 15)]
-         [dohlc (list->vector (get-date-ohlc symbol (date->string start-date "~1") (date->string end-date "~1")))]
+  (let* ([end-date (iso8601->date (send end-date-field get-value))]
+         [start-date (-months end-date 15)]
+         [dohlc (list->vector (get-date-ohlc symbol (date->iso8601 start-date) (date->iso8601 end-date)))]
          [sma-20 (simple-moving-average dohlc 20)]
          [sma-50 (simple-moving-average dohlc 50)]
          [sma-20-distance (* 1/2
@@ -123,13 +110,13 @@
   (new text-field%
        [parent analysis-input-pane]
        [label "Start Date"]
-       [init-value (date->string (subtract-months (current-date) 5) "~1")]))
+       [init-value (date->iso8601 (-months (today) 5))]))
 
 (define end-date-field
   (new text-field%
        [parent analysis-input-pane]
        [label "End Date"]
-       [init-value (date->string (current-date) "~1")]))
+       [init-value (date->iso8601 (today))]))
 
 (define filter-input-pane
   (new horizontal-pane%
@@ -192,7 +179,7 @@
                              filter-hold)]
          [filter-spread (if (send hide-spread-20-check-box get-value)
                             (filter (λ (m) (and (not (equal? "" (msis-option-spread m)))
-                                                (> 20 (string->number (msis-option-spread m))))) filter-pattern)
+                                                (> 25 (string->number (msis-option-spread m))))) filter-pattern)
                             filter-pattern)])
     (send analysis-box set
           (map (λ (m) (msis-market m)) filter-spread)

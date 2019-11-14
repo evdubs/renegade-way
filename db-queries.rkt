@@ -2,9 +2,8 @@
 
 (require db
          db/util/datetime
-         (only-in racket/date date->seconds)
+         gregor
          racket/list
-         srfi/19 ; Time and Date Functions
          "../interactive-brokers-api/response-messages.rkt"
          "cmd-line.rkt"
          "structs.rkt")
@@ -21,7 +20,7 @@
 (define (get-date-ohlc ticker-symbol start-date end-date)
   (let ([price-query (query-rows dbc "
 select
-  date,
+  date::text,
   open,
   case
     when high is null and open >= close then open
@@ -49,7 +48,7 @@ order by
                                  ticker-symbol
                                  start-date
                                  end-date)])
-    (map (λ (row) (dohlc (date->seconds (sql-datetime->srfi-date (vector-ref row 0)))
+    (map (λ (row) (dohlc (->posix (iso8601->date (vector-ref row 0)))
                          (vector-ref row 1) (vector-ref row 2) (vector-ref row 3) (vector-ref row 4)))
          price-query)))
 
@@ -72,19 +71,7 @@ select
 from
   (select
     etf_symbol as market_symbol,
-    case sector::text
-      when 'Communication Services' then 'XLC'
-      when 'Consumer Discretionary' then 'XLY'
-      when 'Consumer Staples' then 'XLP'
-      when 'Energy' then 'XLE'
-      when 'Financials' then 'XLF'
-      when 'Health Care' then 'XLV'
-      when 'Industrials' then 'XLI'
-      when 'Information Technology' then 'XLK'
-      when 'Materials' then 'XLB'
-      when 'Real Estate' then 'XLRE'
-      when 'Utilities' then 'XLU'
-    end as sector_symbol,
+    spdr.to_sector_etf(sector) as sector_symbol,
     component_symbol as component_symbol,
     date
   from
@@ -95,19 +82,7 @@ from
   union
   select
     etf_symbol as market_symbol,
-    case sector::text
-      when 'Communication Services' then 'XLC'
-      when 'Consumer Discretionary' then 'XLY'
-      when 'Consumer Staples' then 'XLP'
-      when 'Energy' then 'XLE'
-      when 'Financials' then 'XLF'
-      when 'Health Care' then 'XLV'
-      when 'Industrials' then 'XLI'
-      when 'Information Technology' then 'XLK'
-      when 'Materials' then 'XLB'
-      when 'Real Estate' then 'XLRE'
-      when 'Utilities' then 'XLU'
-    end as sector_symbol,
+    spdr.to_sector_etf(sector::text::spdr.sector) as sector_symbol,
     component_symbol,
     date
   from
@@ -219,10 +194,10 @@ where
     else true
   end
 order by
-  abs(((sector_end_close.close - sector_start_close.close) / sector_start_close.close) - 
-    ((market_end_close.close - market_start_close.close) / market_start_close.close)) desc,
-  abs(((stock_end_close.close - stock_start_close.close) / stock_start_close.close) - 
-    ((sector_end_close.close - sector_start_close.close) / sector_start_close.close)) desc;
+  ((sector_end_close.close - sector_start_close.close) / sector_start_close.close) - 
+    ((market_end_close.close - market_start_close.close) / market_start_close.close) desc,
+  ((stock_end_close.close - stock_start_close.close) / stock_start_close.close) - 
+    ((sector_end_close.close - sector_start_close.close) / sector_start_close.close) desc;
 "
                                 market
                                 sector
@@ -373,7 +348,7 @@ insert into ibkr.execution (
               (execution-rsp-contract-id execution)
               (execution-rsp-symbol execution)
               (string-upcase (symbol->string (execution-rsp-security-type execution)))
-              (if (execution-rsp-expiry execution) (date->string (execution-rsp-expiry execution) "~1") sql-null)
+              (if (execution-rsp-expiry execution) (date->iso8601 (execution-rsp-expiry execution)) sql-null)
               (execution-rsp-strike execution)
               (string-upcase (symbol->string (execution-rsp-right execution)))
               (if (execution-rsp-multiplier execution) (execution-rsp-multiplier execution) sql-null)
@@ -382,7 +357,7 @@ insert into ibkr.execution (
               (execution-rsp-local-symbol execution)
               (execution-rsp-trading-class execution)
               (execution-rsp-execution-id execution)
-              (date->string (execution-rsp-timestamp execution) "~5")
+              (~t (execution-rsp-timestamp execution) "yyyy-MM-dd'T'HH:mm:ss")
               (execution-rsp-account execution)
               (execution-rsp-executing-exchange execution)
               (execution-rsp-side execution)

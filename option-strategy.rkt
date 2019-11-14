@@ -1,16 +1,10 @@
 #lang racket/base
 
-(require racket/gui
-         (only-in srfi/19 
-                  add-duration
-                  current-date
-                  date->string
-                  date->time-utc
-                  make-time
-                  string->date
-                  subtract-duration
-                  time-duration
-                  time-utc->date)
+(require gregor
+         racket/class
+         racket/gui/base
+         racket/list
+         racket/string
          "db-queries.rkt"
          "position-order-manager.rkt"
          "pricing-risk.rkt"
@@ -18,10 +12,6 @@
 
 (provide show-option-strategy
          refresh-option-strategy)
-
-(define (add-months d n)
-  (time-utc->date (add-duration (date->time-utc d)
-                                (make-time time-duration 0 (* 60 60 24 30 n)))))
 
 (define strategy-frame
   (new frame% [label "Option Strategy"] [width 1000] [height 600]))
@@ -41,7 +31,7 @@
   (new text-field%
        [parent strategy-input-pane]
        [label "Date"]
-       [init-value (date->string (current-date) "~1")]))
+       [init-value (date->iso8601 (today))]))
 
 (define ref-price-field
   (new text-field%
@@ -229,7 +219,7 @@
                                                  (set-order-data (map (λ (o)
                                                                         (order (string->symbol (string-replace (string-downcase k) " " "-"))
                                                                                (option-symbol o)
-                                                                               (string->date (option-expiration o) "~y-~m-~d")
+                                                                               (parse-date (option-expiration o) "yy-MM-dd")
                                                                                (option-strike o)
                                                                                (string->symbol (string-downcase (option-call-put o)))
                                                                                #f
@@ -237,7 +227,7 @@
                                                                                (string->number (send ref-price-field get-value))
                                                                                #f
                                                                                #f
-                                                                               (add-months (string->date (send date-field get-value) "~Y-~m-~d") 1)))
+                                                                               (+months (iso8601->date (send date-field get-value)) 1)))
                                                                       v)))])])
                      (send table set
                            (map (λ (o) (option-symbol o)) v)

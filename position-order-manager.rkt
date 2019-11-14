@@ -1,10 +1,11 @@
 #lang racket/base
 
-(require racket/async-channel
-         racket/gui
-         (only-in srfi/19
-                  date->string
-                  string->date)
+(require gregor
+         racket/async-channel
+         racket/class
+         racket/contract
+         racket/list
+         racket/gui/base
          "../interactive-brokers-api/base-structs.rkt"
          "../interactive-brokers-api/main.rkt"
          "../interactive-brokers-api/request-messages.rkt"
@@ -211,6 +212,7 @@
                                                 [contract-id (first contract-ids)]
                                                 [order-type "LMT"]
                                                 [limit-price (order-price first-item)]
+                                                [time-in-force 'gtc]
                                                 [action (if (< 0 (order-quantity first-item)) 'buy 'sell)]
                                                 [total-quantity (abs (order-quantity first-item))]
                                                 [exchange "SMART"]
@@ -221,6 +223,7 @@
                                                 [security-type 'bag]
                                                 [order-type "LMT"]
                                                 [limit-price (abs total-price)]
+                                                [time-in-force 'gtc]
                                                 [action (if (< 0 total-price) 'buy 'sell)]
                                                 [total-quantity quantity]
                                                 [exchange "SMART"]
@@ -261,7 +264,7 @@
 (define (set-order-data order-data)
   (send order-box set
         (map (λ (d) (order-symbol d)) order-data)
-        (map (λ (d) (date->string (order-expiration d) "~y-~m-~d")) order-data)
+        (map (λ (d) (~t (order-expiration d) "yy-MM-dd")) order-data)
         (map (λ (d) (real->decimal-string (order-strike d))) order-data)
         (map (λ (d) (symbol->string (order-call-put d))) order-data)
         (map (λ (d) (if (order-quantity d) (number->string (order-quantity d)) "")) order-data)

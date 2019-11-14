@@ -63,3 +63,38 @@ CREATE TABLE ibkr.execution
 );
 
 CREATE INDEX ON ibkr.execution ("timestamp");
+
+CREATE OR REPLACE VIEW ibkr."position"
+ AS
+ SELECT execution.contract_id,
+    execution.act_symbol,
+    execution.security_type,
+    execution.expiry,
+    execution.strike,
+    execution."right",
+    execution.multiplier,
+    execution.currency,
+    execution.local_symbol,
+    execution.trading_class,
+    execution.account,
+    sum(
+        CASE execution.side
+            WHEN 'BOT'::text THEN execution.shares
+            WHEN 'SLD'::text THEN execution.shares * '-1'::integer::numeric
+            ELSE NULL::numeric
+        END) AS signed_shares,
+    min(execution."timestamp") AS entry_timestamp
+   FROM ibkr.execution
+  GROUP BY 
+    execution.contract_id, 
+    execution.act_symbol, 
+    execution.security_type, 
+    execution.expiry, 
+    execution.strike, 
+    execution."right", 
+    execution.multiplier, 
+    execution.currency, 
+    execution.local_symbol, 
+    execution.trading_class, 
+    execution.account;
+
