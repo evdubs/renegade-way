@@ -164,8 +164,11 @@
        [parent button-pane]
        [callback (λ (b e)
                    (set! ibkr (new ibkr-session%
-                                   [handle-contract-details-rsp (λ (cd) (async-channel-put contract-id-channel (contract-details-rsp-contract-id cd)))]
+                                   [handle-contract-details-rsp (λ (cd)
+                                                                  (async-channel-put contract-id-channel (contract-details-rsp-contract-id cd))
+                                                                  (insert-contract cd))]
                                    [handle-execution-rsp (λ (e) (insert-execution e))]
+                                   [handle-open-order-rsp (λ (oo) (insert-order oo))]
                                    [handle-next-valid-id-rsp (λ (id) (set! next-order-id (next-valid-id-rsp-order-id id)))]
                                    [write-messages #t]))
                    (send ibkr connect))]))

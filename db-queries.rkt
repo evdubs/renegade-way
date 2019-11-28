@@ -4,6 +4,8 @@
          db/util/datetime
          gregor
          racket/list
+         racket/string
+         "../interactive-brokers-api/base-structs.rkt"
          "../interactive-brokers-api/response-messages.rkt"
          "cmd-line.rkt"
          "structs.rkt")
@@ -13,7 +15,9 @@
          get-options
          get-msis
          get-security-name
-         insert-execution)
+         insert-contract
+         insert-execution
+         insert-order)
 
 (define dbc (postgresql-connect #:user (db-user) #:database (db-name) #:password (db-pass)))
 
@@ -287,16 +291,6 @@ where
 insert into ibkr.execution (
   order_id,
   contract_id,
-  act_symbol,
-  security_type,
-  expiry,
-  strike,
-  \"right\",
-  multiplier,
-  exchange,
-  currency,
-  local_symbol,
-  trading_class,
   execution_id,
   \"timestamp\",
   account,
@@ -310,52 +304,28 @@ insert into ibkr.execution (
   cumulative_quantity,
   average_price,
   order_reference,
-  ev_rule,
-  ev_multiplier,
   model_code
 ) values (
   $1,
   $2,
   $3,
-  $4::text::ibkr.security_type,
-  $5::text::date,
+  $4::text::timestamptz,
+  $5,
   $6,
-  $7::text::ibkr.right,
+  $7,
   $8,
   $9,
   $10,
   $11,
   $12,
   $13,
-  $14::text::timestamptz,
+  $14,
   $15,
-  $16,
-  $17,
-  $18,
-  $19,
-  $20,
-  $21,
-  $22,
-  $23,
-  $24,
-  $25,
-  $26,
-  $27,
-  $28
+  $16
 ) on conflict (execution_id) do nothing;
 "
               (execution-rsp-order-id execution)
               (execution-rsp-contract-id execution)
-              (execution-rsp-symbol execution)
-              (string-upcase (symbol->string (execution-rsp-security-type execution)))
-              (if (execution-rsp-expiry execution) (date->iso8601 (execution-rsp-expiry execution)) sql-null)
-              (execution-rsp-strike execution)
-              (string-upcase (symbol->string (execution-rsp-right execution)))
-              (if (execution-rsp-multiplier execution) (execution-rsp-multiplier execution) sql-null)
-              (execution-rsp-exchange execution)
-              (execution-rsp-currency execution)
-              (execution-rsp-local-symbol execution)
-              (execution-rsp-trading-class execution)
               (execution-rsp-execution-id execution)
               (~t (execution-rsp-timestamp execution) "yyyy-MM-dd'T'HH:mm:ss")
               (execution-rsp-account execution)
@@ -369,6 +339,198 @@ insert into ibkr.execution (
               (execution-rsp-cumulative-quantity execution)
               (execution-rsp-average-price execution)
               (execution-rsp-order-reference execution)
-              (execution-rsp-ev-rule execution)
-              (if (execution-rsp-ev-multiplier execution) (execution-rsp-ev-multiplier execution) sql-null)
               (execution-rsp-model-code execution)))
+
+(define (insert-contract contract)
+  (query-exec dbc "
+insert into ibkr.contract (
+  symbol,
+  security_type,
+  expiry,
+  strike,
+  \"right\",
+  exchange,
+  currency,
+  local_symbol,
+  market_name,
+  trading_class,
+  contract_id,
+  minimum_tick_increment,
+  multiplier,
+  price_magnifier,
+  underlying_contract_id,
+  long_name,
+  primary_exchange,
+  contract_month,
+  industry,
+  category,
+  subcategory,
+  time_zone,
+  ev_rule,
+  ev_multiplier
+) values (
+  $1,
+  $2::text::ibkr.security_type,
+  $3::text::date,
+  $4,
+  $5::text::ibkr.right,
+  $6,
+  $7,
+  $8,
+  $9,
+  $10,
+  $11,
+  $12,
+  $13::text::numeric,
+  $14,
+  $15,
+  $16,
+  $17,
+  $18,
+  $19,
+  $20,
+  $21,
+  $22,
+  $23,
+  $24
+) on conflict (contract_id) do nothing;
+"
+              (contract-details-rsp-symbol contract)
+              (string-upcase (symbol->string (contract-details-rsp-security-type contract)))
+              (if (contract-details-rsp-expiry contract) (date->iso8601 (contract-details-rsp-expiry contract)) sql-null)
+              (if (contract-details-rsp-strike contract) (contract-details-rsp-strike contract) sql-null)
+              (if (contract-details-rsp-right contract) (string-upcase (symbol->string (contract-details-rsp-right contract))) sql-null)
+              (contract-details-rsp-exchange contract)
+              (contract-details-rsp-currency contract)
+              (contract-details-rsp-local-symbol contract)
+              (contract-details-rsp-market-name contract)
+              (contract-details-rsp-trading-class contract)
+              (contract-details-rsp-contract-id contract)
+              (contract-details-rsp-minimum-tick-increment contract)
+              (if (equal? "" (contract-details-rsp-multiplier contract)) sql-null (contract-details-rsp-multiplier contract))
+              (contract-details-rsp-price-magnifier contract)
+              (contract-details-rsp-underlying-contract-id contract)
+              (contract-details-rsp-long-name contract)
+              (contract-details-rsp-primary-exchange contract)
+              (contract-details-rsp-contract-month contract)
+              (contract-details-rsp-industry contract)
+              (contract-details-rsp-category contract)
+              (contract-details-rsp-subcategory contract)
+              (contract-details-rsp-time-zone-id contract)
+              (contract-details-rsp-ev-rule contract)
+              (contract-details-rsp-ev-multiplier contract)))
+
+(define (insert-order order)
+  (query-exec dbc "
+insert into ibkr.order (
+  order_id,
+  contract_id,
+  \"action\",
+  total_quantity,
+  order_type,
+  limit_price,
+  aux_price,
+  time_in_force,
+  account,
+  open_close,
+  order_ref,
+  client_id,
+  perm_id,
+  \"timestamp\"
+) values (
+  $1,
+  $2,
+  $3::text::ibkr.action,
+  $4,
+  $5,
+  $6,
+  $7,
+  $8::text::ibkr.time_in_force,
+  $9,
+  $10::text::ibkr.open_close,
+  $11,
+  $12,
+  $13,
+  current_timestamp
+) on conflict (order_id) do nothing;
+"
+              (open-order-rsp-order-id order)
+              (open-order-rsp-contract-id order)
+              (string-upcase (symbol->string (open-order-rsp-action order)))
+              (open-order-rsp-total-quantity order)
+              (open-order-rsp-order-type order)
+              (open-order-rsp-limit-price order)
+              (open-order-rsp-aux-price order)
+              (string-upcase (symbol->string (open-order-rsp-time-in-force order)))
+              (open-order-rsp-account order)
+              (if (open-order-rsp-open-close order) (string-upcase (symbol->string (open-order-rsp-open-close order))) sql-null)
+              (open-order-rsp-order-ref order)
+              (open-order-rsp-client-id order)
+              (open-order-rsp-perm-id order))
+  (for-each (λ (leg)
+              (query-exec dbc "
+insert into ibkr.order_leg (
+  order_id,
+  contract_id,
+  ratio,
+  \"action\",
+  exchange,
+  open_close,
+  short_sale_slot,
+  designated_location,
+  exempt_code
+) values (
+  $1,
+  $2,
+  $3,
+  $4::text::ibkr.action,
+  $5,
+  $6::text::ibkr.open_close,
+  $7,
+  $8,
+  $9
+) on conflict (order_id, contract_id) do nothing;
+"
+                          (open-order-rsp-order-id order)
+                          (combo-leg-contract-id leg)
+                          (combo-leg-ratio leg)
+                          (string-upcase (symbol->string (combo-leg-action leg)))
+                          (combo-leg-exchange leg)
+                          (string-upcase (symbol->string (combo-leg-open-close leg)))
+                          (combo-leg-short-sale-slot leg)
+                          (combo-leg-designated-location leg)
+                          (combo-leg-exempt-code leg)))
+            (open-order-rsp-combo-legs order))
+  (for-each (λ (con)
+              (query-exec dbc "
+insert into ibkr.order_condition (
+  order_id,
+  contract_id,
+  \"type\",
+  \"operator\",
+  \"comparator\",
+  \"value\",
+  exchange,
+  trigger_method
+) values (
+  $1,
+  $2,
+  $3::text::ibkr.condition_type,
+  $4::text::ibkr.condition_operator,
+  $5::text::ibkr.condition_comparator,
+  $6,
+  $7,
+  $8::text::ibkr.condition_trigger_method
+) on conflict (order_id, \"type\") do nothing;
+"
+                          (open-order-rsp-order-id order)
+                          (condition-contract-id con)
+                          (string-replace (string-upcase (symbol->string (condition-type con))) "-" " ")
+                          (string-upcase (symbol->string (condition-boolean-operator con)))
+                          (string-replace (string-upcase (symbol->string (condition-comparator con))) "-" " ")
+                          (cond
+                            [(moment? (condition-value con)) (moment->iso8601 (condition-value con))]
+                            [(rational? (condition-value con)) (real->decimal-string (condition-value con) 2)])
+                          (condition-exchange con)
+                          (string-replace (string-upcase (symbol->string (condition-trigger-method con))) "-" " ")))
+            (open-order-rsp-conditions order)))
