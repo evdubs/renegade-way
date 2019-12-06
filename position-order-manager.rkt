@@ -10,39 +10,11 @@
          "../interactive-brokers-api/main.rkt"
          "../interactive-brokers-api/request-messages.rkt"
          "../interactive-brokers-api/response-messages.rkt"
-         "db-queries.rkt")
+         "db-queries.rkt"
+         "structs.rkt")
 
 (provide set-order-data
-         show-position-order-manager
-         (contract-out
-          [struct order
-            ((strategy (or/c 'long-call 'long-put
-                             'bull-call-vertical-spread 'bear-call-vertical-spread
-                             'bull-put-vertical-spread 'bear-put-vertical-spread))
-             (symbol string?)
-             (expiration date?)
-             (strike rational?)
-             (call-put (or/c 'call 'put))
-             (quantity (or/c rational? #f))
-             (price rational?)
-             (stock-entry rational?)
-             (stock-stop (or/c rational? #f))
-             (stock-target (or/c rational? #f))
-             (end-date (or/c date? #f)))]))
-
-(struct order
-  (strategy
-   symbol
-   expiration
-   strike
-   call-put
-   quantity
-   price
-   stock-entry
-   stock-stop
-   stock-target
-   end-date)
-  #:transparent)
+         show-position-order-manager)
 
 (define manager-frame
   (new frame% [label "Position/Order Manager"] [width 600] [height 400]))
@@ -207,6 +179,7 @@
                                0
                                (range (send order-box get-number)))
                         quantity))
+                   (insert-order-note next-order-id (send order-box get-data 0))
                    (if (= 1 (length contract-ids))
                        (send ibkr send-msg (new place-order-req%
                                                 [order-id next-order-id]

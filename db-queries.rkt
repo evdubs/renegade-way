@@ -17,7 +17,8 @@
          get-security-name
          insert-contract
          insert-execution
-         insert-order)
+         insert-order
+         insert-order-note)
 
 (define dbc (postgresql-connect #:user (db-user) #:database (db-name) #:password (db-pass)))
 
@@ -534,3 +535,28 @@ insert into ibkr.order_condition (
                           (condition-exchange con)
                           (string-replace (string-upcase (symbol->string (condition-trigger-method con))) "-" " ")))
             (open-order-rsp-conditions order)))
+
+(define (insert-order-note order-id order-note)
+  (query-exec dbc "
+insert into ibkr.order_note (
+  order_id,
+  order_strategy,
+  underlying_entry_price,
+  underlying_stop_price,
+  underlying_target_price,
+  end_date
+) values (
+  $1,
+  $2::text::ibkr.order_strategy,
+  $3,
+  $4,
+  $5,
+  $6::text::date
+) on conflict (order_id) do nothing;
+"
+              order-id
+              (string-replace (string-upcase (symbol->string (order-strategy order-note))) "-" " ")
+              (order-stock-entry order-note)
+              (order-stock-stop order-note)
+              (order-stock-target order-note)
+              (date->iso8601 (order-end-date order-note))))

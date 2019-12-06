@@ -33,6 +33,15 @@ CREATE TYPE ibkr.open_close AS ENUM
      'CLOSE',
      'SAME');
 
+CREATE TYPE ibkr.order_strategy AS ENUM
+    ('LONG CALL',
+     'LONG PUT',
+     'BULL CALL VERTICAL SPREAD',
+     'BEAR CALL VERTICAL SPREAD',
+     'BULL PUT VERTICAL SPREAD',
+     'BEAR PUT VERTICAL SPREAD');
+
+
 CREATE TYPE ibkr."right" AS ENUM
     ('CALL',
      'PUT');
@@ -162,7 +171,6 @@ CREATE TABLE ibkr.order_condition
         REFERENCES ibkr."order" (order_id) MATCH SIMPLE
         ON UPDATE NO ACTION
         ON DELETE NO ACTION
-        NOT VALID
 );
 
 CREATE TABLE ibkr.order_leg
@@ -181,7 +189,17 @@ CREATE TABLE ibkr.order_leg
         REFERENCES ibkr."order" (order_id) MATCH SIMPLE
         ON UPDATE NO ACTION
         ON DELETE NO ACTION
-        NOT VALID
+);
+
+CREATE TABLE ibkr.order_note
+(
+    order_id integer NOT NULL,
+    order_strategy ibkr.order_strategy,
+    underlying_entry_price numeric,
+    underlying_stop_price numeric,
+    underlying_target_price numeric,
+    end_date date,
+    CONSTRAINT order_note_order_id_key UNIQUE (order_id)
 );
 
 CREATE OR REPLACE VIEW ibkr."position"

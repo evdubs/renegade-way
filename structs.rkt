@@ -1,6 +1,8 @@
 #lang racket/base
 
-(require racket/list
+(require gregor
+         racket/contract
+         racket/list
          racket/stream) ; needed for gen:stream
 
 (provide (struct-out dv)
@@ -11,7 +13,22 @@
          (struct-out position)
          (struct-out history)
          (struct-out msis)
-         (struct-out option))
+         (struct-out option)
+         (contract-out
+          [struct order
+            ((strategy (or/c 'long-call 'long-put
+                             'bull-call-vertical-spread 'bear-call-vertical-spread
+                             'bull-put-vertical-spread 'bear-put-vertical-spread))
+             (symbol string?)
+             (expiration date?)
+             (strike rational?)
+             (call-put (or/c 'call 'put))
+             (quantity (or/c rational? #f))
+             (price rational?)
+             (stock-entry rational?)
+             (stock-stop (or/c rational? #f))
+             (stock-target (or/c rational? #f))
+             (end-date (or/c date? #f)))]))
 
 (struct dv (date value)
   #:transparent
@@ -70,4 +87,7 @@
   #:transparent)
 
 (struct option (symbol expiration dte strike call-put date bid mid ask vol delta gamma theta vega rho)
+  #:transparent)
+
+(struct order (strategy symbol expiration strike call-put quantity price stock-entry stock-stop stock-target end-date)
   #:transparent)
