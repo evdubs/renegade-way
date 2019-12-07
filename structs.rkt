@@ -12,7 +12,9 @@
          (struct-out trade)
          (struct-out position)
          (struct-out history)
-         (struct-out msis)
+         (struct-out price-analysis)
+         (struct-out rank-analysis)
+         (struct-out vol-analysis)
          (struct-out option)
          (contract-out
           [struct order
@@ -83,7 +85,14 @@
 (struct history (test trade)
   #:transparent)
 
-(struct msis (market sector sector-vs-market industry stock stock-vs-sector next-div-date earnings-date option-spread zacks-rank)
+(struct price-analysis (market sector sector-vs-market industry stock stock-vs-sector next-div-date earnings-date option-spread zacks-rank)
+  #:transparent)
+
+(struct rank-analysis (market market-rank sector sector-rank industry industry-rank stock stock-rank stock-avg-rank earnings-date option-spread)
+  #:transparent)
+
+(struct vol-analysis (market market-iv market-iv-rank sector sector-iv sector-iv-rank industry industry-iv industry-iv-rank
+                             stock stock-iv stock-iv-rank earnings-date option-spread)
   #:transparent)
 
 (struct option (symbol expiration dte strike call-put date bid mid ask vol delta gamma theta vega rho)

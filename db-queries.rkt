@@ -13,8 +13,10 @@
 (provide get-1-month-rate
          get-date-ohlc
          get-options
-         get-msis
+         get-price-analysis
+         get-rank-analysis
          get-security-name
+         get-vol-analysis
          insert-contract
          insert-execution
          insert-order
@@ -58,7 +60,7 @@ order by
          price-query)))
 
 ;; Get market/sector/industry/stock breakdown for ETF components
-(define (get-msis market sector start-date end-date)
+(define (get-price-analysis market sector start-date end-date)
   (let ([msis-query (query-rows dbc "
 select
   market.market_symbol as market,
@@ -208,10 +210,192 @@ order by
                                 sector
                                 start-date
                                 end-date)])
-    (map (λ (row) (msis (vector-ref row 0) (vector-ref row 1) (vector-ref row 2) (vector-ref row 3)
-                        (vector-ref row 4) (vector-ref row 5) (vector-ref row 6) (vector-ref row 7)
-                        (vector-ref row 8) (vector-ref row 9)))
+    (map (λ (row) (price-analysis (vector-ref row 0) (vector-ref row 1) (vector-ref row 2) (vector-ref row 3)
+                                  (vector-ref row 4) (vector-ref row 5) (vector-ref row 6) (vector-ref row 7)
+                                  (vector-ref row 8) (vector-ref row 9)))
          msis-query)))
+
+(define (get-rank-analysis market date)
+  (map (λ (row) (rank-analysis (vector-ref row 0) (vector-ref row 1) (vector-ref row 2) (vector-ref row 3)
+                               (vector-ref row 4) (vector-ref row 5) (vector-ref row 6) (vector-ref row 7)
+                               (vector-ref row 8) (vector-ref row 9) (vector-ref row 10)))
+       (query-rows dbc "
+with etf_rank as (
+  select
+    etf_symbol,
+    sum(eh.weight * zacks.to_integer_rank(r.rank)) / sum(eh.weight) as \"rank\"
+  from
+    spdr.etf_holding eh
+  join
+    zacks.rank_score r
+  on
+    eh.component_symbol = r.act_symbol and
+    r.date = (select max(date) from zacks.rank_score where date <= $2::text::date)
+  where
+    eh.date = (select max(date) from spdr.etf_holding where date <= $2::text::date)
+  group by
+    etf_symbol
+  order by
+    \"rank\")
+select
+  market.etf_symbol as market_symbol,
+  trunc(market_rank.rank, 2) as market_rank,
+  spdr.to_sector_etf(market.sector) as sector_symbol,
+  trunc(sector_rank.rank, 2) as sector_rank,
+  coalesce(industry.etf_symbol, '') as industry_symbol,
+  coalesce(trunc(industry_rank.rank, 2), 0.00) as industry_rank,
+  market.component_symbol,
+  zacks.to_integer_rank(component_rank.rank) as component_rank,
+  trunc(component_avg_rank.rank, 2) as component_avg_rank,
+  coalesce(to_char(ec.date, 'YY-MM-DD'), '') as earnings_date,
+  coalesce(trunc(option_spread.spread * 100, 2)::text, '') as option_spread
+from
+  spdr.etf_holding market
+join
+  etf_rank market_rank
+on
+  market.etf_symbol = market_rank.etf_symbol
+join
+  etf_rank sector_rank
+on
+  spdr.to_sector_etf(market.sector) = sector_rank.etf_symbol
+left outer join
+  spdr.etf_holding industry
+on
+  market.component_symbol = industry.component_symbol and
+  market.date = industry.date and
+  industry.sub_industry is not null
+left outer join
+  etf_rank industry_rank
+on
+  industry.etf_symbol = industry_rank.etf_symbol
+join
+  zacks.rank_score component_rank
+on
+  market.component_symbol = component_rank.act_symbol and
+  component_rank.date = (select max(date) from zacks.rank_score where date <= $2::text::date)
+join
+  (select
+    act_symbol,
+    avg(zacks.to_integer_rank(rank)) as \"rank\"
+   from
+    zacks.rank_score
+   where
+    date between ($2::text::date - interval '5 weeks') and
+      ($2::text::date - interval '1 week')
+   group by
+    act_symbol) as component_avg_rank
+on
+  market.component_symbol = component_avg_rank.act_symbol
+left outer join
+  ecnet.earnings_calendar ec
+on
+  market.component_symbol = ec.act_symbol and
+  ec.date >= $2::text::date - interval '1 week' and
+  ec.date <= $2::text::date + interval '1 month'
+left outer join
+  (select
+    act_symbol,
+    avg((ask - bid) / ask) as spread
+  from
+    oic.option_chain
+  where
+    expiration > $2::text::date and
+    expiration <= $2::text::date + interval '3 months' and
+    bid > 0.0 and
+    ask > 0.0
+  group by
+    act_symbol) option_spread
+on
+  market.component_symbol = option_spread.act_symbol
+where
+  market.etf_symbol = $1 and
+  market.date = (select max(date) from spdr.etf_holding where date <= $2::text::date) and
+  component_rank.rank in ('Strong Buy', 'Buy', 'Sell', 'Strong Sell')
+order by
+  component_rank.rank, zacks.to_integer_rank(component_rank.rank) - component_avg_rank.rank;
+"
+                   market
+                   date)))
+
+(define (get-vol-analysis market date)
+  (map (λ (row) (vol-analysis (vector-ref row 0) (vector-ref row 1) (vector-ref row 2) (vector-ref row 3)
+                              (vector-ref row 4) (vector-ref row 5) (vector-ref row 6) (vector-ref row 7)
+                              (vector-ref row 8) (vector-ref row 9) (vector-ref row 10) (vector-ref row 11)
+                              (vector-ref row 12) (vector-ref row 13)))
+       (query-rows dbc "
+select
+  market.etf_symbol,
+  trunc(market_vol.iv_current * 100, 2) as market_iv,
+  trunc((market_vol.iv_current - market_vol.iv_year_low) / (market_vol.iv_year_high - market_vol.iv_year_low) * 100, 2) as market_iv_rank,
+  spdr.to_sector_etf(market.sector),
+  trunc(sector_vol.iv_current * 100, 2) as sector_iv,
+  trunc((sector_vol.iv_current - sector_vol.iv_year_low) / (sector_vol.iv_year_high - sector_vol.iv_year_low) * 100, 2) as sector_iv_rank,
+  coalesce(industry.etf_symbol, ''),
+  coalesce(trunc(industry_vol.iv_current * 100, 2), 0.00) as industry_iv,
+  coalesce(trunc((industry_vol.iv_current - industry_vol.iv_year_low) / (industry_vol.iv_year_high - industry_vol.iv_year_low) * 100, 2), 0.00) as industry_iv_rank,
+  market.component_symbol,
+  coalesce(trunc(component_vol.iv_current * 100, 2), 0.00) as component_iv,
+  coalesce(trunc((component_vol.iv_current - component_vol.iv_year_low) / (component_vol.iv_year_high - component_vol.iv_year_low) * 100, 2), 0.00) as component_iv_rank,
+  coalesce(to_char(ec.date, 'YY-MM-DD'), '') as earnings_date,
+  coalesce(trunc(option_spread.spread * 100, 2)::text, '') as option_spread
+from
+  spdr.etf_holding market
+join
+  oic.volatility_history market_vol
+on
+  market.etf_symbol = market_vol.act_symbol and
+  market_vol.date = (select max(date) from oic.volatility_history where date <= $2::text::date)
+join
+  oic.volatility_history sector_vol
+on
+  spdr.to_sector_etf(market.sector) = sector_vol.act_symbol and 
+  sector_vol.date = (select max(date) from oic.volatility_history where date <= $2::text::date)
+left outer join
+  spdr.etf_holding industry
+on
+  market.component_symbol = industry.component_symbol and
+  market.date = industry.date and
+  industry.sub_industry is not null
+left outer join
+  oic.volatility_history industry_vol
+on
+  industry.etf_symbol = industry_vol.act_symbol and
+  industry_vol.date = (select max(date) from oic.volatility_history where date <= $2::text::date)
+join
+  oic.volatility_history component_vol
+on
+  market.component_symbol = component_vol.act_symbol and
+  component_vol.date = (select max(date) from oic.volatility_history where date <= $2::text::date)
+left outer join
+  ecnet.earnings_calendar ec
+on
+  market.component_symbol = ec.act_symbol and
+  ec.date >= $2::text::date - interval '1 week' and
+  ec.date <= $2::text::date + interval '1 month'
+left outer join
+  (select
+    act_symbol,
+    avg((ask - bid) / ask) as spread
+  from
+    oic.option_chain
+  where
+    expiration > $2::text::date and
+    expiration <= $2::text::date + interval '3 months' and
+    bid > 0.0 and
+    ask > 0.0
+  group by
+    act_symbol) option_spread
+on
+  market.component_symbol = option_spread.act_symbol
+where
+  market.etf_symbol = $1 and
+  market.date = (select max(date) from spdr.etf_holding where date <= $2::text::date)
+order by
+  market_iv_rank desc, sector_iv_rank desc, component_iv_rank desc;
+"
+                   market
+                   date)))
 
 (define (get-security-name act-symbol)
   (query-value dbc "

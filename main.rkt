@@ -4,7 +4,7 @@
          "cmd-line.rkt"
          "option-strategy.rkt"
          "position-order-manager.rkt"
-         "price-analysis.rkt")
+         "analysis.rkt")
 
 (show-chart)
 
@@ -12,5 +12,5 @@
 
 (show-position-order-manager)
 
-(show-price-analysis)
+(show-analysis)
 

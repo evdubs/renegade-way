@@ -1,0 +1,100 @@
+#lang racket/base
+
+(require gregor
+         racket/class
+         racket/gui/base
+         racket/match
+         "price-analysis.rkt"
+         "rank-analysis.rkt"
+         "vol-analysis.rkt")
+
+(provide analysis-tab-panel
+         show-analysis)
+
+(define analysis-frame
+  (new frame% [label "Analysis"] [width 900] [height 1000]))
+
+(define analysis-input-pane
+  (new horizontal-pane%
+       [parent analysis-frame]
+       [stretchable-height #f]))
+
+(define market-field
+  (new text-field%
+       [parent analysis-input-pane]
+       [label "Market"]
+       [init-value "SPY"]))
+
+(define sector-field
+  (new text-field%
+       [parent analysis-input-pane]
+       [label "Sector"]
+       [init-value ""]))
+
+(define start-date-field
+  (new text-field%
+       [parent analysis-input-pane]
+       [label "Start Date"]
+       [init-value (date->iso8601 (-months (today) 5))]))
+
+(define end-date-field
+  (new text-field%
+       [parent analysis-input-pane]
+       [label "End Date"]
+       [init-value (date->iso8601 (today))]))
+
+(define filter-input-pane
+  (new horizontal-pane%
+       [parent analysis-frame]
+       [stretchable-height #f]))
+
+(define hide-hold-check-box
+  (new check-box%
+       [parent filter-input-pane]
+       [label "Hide Hold"]))
+
+(define hide-no-pattern-check-box
+  (new check-box%
+       [parent filter-input-pane]
+       [label "Hide No Pattern"]))
+
+(define hide-spread-20-check-box
+  (new check-box%
+       [parent filter-input-pane]
+       [label "Hide Large Spread"]))
+
+(define analysis-tab-panel
+  (new tab-panel%
+       [choices (list "Price" "Rank" "Vol" "Position")]
+       [parent analysis-frame]
+       [callback (λ (p e) (refresh-tab-panel))]))
+
+(define (refresh-tab-panel)
+  (map (λ (c) (send analysis-tab-panel delete-child c)) (send analysis-tab-panel get-children))
+  (match (send analysis-tab-panel get-item-label (send analysis-tab-panel get-selection))
+    ["Price" (price-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))]
+    ["Rank" (rank-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))]
+    ["Vol" (vol-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))]
+    ["Position" #f]))
+
+(define analyze-button
+  (new button%
+       [parent analysis-input-pane]
+       [label "Analyze"]
+       [callback (λ (b e)
+                   (send b enable #f)
+                   (match (send analysis-tab-panel get-item-label (send analysis-tab-panel get-selection))
+                     ["Price" (run-price-analysis (send market-field get-value) (send sector-field get-value)
+                                                  (send start-date-field get-value) (send end-date-field get-value))
+                              (refresh-tab-panel)]
+                     ["Rank" (run-rank-analysis (send market-field get-value) (send sector-field get-value)
+                                                (send start-date-field get-value) (send end-date-field get-value))
+                             (refresh-tab-panel)]
+                     ["Vol" (run-vol-analysis (send market-field get-value) (send sector-field get-value)
+                                              (send start-date-field get-value) (send end-date-field get-value))
+                            (refresh-tab-panel)]
+                     ["Position" #f])
+                   (send b enable #t))]))
+
+(define (show-analysis)
+  (send analysis-frame show #t))
