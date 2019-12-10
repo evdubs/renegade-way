@@ -392,7 +392,7 @@ where
   market.etf_symbol = $1 and
   market.date = (select max(date) from spdr.etf_holding where date <= $2::text::date)
 order by
-  market_iv_rank desc, sector_iv_rank desc, component_iv_rank desc;
+  component_iv_rank desc;
 "
                    market
                    date)))

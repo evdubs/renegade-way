@@ -20,7 +20,9 @@
           [struct order
             ((strategy (or/c 'long-call 'long-put
                              'bull-call-vertical-spread 'bear-call-vertical-spread
-                             'bull-put-vertical-spread 'bear-put-vertical-spread))
+                             'bull-put-vertical-spread 'bear-put-vertical-spread
+                             'long-straddle 'long-strangle
+                             'call-ratio-spread 'put-ratio-spread))
              (symbol string?)
              (expiration date?)
              (strike rational?)

@@ -28,7 +28,8 @@
                      (let ([market (vol-analysis-market (send b get-data (first (send b get-selections))))]
                            [sector (vol-analysis-sector (send b get-data (first (send b get-selections))))]
                            [industry (vol-analysis-industry (send b get-data (first (send b get-selections))))]
-                           [stock (vol-analysis-stock (send b get-data (first (send b get-selections))))])
+                           [stock (vol-analysis-stock (send b get-data (first (send b get-selections))))]
+                           [earnings-date (vol-analysis-earnings-date (send b get-data (first (send b get-selections))))])
                        (refresh-chart market
                                       sector
                                       industry
@@ -38,7 +39,7 @@
                        (refresh-option-strategy stock
                                                 end-date
                                                 (dohlc-close (first (get-date-ohlc stock end-date end-date)))
-                                                "")))]
+                                                (if (equal? "" earnings-date) "DV" "IV"))))]
          [style (list 'single 'column-headers 'vertical-label)]
          [columns analysis-box-columns]
          [choices (list "")]))

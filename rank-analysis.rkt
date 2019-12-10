@@ -3,6 +3,7 @@
 (require racket/class
          racket/gui/base
          racket/list
+         racket/match
          "chart.rkt"
          "db-queries.rkt"
          "option-strategy.rkt"
@@ -28,7 +29,8 @@
                      (let ([market (rank-analysis-market (send b get-data (first (send b get-selections))))]
                            [sector (rank-analysis-sector (send b get-data (first (send b get-selections))))]
                            [industry (rank-analysis-industry (send b get-data (first (send b get-selections))))]
-                           [stock (rank-analysis-stock (send b get-data (first (send b get-selections))))])
+                           [stock (rank-analysis-stock (send b get-data (first (send b get-selections))))]
+                           [stock-rank (rank-analysis-stock-rank (send b get-data (first (send b get-selections))))])
                        (refresh-chart market
                                       sector
                                       industry
@@ -38,7 +40,10 @@
                        (refresh-option-strategy stock
                                                 end-date
                                                 (dohlc-close (first (get-date-ohlc stock end-date end-date)))
-                                                "")))]
+                                                (match stock-rank
+                                                  [1 "IR"]
+                                                  [5 "DR"]
+                                                  [_ ""]))))]
          [style (list 'single 'column-headers 'vertical-label)]
          [columns analysis-box-columns]
          [choices (list "")]))
