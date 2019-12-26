@@ -42,6 +42,8 @@
                                                 (dohlc-close (first (get-date-ohlc stock end-date end-date)))
                                                 (match stock-rank
                                                   [1 "IR"]
+                                                  [2 "IR"]
+                                                  [4 "DR"]
                                                   [5 "DR"]
                                                   [_ ""]))))]
          [style (list 'single 'column-headers 'vertical-label)]

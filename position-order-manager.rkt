@@ -171,7 +171,9 @@
                                    [handle-contract-details-rsp (λ (cd)
                                                                   (async-channel-put contract-id-channel (contract-details-rsp-contract-id cd))
                                                                   (insert-contract cd))]
-                                   [handle-execution-rsp (λ (e) (insert-execution e))]
+                                   [handle-execution-rsp (λ (e) (insert-execution e)
+                                                            (thread (λ () (send ibkr send-msg
+                                                                                (new contract-details-req% [contract-id (execution-rsp-contract-id e)])))))]
                                    [handle-open-order-rsp (λ (oo) (insert-order oo))]
                                    [handle-next-valid-id-rsp (λ (id) (set! next-order-id (next-valid-id-rsp-order-id id)))]
                                    [write-messages #t]))
