@@ -75,17 +75,18 @@
 (define (stock-patterns symbol start-date end-date)
   (let* ([dohlc-list (get-date-ohlc symbol start-date end-date)])
     (if (< (length dohlc-list) 60) ""
-        (string-trim (string-join (map (λ (p) (cond [(not (empty? (history-test ((second p) dohlc-list)))) (first p)]
-                                                    [else ""]))
-                                       (list (list "AT" ascending-triangle-entry)
-                                             (list "BP" bull-pullback-entry)
-                                             (list "BR" bear-rally-entry)
-                                             (list "DT" descending-triangle-entry)
-                                             (list "HB" high-base-entry)
-                                             (list "LB" low-base-entry)
-                                             (list "RR" range-rally-entry)
-                                             (list "RP" range-pullback-entry)))
-                                  " ")))))
+        (string-join (filter (λ (p) (not (equal? "" p)))
+                             (map (λ (p) (cond [(not (empty? (history-test ((second p) dohlc-list)))) (first p)]
+                                               [else ""]))
+                                  (list (list "AT" ascending-triangle-entry)
+                                        (list "BP" bull-pullback-entry)
+                                        (list "BR" bear-rally-entry)
+                                        (list "DT" descending-triangle-entry)
+                                        (list "HB" high-base-entry)
+                                        (list "LB" low-base-entry)
+                                        (list "RR" range-rally-entry)
+                                        (list "RP" range-pullback-entry))))
+                     " "))))
 
 (define price-analysis-list (list))
 
