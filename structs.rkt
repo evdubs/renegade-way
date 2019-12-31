@@ -22,7 +22,9 @@
                              'bull-call-vertical-spread 'bear-call-vertical-spread
                              'bull-put-vertical-spread 'bear-put-vertical-spread
                              'long-straddle 'long-strangle
-                             'call-ratio-spread 'put-ratio-spread))
+                             'call-ratio-spread 'put-ratio-spread
+                             'call-horizontal-spread 'put-horizontal-spread
+                             'call-diagonal-spread 'put-diagonal-spread))
              (symbol string?)
              (expiration date?)
              (strike rational?)

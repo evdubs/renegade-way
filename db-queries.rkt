@@ -12,6 +12,7 @@
 
 (provide get-1-month-rate
          get-date-ohlc
+         get-dividend-estimates
          get-options
          get-price-analysis
          get-rank-analysis
@@ -470,6 +471,26 @@ where
   date = (select max(date) from ust.yield_curve where date < $1::text::date)
 "
                date))
+
+(define (get-dividend-estimates symbol start-date end-date)
+  (query-rows dbc "
+select
+  (previous.ex_date + interval '1 year')::date - $2::text::date,
+  latest.amount
+from
+  yahoo.dividend latest
+join
+  yahoo.dividend previous
+on
+  previous.act_symbol = latest.act_symbol
+where
+  latest.act_symbol = $1 and
+  latest.ex_date = (select max(ex_date) from yahoo.dividend where act_symbol = $1) and 
+  previous.ex_date between $2::text::date - interval '1 year' and $3::text::date - interval '1 year';
+"
+               symbol
+               (date->iso8601 start-date)
+               (date->iso8601 end-date)))
 
 (define (insert-execution execution)
   (query-exec dbc "

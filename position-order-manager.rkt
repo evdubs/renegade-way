@@ -139,6 +139,38 @@
                                                               (order-stock-entry ord))]
                                                [stock-target (* (- 1 (string->number (send target-percent-field get-value)))
                                                                 (order-stock-entry ord))])]
+                                 [(equal? 'call-horizontal-spread (order-strategy ord))
+                                  (define risk (- (order-price (send order-box get-data 1)) (order-price (send order-box get-data 0))))
+                                  (struct-copy order ord
+                                               [quantity (truncate (/ (string->number (send trade-risk-field get-value))
+                                                                      (* 100 risk (if (= i 0) -1 1))))]
+                                               [stock-stop (* (- 1 (string->number (send stop-percent-field get-value)))
+                                                              (order-stock-entry ord))]
+                                               [stock-target (order-strike (send order-box get-data 0))])]
+                                 [(equal? 'put-horizontal-spread (order-strategy ord))
+                                  (define risk (- (order-price (send order-box get-data 1)) (order-price (send order-box get-data 0))))
+                                  (struct-copy order ord
+                                               [quantity (truncate (/ (string->number (send trade-risk-field get-value))
+                                                                      (* 100 risk (if (= i 0) -1 1))))]
+                                               [stock-stop (* (+ 1 (string->number (send stop-percent-field get-value)))
+                                                              (order-stock-entry ord))]
+                                               [stock-target (order-strike (send order-box get-data 0))])]
+                                 [(equal? 'call-diagonal-spread (order-strategy ord))
+                                  (define risk (- (order-price (send order-box get-data 0)) (order-price (send order-box get-data 1))))
+                                  (struct-copy order ord
+                                               [quantity (truncate (/ (string->number (send trade-risk-field get-value))
+                                                                      (* 100 risk (if (= i 0) 1 -1))))]
+                                               [stock-stop (* (- 1 (string->number (send stop-percent-field get-value)))
+                                                              (order-stock-entry ord))]
+                                               [stock-target (order-strike (send order-box get-data 1))])]
+                                 [(equal? 'put-diagonal-spread (order-strategy ord))
+                                  (define risk (- (order-price (send order-box get-data 0)) (order-price (send order-box get-data 1))))
+                                  (struct-copy order ord
+                                               [quantity (truncate (/ (string->number (send trade-risk-field get-value))
+                                                                      (* 100 risk (if (= i 0) 1 -1))))]
+                                               [stock-stop (* (+ 1 (string->number (send stop-percent-field get-value)))
+                                                              (order-stock-entry ord))]
+                                               [stock-target (order-strike (send order-box get-data 1))])]
                                  [else ord]))
                          (range (send order-box get-number)))))]))
 
@@ -256,11 +288,13 @@
                                                                                  'and
                                                                                  (cond [(or (equal? 'bull-call-vertical-spread (order-strategy first-item))
                                                                                             (equal? 'bull-put-vertical-spread (order-strategy first-item))
-                                                                                            (equal? 'call-ratio-spread (order-strategy first-item)))
+                                                                                            (equal? 'call-ratio-spread (order-strategy first-item))
+                                                                                            (equal? 'call-diagonal-spread (order-strategy first-item)))
                                                                                         'greater-than]
                                                                                        [(or (equal? 'bear-call-vertical-spread (order-strategy first-item))
                                                                                             (equal? 'bear-put-vertical-spread (order-strategy first-item))
-                                                                                            (equal? 'put-ratio-spread (order-strategy first-item)))
+                                                                                            (equal? 'put-ratio-spread (order-strategy first-item))
+                                                                                            (equal? 'put-diagonal-spread (order-strategy first-item)))
                                                                                         'less-than])
                                                                                  (order-stock-entry first-item)
                                                                                  underlying-contract-id

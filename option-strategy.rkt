@@ -56,7 +56,7 @@
 
 (define strategy-table-pane (new vertical-pane% [parent strategy-frame]))
 
-(define (suitable-options options patterns)
+(define (suitable-options ref-price options patterns)
   (cond [(or (string-contains? patterns "BP")
              (string-contains? patterns "HB")
              (string-contains? patterns "AT")
@@ -103,7 +103,49 @@
                                                           (> (option-delta o) -4/10)
                                                           (equal? (option-call-put o) "Put")))
                                               options))])
-                 (list short-put long-put)))]
+                 (list short-put long-put))
+               "Call Horizontal Spread"
+               (let* ([short-call (foldl (λ (o res) (if (and (<= (abs (- 14 (option-dte o)))
+                                                                 (abs (- 14 (option-dte res))))
+                                                             (<= (abs (- ref-price (option-strike o)))
+                                                                 (abs (- ref-price (option-strike res))))
+                                                             (equal? (option-call-put o) "Call"))
+                                                        o
+                                                        res))
+                                         (first options)
+                                         options)]
+                      [long-call (foldl (λ (o res) (if (and (<= (abs (- 28 (option-dte o)))
+                                                                (abs (- 28 (option-dte res))))
+                                                            (<= (abs (- ref-price (option-strike o)))
+                                                                (abs (- ref-price (option-strike res))))
+                                                            (equal? (option-call-put o) "Call"))
+                                                       o
+                                                       res))
+                                        (first options)
+                                        options)])
+                 (list short-call long-call))
+               "Call Diagonal Spread"
+               (let* ([closest-front-dte (foldl (λ (o res) (if (< (abs (- 28 (option-dte o)))
+                                                                  (abs (- 28 (option-dte res))))
+                                                               o
+                                                               res))
+                                                (first options)
+                                                options)]
+                      [closest-back-dte (foldl (λ (o res) (if (< (abs (- 56 (option-dte o)))
+                                                                 (abs (- 56 (option-dte res))))
+                                                              o
+                                                              res))
+                                               (first options)
+                                               options)]
+                      [long-call (last (filter (λ (o) (and (= (option-dte o) (option-dte closest-back-dte))
+                                                           (> (option-delta o) 55/100)
+                                                           (equal? (option-call-put o) "Call")))
+                                               options))]
+                      [short-call (first (filter (λ (o) (and (= (option-dte o) (option-dte closest-front-dte))
+                                                             (< (option-delta o) 4/10)
+                                                             (equal? (option-call-put o) "Call")))
+                                                 options))])
+                 (list long-call short-call)))]
         [(or (string-contains? patterns "BR")
              (string-contains? patterns "LB")
              (string-contains? patterns "DT")
@@ -150,7 +192,49 @@
                                                             (< (option-delta o) 4/10)
                                                             (equal? (option-call-put o) "Call")))
                                                 options))])
-                 (list short-call long-call)))]
+                 (list short-call long-call))
+               "Put Horizontal Spread"
+               (let* ([short-put (foldl (λ (o res) (if (and (<= (abs (- 14 (option-dte o)))
+                                                                (abs (- 14 (option-dte res))))
+                                                            (<= (abs (- ref-price (option-strike o)))
+                                                                (abs (- ref-price (option-strike res))))
+                                                            (equal? (option-call-put o) "Put"))
+                                                       o
+                                                       res))
+                                        (first options)
+                                        options)]
+                      [long-put (foldl (λ (o res) (if (and (<= (abs (- 28 (option-dte o)))
+                                                               (abs (- 28 (option-dte res))))
+                                                           (<= (abs (- ref-price (option-strike o)))
+                                                               (abs (- ref-price (option-strike res))))
+                                                           (equal? (option-call-put o) "Put"))
+                                                      o
+                                                      res))
+                                       (first options)
+                                       options)])
+                 (list short-put long-put))
+               "Put Diagonal Spread"
+               (let* ([closest-front-dte (foldl (λ (o res) (if (< (abs (- 28 (option-dte o)))
+                                                                  (abs (- 28 (option-dte res))))
+                                                               o
+                                                               res))
+                                                (first options)
+                                                options)]
+                      [closest-back-dte (foldl (λ (o res) (if (< (abs (- 56 (option-dte o)))
+                                                                 (abs (- 56 (option-dte res))))
+                                                              o
+                                                              res))
+                                               (first options)
+                                               options)]
+                      [long-put (first (filter (λ (o) (and (= (option-dte o) (option-dte closest-back-dte))
+                                                           (< (option-delta o) -55/100)
+                                                           (equal? (option-call-put o) "Put")))
+                                               options))]
+                      [short-put (last (filter (λ (o) (and (= (option-dte o) (option-dte closest-front-dte))
+                                                           (> (option-delta o) -4/10)
+                                                           (equal? (option-call-put o) "Put")))
+                                               options))])
+                 (list long-put short-put)))]
         [(string-contains? patterns "IV")
          (hash "Long Straddle"
                (let* ([closest-dte (foldl (λ (o res) (if (< (abs (- 28 (option-dte o)))
@@ -244,51 +328,64 @@
   (send date-field set-value date)
   (send ref-price-field set-value (real->decimal-string ref-price))
   (send patterns-field set-value patterns)
-  (hash-for-each (suitable-options (map (λ (o) (option (option-symbol o)
-                                                       (option-expiration o)
-                                                       (option-dte o)
-                                                       (option-strike o)
-                                                       (option-call-put o)
-                                                       (option-date o)
-                                                       (option-bid o)
-                                                       (black-scholes ref-price
+  (hash-for-each (suitable-options ref-price
+                                   (map (λ (o)
+                                          (define divs (map (λ (div) (vector (/ (vector-ref div 0) 365) (vector-ref div 1)))
+                                                            (get-dividend-estimates symbol
+                                                                                    (iso8601->date date)
+                                                                                    (parse-date (option-expiration o) "yy-MM-dd"))))
+                                          (define 1-month-rate (get-1-month-rate date))
+                                          (option (option-symbol o)
+                                                  (option-expiration o)
+                                                  (option-dte o)
+                                                  (option-strike o)
+                                                  (option-call-put o)
+                                                  (option-date o)
+                                                  (option-bid o)
+                                                  (black-scholes ref-price
+                                                                 (/ (option-dte o) 365)
+                                                                 (option-strike o)
+                                                                 (string->symbol (option-call-put o))
+                                                                 1-month-rate
+                                                                 (option-vol o)
+                                                                 divs)
+                                                  (option-ask o)
+                                                  (option-vol o)
+                                                  (black-scholes-delta ref-price
+                                                                       (/ (option-dte o) 365)
+                                                                       (option-strike o)
+                                                                       (string->symbol (option-call-put o))
+                                                                       1-month-rate
+                                                                       (option-vol o)
+                                                                       divs)
+                                                  (black-scholes-gamma ref-price
+                                                                       (/ (option-dte o) 365)
+                                                                       (option-strike o)
+                                                                       (string->symbol (option-call-put o))
+                                                                       1-month-rate
+                                                                       (option-vol o)
+                                                                       divs)
+                                                  (black-scholes-theta ref-price
+                                                                       (/ (option-dte o) 365)
+                                                                       (option-strike o)
+                                                                       (string->symbol (option-call-put o))
+                                                                       1-month-rate
+                                                                       (option-vol o)
+                                                                       divs)
+                                                  (black-scholes-vega ref-price
                                                                       (/ (option-dte o) 365)
                                                                       (option-strike o)
                                                                       (string->symbol (option-call-put o))
-                                                                      (get-1-month-rate date)
-                                                                      (option-vol o))
-                                                       (option-ask o)
-                                                       (option-vol o)
-                                                       (black-scholes-delta ref-price
-                                                                            (/ (option-dte o) 365)
-                                                                            (option-strike o)
-                                                                            (string->symbol (option-call-put o))
-                                                                            (get-1-month-rate date)
-                                                                            (option-vol o))
-                                                       (black-scholes-gamma ref-price
-                                                                            (/ (option-dte o) 365)
-                                                                            (option-strike o)
-                                                                            (string->symbol (option-call-put o))
-                                                                            (get-1-month-rate date)
-                                                                            (option-vol o))
-                                                       (black-scholes-theta ref-price
-                                                                            (/ (option-dte o) 365)
-                                                                            (option-strike o)
-                                                                            (string->symbol (option-call-put o))
-                                                                            (get-1-month-rate date)
-                                                                            (option-vol o))
-                                                       (black-scholes-vega ref-price
-                                                                           (/ (option-dte o) 365)
-                                                                           (option-strike o)
-                                                                           (string->symbol (option-call-put o))
-                                                                           (get-1-month-rate date)
-                                                                           (option-vol o))
-                                                       (black-scholes-rho ref-price
-                                                                          (/ (option-dte o) 365)
-                                                                          (option-strike o)
-                                                                          (string->symbol (option-call-put o))
-                                                                          (get-1-month-rate date)
-                                                                          (option-vol o))))
+                                                                      1-month-rate
+                                                                      (option-vol o)
+                                                                      divs)
+                                                  (black-scholes-rho ref-price
+                                                                     (/ (option-dte o) 365)
+                                                                     (option-strike o)
+                                                                     (string->symbol (option-call-put o))
+                                                                     1-month-rate
+                                                                     (option-vol o)
+                                                                     divs)))
                                         (get-options symbol date)) patterns)
                  (λ (k v)
                    (let ([table (new list-box% [parent strategy-table-pane]
