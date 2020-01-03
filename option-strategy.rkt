@@ -366,12 +366,18 @@
                                                          res))
                                           (first options)
                                           options)]
+                      [closest-strike (foldl (λ (o res) (if (< (abs (- 5/10 (option-delta o)))
+                                                               (abs (- 5/10 (option-delta res))))
+                                                            o
+                                                            res))
+                                             (first options)
+                                             (filter (λ (o) (= (option-dte o) (option-dte closest-dte))) options))]
                       [first-short-call (last (filter (λ (o) (and (= (option-dte o) (option-dte closest-dte))
-                                                                  (< 5/10 (option-delta o))
+                                                                  (< (option-strike o) (option-strike closest-strike))
                                                                   (equal? (option-call-put o) "Call")))
                                                       options))]
                       [second-short-call (first (filter (λ (o) (and (= (option-dte o) (option-dte closest-dte))
-                                                                    (> 5/10 (option-delta o))
+                                                                    (> (option-strike o) (option-strike closest-strike))
                                                                     (equal? (option-call-put o) "Call")))
                                                         options))]
                       [first-long-call (last (filter (λ (o) (and (= (option-dte o) (option-dte closest-dte))
@@ -414,12 +420,18 @@
                                                          res))
                                           (first options)
                                           options)]
+                      [closest-strike (foldl (λ (o res) (if (< (abs (- 5/10 (option-delta o)))
+                                                               (abs (- 5/10 (option-delta res))))
+                                                            o
+                                                            res))
+                                             (first options)
+                                             (filter (λ (o) (= (option-dte o) (option-dte closest-dte))) options))]
                       [first-short-put (first (filter (λ (o) (and (= (option-dte o) (option-dte closest-dte))
-                                                                  (> -5/10 (option-delta o))
+                                                                  (> (option-strike o) (option-strike closest-strike))
                                                                   (equal? (option-call-put o) "Put")))
                                                       options))]
                       [second-short-put (last (filter (λ (o) (and (= (option-dte o) (option-dte closest-dte))
-                                                                  (< -5/10 (option-delta o))
+                                                                  (< (option-strike o) (option-strike closest-strike))
                                                                   (equal? (option-call-put o) "Put")))
                                                       options))]
                       [first-long-put (first (filter (λ (o) (and (= (option-dte o) (option-dte closest-dte))
