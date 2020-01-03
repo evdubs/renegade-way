@@ -24,13 +24,16 @@
                              'long-straddle 'long-strangle
                              'call-ratio-spread 'put-ratio-spread
                              'call-horizontal-spread 'put-horizontal-spread
-                             'call-diagonal-spread 'put-diagonal-spread))
+                             'call-diagonal-spread 'put-diagonal-spread
+                             'call-butterfly 'call-condor
+                             'put-butterfly 'put-condor))
              (symbol string?)
              (expiration date?)
              (strike rational?)
              (call-put (or/c 'call 'put))
              (quantity (or/c rational? #f))
              (price rational?)
+             (vol rational?)
              (stock-entry rational?)
              (stock-stop (or/c rational? #f))
              (stock-target (or/c rational? #f))
@@ -102,5 +105,5 @@
 (struct option (symbol expiration dte strike call-put date bid mid ask vol delta gamma theta vega rho)
   #:transparent)
 
-(struct order (strategy symbol expiration strike call-put quantity price stock-entry stock-stop stock-target end-date)
+(struct order (strategy symbol expiration strike call-put quantity price vol stock-entry stock-stop stock-target end-date)
   #:transparent)

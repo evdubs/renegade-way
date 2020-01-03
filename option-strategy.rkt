@@ -56,7 +56,7 @@
 
 (define strategy-table-pane (new vertical-pane% [parent strategy-frame]))
 
-(define (suitable-options ref-price options patterns)
+(define (suitable-options options patterns)
   (cond [(or (string-contains? patterns "BP")
              (string-contains? patterns "HB")
              (string-contains? patterns "AT")
@@ -105,19 +105,29 @@
                                               options))])
                  (list short-put long-put))
                "Call Horizontal Spread"
-               (let* ([short-call (foldl (λ (o res) (if (and (<= (abs (- 14 (option-dte o)))
-                                                                 (abs (- 14 (option-dte res))))
-                                                             (<= (abs (- ref-price (option-strike o)))
-                                                                 (abs (- ref-price (option-strike res))))
+               (let* ([closest-front-dte (foldl (λ (o res) (if (< (abs (- 14 (option-dte o)))
+                                                                  (abs (- 14 (option-dte res))))
+                                                               o
+                                                               res))
+                                                (first options)
+                                                options)]
+                      [closest-back-dte (foldl (λ (o res) (if (< (abs (- 28 (option-dte o)))
+                                                                 (abs (- 28 (option-dte res))))
+                                                              o
+                                                              res))
+                                               (first options)
+                                               options)]
+                      [short-call (foldl (λ (o res) (if (and (= (option-dte o) (option-dte closest-front-dte))
+                                                             (<= (abs (- 5/10 (option-delta o)))
+                                                                 (abs (- 5/10 (option-delta res))))
                                                              (equal? (option-call-put o) "Call"))
                                                         o
                                                         res))
                                          (first options)
                                          options)]
-                      [long-call (foldl (λ (o res) (if (and (<= (abs (- 28 (option-dte o)))
-                                                                (abs (- 28 (option-dte res))))
-                                                            (<= (abs (- ref-price (option-strike o)))
-                                                                (abs (- ref-price (option-strike res))))
+                      [long-call (foldl (λ (o res) (if (and (= (option-dte o) (option-dte closest-back-dte))
+                                                            (<= (abs (- 5/10 (option-delta o)))
+                                                                (abs (- 5/10 (option-delta res))))
                                                             (equal? (option-call-put o) "Call"))
                                                        o
                                                        res))
@@ -194,19 +204,29 @@
                                                 options))])
                  (list short-call long-call))
                "Put Horizontal Spread"
-               (let* ([short-put (foldl (λ (o res) (if (and (<= (abs (- 14 (option-dte o)))
-                                                                (abs (- 14 (option-dte res))))
-                                                            (<= (abs (- ref-price (option-strike o)))
-                                                                (abs (- ref-price (option-strike res))))
+               (let* ([closest-front-dte (foldl (λ (o res) (if (< (abs (- 14 (option-dte o)))
+                                                                  (abs (- 14 (option-dte res))))
+                                                               o
+                                                               res))
+                                                (first options)
+                                                options)]
+                      [closest-back-dte (foldl (λ (o res) (if (< (abs (- 28 (option-dte o)))
+                                                                 (abs (- 28 (option-dte res))))
+                                                              o
+                                                              res))
+                                               (first options)
+                                               options)]
+                      [short-put (foldl (λ (o res) (if (and (= (option-dte o) (option-dte closest-front-dte))
+                                                            (<= (abs (- 5/10 (option-delta o)))
+                                                                (abs (- 5/10 (option-delta res))))
                                                             (equal? (option-call-put o) "Put"))
                                                        o
                                                        res))
                                         (first options)
                                         options)]
-                      [long-put (foldl (λ (o res) (if (and (<= (abs (- 28 (option-dte o)))
-                                                               (abs (- 28 (option-dte res))))
-                                                           (<= (abs (- ref-price (option-strike o)))
-                                                               (abs (- ref-price (option-strike res))))
+                      [long-put (foldl (λ (o res) (if (and (= (option-dte o) (option-dte closest-back-dte))
+                                                           (<= (abs (- 5/10 (option-delta o)))
+                                                               (abs (- 5/10 (option-delta res))))
                                                            (equal? (option-call-put o) "Put"))
                                                       o
                                                       res))
@@ -243,9 +263,8 @@
                                                          res))
                                           (first options)
                                           options)]
-                      [ref-price (string->number (send ref-price-field get-value))]
-                      [closest-strike (foldl (λ (o res) (if (< (abs (- ref-price (option-strike o)))
-                                                               (abs (- ref-price (option-strike res))))
+                      [closest-strike (foldl (λ (o res) (if (< (abs (- 5/10 (option-delta o)))
+                                                               (abs (- 5/10 (option-delta res))))
                                                             o
                                                             res))
                                              (first options)
@@ -266,9 +285,8 @@
                                                          res))
                                           (first options)
                                           options)]
-                      [ref-price (string->number (send ref-price-field get-value))]
-                      [closest-strike (foldl (λ (o res) (if (< (abs (- ref-price (option-strike o)))
-                                                               (abs (- ref-price (option-strike res))))
+                      [closest-strike (foldl (λ (o res) (if (< (abs (- 5/10 (option-delta o)))
+                                                               (abs (- 5/10 (option-delta res))))
                                                             o
                                                             res))
                                              (first options)
@@ -314,6 +332,105 @@
                                                           (equal? (option-call-put o) "Put")))
                                               options))])
                  (list short-put long-put)))]
+        [(or (string-contains? patterns "RR")
+             (string-contains? patterns "RP")
+             (string-contains? patterns "DV"))
+         (hash "Call Butterfly"
+               (let* ([closest-dte (foldl (λ (o res) (if (< (abs (- 14 (option-dte o)))
+                                                            (abs (- 14 (option-dte res))))
+                                                         o
+                                                         res))
+                                          (first options)
+                                          options)]
+                      [short-call (foldl (λ (o res) (if (and (< (abs (- 5/10 (option-delta o)))
+                                                                (abs (- 5/10 (option-delta res))))
+                                                             (= (option-dte o) (option-dte closest-dte))
+                                                             (equal? (option-call-put o) "Call"))
+                                                        o
+                                                        res))
+                                         (first options)
+                                         options)]
+                      [first-long-call (last (filter (λ (o) (and (= (option-dte o) (option-dte closest-dte))
+                                                                  (< (option-strike o) (option-strike short-call))
+                                                                  (equal? (option-call-put o) "Call")))
+                                                      options))]
+                      [second-long-call (first (filter (λ (o) (and (= (option-dte o) (option-dte closest-dte))
+                                                                   (> (option-strike o) (option-strike short-call))
+                                                                   (equal? (option-call-put o) "Call")))
+                                                       options))])
+                 (list first-long-call short-call second-long-call))
+               "Call Condor"
+               (let* ([closest-dte (foldl (λ (o res) (if (< (abs (- 28 (option-dte o)))
+                                                            (abs (- 28 (option-dte res))))
+                                                         o
+                                                         res))
+                                          (first options)
+                                          options)]
+                      [first-short-call (last (filter (λ (o) (and (= (option-dte o) (option-dte closest-dte))
+                                                                  (< 5/10 (option-delta o))
+                                                                  (equal? (option-call-put o) "Call")))
+                                                      options))]
+                      [second-short-call (first (filter (λ (o) (and (= (option-dte o) (option-dte closest-dte))
+                                                                    (> 5/10 (option-delta o))
+                                                                    (equal? (option-call-put o) "Call")))
+                                                        options))]
+                      [first-long-call (last (filter (λ (o) (and (= (option-dte o) (option-dte closest-dte))
+                                                                  (< (option-strike o) (option-strike first-short-call))
+                                                                  (equal? (option-call-put o) "Call")))
+                                                      options))]
+                      [second-long-call (first (filter (λ (o) (and (= (option-dte o) (option-dte closest-dte))
+                                                                   (> (option-strike o) (option-strike second-short-call))
+                                                                   (equal? (option-call-put o) "Call")))
+                                                       options))])
+                 (list first-long-call first-short-call second-short-call second-long-call))
+               "Put Butterfly"
+               (let* ([closest-dte (foldl (λ (o res) (if (< (abs (- 14 (option-dte o)))
+                                                            (abs (- 14 (option-dte res))))
+                                                         o
+                                                         res))
+                                          (first options)
+                                          options)]
+                      [short-put (foldl (λ (o res) (if (and (< (abs (- -5/10 (option-delta o)))
+                                                               (abs (- -5/10 (option-delta res))))
+                                                            (= (option-dte o) (option-dte closest-dte))
+                                                            (equal? (option-call-put o) "Put"))
+                                                       o
+                                                       res))
+                                        (first options)
+                                        options)]
+                      [first-long-put (first (filter (λ (o) (and (= (option-dte o) (option-dte closest-dte))
+                                                                 (> (option-strike o) (option-strike short-put))
+                                                                 (equal? (option-call-put o) "Put")))
+                                                     options))]
+                      [second-long-put (last (filter (λ (o) (and (= (option-dte o) (option-dte closest-dte))
+                                                                 (< (option-strike o) (option-strike short-put))
+                                                                 (equal? (option-call-put o) "Put")))
+                                                     options))])
+                 (list first-long-put short-put second-long-put))
+               "Put Condor"
+               (let* ([closest-dte (foldl (λ (o res) (if (< (abs (- 28 (option-dte o)))
+                                                            (abs (- 28 (option-dte res))))
+                                                         o
+                                                         res))
+                                          (first options)
+                                          options)]
+                      [first-short-put (first (filter (λ (o) (and (= (option-dte o) (option-dte closest-dte))
+                                                                  (> -5/10 (option-delta o))
+                                                                  (equal? (option-call-put o) "Put")))
+                                                      options))]
+                      [second-short-put (last (filter (λ (o) (and (= (option-dte o) (option-dte closest-dte))
+                                                                  (< -5/10 (option-delta o))
+                                                                  (equal? (option-call-put o) "Put")))
+                                                      options))]
+                      [first-long-put (first (filter (λ (o) (and (= (option-dte o) (option-dte closest-dte))
+                                                                 (> (option-strike o) (option-strike first-short-put))
+                                                                 (equal? (option-call-put o) "Put")))
+                                                     options))]
+                      [second-long-put (last (filter (λ (o) (and (= (option-dte o) (option-dte closest-dte))
+                                                                 (< (option-strike o) (option-strike second-short-put))
+                                                                 (equal? (option-call-put o) "Put")))
+                                                     options))])
+                 (list first-long-put first-short-put second-short-put second-long-put)))]
         [else (hash)]))
 
 (define option-columns (list "Symbol" "Expiry" "Strike" "Call/Put" "Date" "Bid" "Ask" "Spread" "BsPrc" "Vol" "Delta" "Gamma" "Theta" "Vega" "Rho"))
@@ -328,8 +445,7 @@
   (send date-field set-value date)
   (send ref-price-field set-value (real->decimal-string ref-price))
   (send patterns-field set-value patterns)
-  (hash-for-each (suitable-options ref-price
-                                   (map (λ (o)
+  (hash-for-each (suitable-options (map (λ (o)
                                           (define divs (map (λ (div) (vector (/ (vector-ref div 0) 365) (vector-ref div 1)))
                                                             (get-dividend-estimates symbol
                                                                                     (iso8601->date date)
@@ -402,6 +518,7 @@
                                                                                (string->symbol (string-downcase (option-call-put o)))
                                                                                #f
                                                                                (option-mid o)
+                                                                               (option-vol o)
                                                                                (string->number (send ref-price-field get-value))
                                                                                #f
                                                                                #f

@@ -21,10 +21,10 @@
                        years-left)))]
          [d-2 (- d-1 (* vol (sqrt years-left)))]
          [pv (* strike (exp (* -1 rate years-left)))])
-    (cond [(equal? call-put 'Call)
+    (cond [(or (equal? call-put 'Call) (equal? call-put 'call))
            (- (* (cdf (normal-dist) d-1) discounted-price)
               (* (cdf (normal-dist) d-2) pv))]
-          [(equal? call-put 'Put)
+          [(or (equal? call-put 'Put) (equal? call-put 'put))
            (- (* (cdf (normal-dist) (* d-2 -1)) pv)
               (* (cdf (normal-dist) (* d-1 -1)) discounted-price))])))
 

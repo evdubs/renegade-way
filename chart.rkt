@@ -74,12 +74,12 @@
                                   [label "Refresh"]
                                   [callback (λ (b e) (send chart-market-canvas set-snip
                                                            (chart-price-plot chart-market-field chart-market-canvas))
-                                              (send chart-sector-canvas set-snip
-                                                    (chart-price-plot chart-sector-field chart-sector-canvas))
-                                              (send chart-industry-canvas set-snip
-                                                    (chart-price-plot chart-industry-field chart-industry-canvas))
-                                              (send chart-stock-canvas set-snip
-                                                    (chart-price-plot chart-stock-field chart-stock-canvas)))]))
+                                               (send chart-sector-canvas set-snip
+                                                     (chart-price-plot chart-sector-field chart-sector-canvas))
+                                               (send chart-industry-canvas set-snip
+                                                     (chart-price-plot chart-industry-field chart-industry-canvas))
+                                               (send chart-stock-canvas set-snip
+                                                     (chart-price-plot chart-stock-field chart-stock-canvas)))]))
 
 (define chart-plot-pane (new vertical-pane%
                              [parent chart-frame]))

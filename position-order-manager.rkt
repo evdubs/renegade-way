@@ -1,6 +1,7 @@
 #lang racket/base
 
 (require gregor
+         plot
          racket/async-channel
          racket/class
          racket/contract
@@ -11,13 +12,15 @@
          "../interactive-brokers-api/request-messages.rkt"
          "../interactive-brokers-api/response-messages.rkt"
          "db-queries.rkt"
+         "plot-util.rkt"
+         "pricing-risk.rkt"
          "structs.rkt")
 
 (provide set-order-data
          show-position-order-manager)
 
 (define manager-frame
-  (new frame% [label "Position/Order Manager"] [width 600] [height 400]))
+  (new frame% [label "Position/Order Manager"] [width 600] [height 600]))
 
 (define manager-pane
   (new vertical-pane% [parent manager-frame]))
@@ -31,7 +34,7 @@
   (new text-field%
        [parent input-pane]
        [label "Trade Risk"]
-       [init-value "2000.00"]))
+       [init-value "1000.00"]))
 
 (define stop-percent-field
   (new text-field%
@@ -171,8 +174,59 @@
                                                [stock-stop (* (+ 1 (string->number (send stop-percent-field get-value)))
                                                               (order-stock-entry ord))]
                                                [stock-target (order-strike (send order-box get-data 1))])]
+                                 [(equal? 'call-butterfly (order-strategy ord))
+                                  (define risk (+ (max (- (order-strike (send order-box get-data 1)) (order-strike (send order-box get-data 0)))
+                                                       (- (order-strike (send order-box get-data 2)) (order-strike (send order-box get-data 1))))
+                                                  (order-price (send order-box get-data 0))
+                                                  (order-price (send order-box get-data 2))
+                                                  (* -2 (order-price (send order-box get-data 1)))))
+                                  (define contracts (truncate (/ (string->number (send trade-risk-field get-value)) (* 100 risk))))
+                                  (struct-copy order ord
+                                               [quantity (if (= i 1) (* -2 contracts) contracts)]
+                                               [stock-stop (* (- 1 (string->number (send stop-percent-field get-value)))
+                                                              (order-stock-entry ord))]
+                                               [stock-target (order-strike (send order-box get-data 1))])]
+                                 [(equal? 'put-butterfly (order-strategy ord))
+                                  (define risk (+ (max (- (order-strike (send order-box get-data 0)) (order-strike (send order-box get-data 1)))
+                                                       (- (order-strike (send order-box get-data 1)) (order-strike (send order-box get-data 2))))
+                                                  (order-price (send order-box get-data 0))
+                                                  (order-price (send order-box get-data 2))
+                                                  (* -2 (order-price (send order-box get-data 1)))))
+                                  (define contracts (truncate (/ (string->number (send trade-risk-field get-value)) (* 100 risk))))
+                                  (struct-copy order ord
+                                               [quantity (if (= i 1) (* -2 contracts) contracts)]
+                                               [stock-stop (* (+ 1 (string->number (send stop-percent-field get-value)))
+                                                              (order-stock-entry ord))]
+                                               [stock-target (order-strike (send order-box get-data 1))])]
+                                 [(equal? 'call-condor (order-strategy ord))
+                                  (define risk (+ (max (- (order-strike (send order-box get-data 1)) (order-strike (send order-box get-data 0)))
+                                                       (- (order-strike (send order-box get-data 3)) (order-strike (send order-box get-data 2))))
+                                                  (order-price (send order-box get-data 0))
+                                                  (order-price (send order-box get-data 3))
+                                                  (* -1 (order-price (send order-box get-data 1)))
+                                                  (* -1 (order-price (send order-box get-data 2)))))
+                                  (define contracts (truncate (/ (string->number (send trade-risk-field get-value)) (* 100 risk))))
+                                  (struct-copy order ord
+                                               [quantity (if (or (= i 1) (= i 2)) (* -1 contracts) contracts)]
+                                               [stock-stop (* (- 1 (string->number (send stop-percent-field get-value)))
+                                                              (order-stock-entry ord))]
+                                               [stock-target (order-stock-entry ord)])]
+                                 [(equal? 'put-condor (order-strategy ord))
+                                  (define risk (+ (max (- (order-strike (send order-box get-data 0)) (order-strike (send order-box get-data 1)))
+                                                       (- (order-strike (send order-box get-data 2)) (order-strike (send order-box get-data 3))))
+                                                  (order-price (send order-box get-data 0))
+                                                  (order-price (send order-box get-data 3))
+                                                  (* -1 (order-price (send order-box get-data 1)))
+                                                  (* -1 (order-price (send order-box get-data 2)))))
+                                  (define contracts (truncate (/ (string->number (send trade-risk-field get-value)) (* 100 risk))))
+                                  (struct-copy order ord
+                                               [quantity (if (or (= i 1) (= i 2)) (* -1 contracts) contracts)]
+                                               [stock-stop (* (+ 1 (string->number (send stop-percent-field get-value)))
+                                                              (order-stock-entry ord))]
+                                               [stock-target (order-stock-entry ord)])]
                                  [else ord]))
-                         (range (send order-box get-number)))))]))
+                         (range (send order-box get-number))))
+                   (update-profit-loss-chart))]))
 
 (define order-box-columns (list "Symbol" "Expiry" "Strike" "CallPut" "Qty" "Price" "StkEntry" "StkStop" "StkTgt"))
 
@@ -183,10 +237,55 @@
        [style (list 'single 'column-headers)]
        [columns order-box-columns]
        [choices (list "")]
+       [min-height 125]
+       [stretchable-height #f]
        [callback (λ (b e)
                    (row-editor-frame (send order-box get-selection)
                                      order-box-columns
                                      (send order-box get-data (send order-box get-selection))))]))
+
+(define profit-loss-canvas
+  (new settable-snip-canvas%
+       [parent manager-pane]))
+
+(define (update-profit-loss-chart)
+  (define ref-price (order-stock-entry (send order-box get-data 0)))
+  (define prices (map (λ (i) (/ (* i ref-price) 100))
+                      (range 93 108 0.5)))
+  (define first-expiry (foldl (λ (i res) (if (date<? (order-expiration (send order-box get-data i)) res)
+                                             (order-expiration (send order-box get-data i))
+                                             res))
+                              (order-expiration (send order-box get-data 0))
+                              (range (send order-box get-number))))
+  (define eval-date (if (date<? (order-end-date (send order-box get-data 0)) first-expiry)
+                        (order-end-date (send order-box get-data 0))
+                        first-expiry))
+  (define 1-month-rate (get-1-month-rate (date->iso8601 (today))))
+  (define price-profit-loss
+    (map (λ (p)
+           (vector p (foldl (λ (i res)
+                              (define order (send order-box get-data i))
+                              (define yte (if (date=? eval-date (order-expiration order))
+                                              1/10000
+                                              (/ (days-between eval-date (order-expiration order)) 365)))
+                              (+ res (* (- (black-scholes p
+                                                          yte
+                                                          (order-strike order)
+                                                          (order-call-put order)
+                                                          1-month-rate
+                                                          (order-vol order)
+                                                          (list))
+                                           (order-price order))
+                                        (order-quantity order) 100)))
+                            0
+                            (range (send order-box get-number)))))
+         prices))
+  (send profit-loss-canvas set-snip
+        (plot-snip (list (tick-grid)
+                         (lines price-profit-loss))
+                   #:title "Order Profit/Loss at First Expiration/Exit"
+                   #:x-label "Stock Price"
+                   #:y-label "Profit/Loss")))
 
 (define button-pane
   (new horizontal-pane%
@@ -283,7 +382,11 @@
                                                                  (range (send order-box get-number))
                                                                  contract-ids)]
                                                 [conditions (if (or (equal? 'long-straddle (order-strategy first-item))
-                                                                    (equal? 'long-strangle (order-strategy first-item))) (list)
+                                                                    (equal? 'long-strangle (order-strategy first-item))
+                                                                    (equal? 'call-butteryfly (order-strategy first-item))
+                                                                    (equal? 'put-butterfly (order-strategy first-item))
+                                                                    (equal? 'call-condor (order-strategy first-item))
+                                                                    (equal? 'put-condor (order-strategy first-item))) (list)
                                                                 (list (condition 'price
                                                                                  'and
                                                                                  (cond [(or (equal? 'bull-call-vertical-spread (order-strategy first-item))
