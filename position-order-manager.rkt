@@ -175,12 +175,14 @@
                                                               (order-stock-entry ord))]
                                                [stock-target (order-strike (send order-box get-data 1))])]
                                  [(equal? 'call-butterfly (order-strategy ord))
-                                  (define risk (max (abs (+ (order-price (send order-box get-data 0))
-                                                            (* -2 (order-price (send order-box get-data 1)))
-                                                            (order-price (send order-box get-data 2))))
+                                  (define out-of-the-money-risk (+ (order-price (send order-box get-data 0))
+                                                                   (* -2 (order-price (send order-box get-data 1)))
+                                                                   (order-price (send order-box get-data 2))))
+                                  (define risk (max (abs out-of-the-money-risk)
                                                     (abs (+ (order-strike (send order-box get-data 0))
                                                             (* -2 (order-strike (send order-box get-data 1)))
-                                                            (order-strike (send order-box get-data 2))))))
+                                                            (order-strike (send order-box get-data 2))
+                                                            out-of-the-money-risk))))
                                   (define contracts (truncate (/ (string->number (send trade-risk-field get-value)) (* 100 risk))))
                                   (struct-copy order ord
                                                [quantity (if (= i 1) (* -2 contracts) contracts)]
@@ -188,12 +190,14 @@
                                                               (order-stock-entry ord))]
                                                [stock-target (order-strike (send order-box get-data 1))])]
                                  [(equal? 'put-butterfly (order-strategy ord))
-                                  (define risk (max (abs (+ (order-price (send order-box get-data 0))
-                                                            (* -2 (order-price (send order-box get-data 1)))
-                                                            (order-price (send order-box get-data 2))))
-                                                    (abs (+ (order-strike (send order-box get-data 0))
-                                                            (* -2 (order-strike (send order-box get-data 1)))
-                                                            (order-strike (send order-box get-data 2))))))
+                                  (define out-of-the-money-risk (+ (order-price (send order-box get-data 0))
+                                                                   (* -2 (order-price (send order-box get-data 1)))
+                                                                   (order-price (send order-box get-data 2))))
+                                  (define risk (max (abs out-of-the-money-risk)
+                                                    (abs (+ (* -1 (order-strike (send order-box get-data 0)))
+                                                            (* 2 (order-strike (send order-box get-data 1)))
+                                                            (* -1 (order-strike (send order-box get-data 2)))
+                                                            out-of-the-money-risk))))
                                   (define contracts (truncate (/ (string->number (send trade-risk-field get-value)) (* 100 risk))))
                                   (struct-copy order ord
                                                [quantity (if (= i 1) (* -2 contracts) contracts)]
@@ -201,14 +205,16 @@
                                                               (order-stock-entry ord))]
                                                [stock-target (order-strike (send order-box get-data 1))])]
                                  [(equal? 'call-condor (order-strategy ord))
-                                  (define risk (max (abs (+ (order-price (send order-box get-data 0))
-                                                            (* -1 (order-price (send order-box get-data 1)))
-                                                            (* -1 (order-price (send order-box get-data 2)))
-                                                            (order-price (send order-box get-data 3))))
+                                  (define out-of-the-money-risk (+ (order-price (send order-box get-data 0))
+                                                                   (* -1 (order-price (send order-box get-data 1)))
+                                                                   (* -1 (order-price (send order-box get-data 2)))
+                                                                   (order-price (send order-box get-data 3))))
+                                  (define risk (max (abs out-of-the-money-risk)
                                                     (abs (+ (order-strike (send order-box get-data 0))
                                                             (* -1 (order-strike (send order-box get-data 1)))
                                                             (* -1 (order-strike (send order-box get-data 2)))
-                                                            (order-strike (send order-box get-data 3))))))
+                                                            (order-strike (send order-box get-data 3))
+                                                            out-of-the-money-risk))))
                                   (define contracts (truncate (/ (string->number (send trade-risk-field get-value)) (* 100 risk))))
                                   (struct-copy order ord
                                                [quantity (if (or (= i 1) (= i 2)) (* -1 contracts) contracts)]
@@ -216,14 +222,16 @@
                                                               (order-stock-entry ord))]
                                                [stock-target (order-stock-entry ord)])]
                                  [(equal? 'put-condor (order-strategy ord))
-                                  (define risk (max (abs (+ (order-price (send order-box get-data 0))
-                                                            (* -1 (order-price (send order-box get-data 1)))
-                                                            (* -1 (order-price (send order-box get-data 2)))
-                                                            (order-price (send order-box get-data 3))))
-                                                    (abs (+ (order-strike (send order-box get-data 0))
-                                                            (* -1 (order-strike (send order-box get-data 1)))
-                                                            (* -1 (order-strike (send order-box get-data 2)))
-                                                            (order-strike (send order-box get-data 3))))))
+                                  (define out-of-the-money-risk (+ (order-price (send order-box get-data 0))
+                                                                   (* -1 (order-price (send order-box get-data 1)))
+                                                                   (* -1 (order-price (send order-box get-data 2)))
+                                                                   (order-price (send order-box get-data 3))))
+                                  (define risk (max (abs out-of-the-money-risk)
+                                                    (abs (+ (* -1 (order-strike (send order-box get-data 0)))
+                                                            (order-strike (send order-box get-data 1))
+                                                            (order-strike (send order-box get-data 2))
+                                                            (* -1 (order-strike (send order-box get-data 3)))
+                                                            out-of-the-money-risk))))
                                   (define contracts (truncate (/ (string->number (send trade-risk-field get-value)) (* 100 risk))))
                                   (struct-copy order ord
                                                [quantity (if (or (= i 1) (= i 2)) (* -1 contracts) contracts)]
@@ -257,7 +265,7 @@
 (define (update-profit-loss-chart)
   (define ref-price (order-stock-entry (send order-box get-data 0)))
   (define prices (map (λ (i) (/ (* i ref-price) 100))
-                      (range 93 108 0.5)))
+                      (range 90 111 0.5)))
   (define first-expiry (foldl (λ (i res) (if (date<? (order-expiration (send order-box get-data i)) res)
                                              (order-expiration (send order-box get-data i))
                                              res))
