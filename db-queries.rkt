@@ -169,7 +169,7 @@ left outer join
 on
   market.component_symbol = div.act_symbol and
   div.ex_date > $4::text::date - interval '1 year' and
-  div.ex_date <= $4::text::date - interval '1 year' + interval '1 month'
+  div.ex_date <= $4::text::date - interval '1 year' + interval '2 months'
 left outer join
   ecnet.earnings_calendar ec
 on

@@ -34,7 +34,7 @@
   (new text-field%
        [parent input-pane]
        [label "Trade Risk"]
-       [init-value "1000.00"]))
+       [init-value "2000.00"]))
 
 (define stop-percent-field
   (new text-field%
@@ -125,19 +125,23 @@
                                                [stock-stop (order-stock-entry ord)]
                                                [stock-target (order-stock-entry ord)])]
                                  [(equal? 'call-ratio-spread (order-strategy ord))
-                                  (define risk (- (order-strike (send order-box get-data 1)) (order-strike (send order-box get-data 0))))
+                                  (define risk (- (order-strike (send order-box get-data 1)) (order-strike (send order-box get-data 0))
+                                                  (order-price (send order-box get-data 0))
+                                                  (* -3 (order-price (send order-box get-data 1)))))
+                                  (define base-quantity (truncate (/ (string->number (send trade-risk-field get-value)) (* 100 risk))))
                                   (struct-copy order ord
-                                               [quantity (truncate (/ (string->number (send trade-risk-field get-value))
-                                                                      (* 100 risk (if (= i 1) 1/3 -1))))]
+                                               [quantity (if (= i 1) (* 3 base-quantity) (* -1 base-quantity))]
                                                [stock-stop (* (- 1 (string->number (send stop-percent-field get-value)))
                                                               (order-stock-entry ord))]
                                                [stock-target (* (+ 1 (string->number (send target-percent-field get-value)))
                                                                 (order-stock-entry ord))])]
                                  [(equal? 'put-ratio-spread (order-strategy ord))
-                                  (define risk (- (order-strike (send order-box get-data 0)) (order-strike (send order-box get-data 1))))
+                                  (define risk (- (order-strike (send order-box get-data 0)) (order-strike (send order-box get-data 1))
+                                                  (order-price (send order-box get-data 0))
+                                                  (* -3 (order-price (send order-box get-data 1)))))
+                                  (define base-quantity (truncate (/ (string->number (send trade-risk-field get-value)) (* 100 risk))))
                                   (struct-copy order ord
-                                               [quantity (truncate (/ (string->number (send trade-risk-field get-value))
-                                                                      (* 100 risk (if (= i 1) 1/3 -1))))]
+                                               [quantity (if (= i 1) (* 3 base-quantity) (* -1 base-quantity))]
                                                [stock-stop (* (+ 1 (string->number (send stop-percent-field get-value)))
                                                               (order-stock-entry ord))]
                                                [stock-target (* (- 1 (string->number (send target-percent-field get-value)))
@@ -371,7 +375,17 @@
                                                 [action (if (< 0 (order-quantity first-item)) 'buy 'sell)]
                                                 [total-quantity (abs (order-quantity first-item))]
                                                 [exchange "SMART"]
-                                                [currency "USD"]))
+                                                [currency "USD"]
+                                                [conditions (list (condition 'price
+                                                                             'and
+                                                                             (cond [(equal? 'long-call (order-strategy first-item))
+                                                                                    'greater-than]
+                                                                                   [(equal? 'long-put (order-strategy first-item))
+                                                                                    'less-than])
+                                                                             (order-stock-entry first-item)
+                                                                             underlying-contract-id
+                                                                             "SMART"
+                                                                             'default))]))
                        (send ibkr send-msg (new place-order-req%
                                                 [order-id next-order-id]
                                                 [symbol (order-symbol first-item)]
@@ -397,7 +411,7 @@
                                                                  contract-ids)]
                                                 [conditions (if (or (equal? 'long-straddle (order-strategy first-item))
                                                                     (equal? 'long-strangle (order-strategy first-item))
-                                                                    (equal? 'call-butteryfly (order-strategy first-item))
+                                                                    (equal? 'call-butterfly (order-strategy first-item))
                                                                     (equal? 'put-butterfly (order-strategy first-item))
                                                                     (equal? 'call-condor (order-strategy first-item))
                                                                     (equal? 'put-condor (order-strategy first-item))) (list)
@@ -406,12 +420,14 @@
                                                                                  (cond [(or (equal? 'bull-call-vertical-spread (order-strategy first-item))
                                                                                             (equal? 'bull-put-vertical-spread (order-strategy first-item))
                                                                                             (equal? 'call-ratio-spread (order-strategy first-item))
-                                                                                            (equal? 'call-diagonal-spread (order-strategy first-item)))
+                                                                                            (equal? 'call-diagonal-spread (order-strategy first-item))
+                                                                                            (equal? 'call-horizontal-spread (order-strategy first-item)))
                                                                                         'greater-than]
                                                                                        [(or (equal? 'bear-call-vertical-spread (order-strategy first-item))
                                                                                             (equal? 'bear-put-vertical-spread (order-strategy first-item))
                                                                                             (equal? 'put-ratio-spread (order-strategy first-item))
-                                                                                            (equal? 'put-diagonal-spread (order-strategy first-item)))
+                                                                                            (equal? 'put-diagonal-spread (order-strategy first-item))
+                                                                                            (equal? 'put-horizontal-spread (order-strategy first-item)))
                                                                                         'less-than])
                                                                                  (order-stock-entry first-item)
                                                                                  underlying-contract-id

@@ -217,16 +217,16 @@
                                                (first options)
                                                options)]
                       [short-put (foldl (λ (o res) (if (and (= (option-dte o) (option-dte closest-front-dte))
-                                                            (<= (abs (- 5/10 (option-delta o)))
-                                                                (abs (- 5/10 (option-delta res))))
+                                                            (<= (abs (- -5/10 (option-delta o)))
+                                                                (abs (- -5/10 (option-delta res))))
                                                             (equal? (option-call-put o) "Put"))
                                                        o
                                                        res))
                                         (first options)
                                         options)]
                       [long-put (foldl (λ (o res) (if (and (= (option-dte o) (option-dte closest-back-dte))
-                                                           (<= (abs (- 5/10 (option-delta o)))
-                                                               (abs (- 5/10 (option-delta res))))
+                                                           (<= (abs (- -5/10 (option-delta o)))
+                                                               (abs (- -5/10 (option-delta res))))
                                                            (equal? (option-call-put o) "Put"))
                                                       o
                                                       res))
