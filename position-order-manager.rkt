@@ -457,22 +457,42 @@
               (send order-box set-data i d))
             order-data (range (length order-data))))
 
+; (define order-box-columns (list "Symbol" "Expiry" "Strike" "CallPut" "Qty" "Price" "StkEntry" "StkStop" "StkTgt"))
+
 (define (row-editor-frame index headers row)
   (define editor-frame (new frame% [label "Row Editor"] [width 300] [height 400]))
   (define editor-pane (new vertical-pane% [parent editor-frame]))
   (define editor-fields
-    (map (λ (name val)
-           (new text-field%
-                [parent editor-pane]
-                [label name]
-                [init-value val])) headers row))
+    (list (new text-field% [parent editor-pane] [label "Strategy"] [init-value (symbol->string (order-strategy row))])
+          (new text-field% [parent editor-pane] [label "Symbol"] [init-value (order-symbol row)])
+          (new text-field% [parent editor-pane] [label "Expiry"] [init-value (~t (order-expiration row) "yy-MM-dd")])
+          (new text-field% [parent editor-pane] [label "Strike"] [init-value (real->decimal-string (order-strike row))])
+          (new text-field% [parent editor-pane] [label "CallPut"] [init-value (symbol->string (order-call-put row))])
+          (new text-field% [parent editor-pane] [label "Qty"] [init-value (if (order-quantity row) (number->string (order-quantity row)) "")])
+          (new text-field% [parent editor-pane] [label "Price"] [init-value (real->decimal-string (order-price row))])
+          (new text-field% [parent editor-pane] [label "Vol"] [init-value (real->decimal-string (order-vol row))])
+          (new text-field% [parent editor-pane] [label "StkEntry"] [init-value (real->decimal-string (order-stock-entry row))])
+          (new text-field% [parent editor-pane] [label "StkStop"] [init-value (if (order-stock-stop row) (real->decimal-string (order-stock-stop row)) "")])
+          (new text-field% [parent editor-pane] [label "StkTarget"] [init-value (if (order-stock-stop row) (real->decimal-string (order-stock-target row)) "")])
+          (new text-field% [parent editor-pane] [label "EndDate"] [init-value (~t (order-expiration row) "yy-MM-dd")])))
   (define save-button
     (new button%
          [label "Save"]
          [parent editor-pane]
          [callback (λ (b e)
                      (send order-box set-data index
-                           (map (λ (f) (send f get-value)) editor-fields))
+                           (order (string->symbol (send (list-ref editor-fields 0) get-value))
+                                  (send (list-ref editor-fields 1) get-value)
+                                  (parse-date (send (list-ref editor-fields 2) get-value) "yy-MM-dd")
+                                  (string->number (send (list-ref editor-fields 3) get-value))
+                                  (string->symbol (send (list-ref editor-fields 4) get-value))
+                                  (string->number (send (list-ref editor-fields 5) get-value))
+                                  (string->number (send (list-ref editor-fields 6) get-value))
+                                  (string->number (send (list-ref editor-fields 7) get-value))
+                                  (string->number (send (list-ref editor-fields 8) get-value))
+                                  (string->number (send (list-ref editor-fields 9) get-value))
+                                  (string->number (send (list-ref editor-fields 10) get-value))
+                                  (parse-date (send (list-ref editor-fields 11) get-value) "yy-MM-dd")))
                      (set-order-data (map (λ (i) (send order-box get-data i))
                                           (range (send order-box get-number)))))]))
   (send editor-frame show #t))
