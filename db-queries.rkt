@@ -13,6 +13,7 @@
 (provide get-1-month-rate
          get-date-ohlc
          get-dividend-estimates
+         get-next-earnings-date
          get-options
          get-price-analysis
          get-rank-analysis
@@ -327,11 +328,11 @@ order by
        (query-rows dbc "
 select
   market.etf_symbol,
-  trunc(market_vol.iv_current * 100, 2) as market_iv,
-  trunc((market_vol.iv_current - market_vol.iv_year_low) / (market_vol.iv_year_high - market_vol.iv_year_low) * 100, 2) as market_iv_rank,
+  coalesce(trunc(market_vol.iv_current * 100, 2), 0.00) as market_iv,
+  coalesce(trunc((market_vol.iv_current - market_vol.iv_year_low) / (market_vol.iv_year_high - market_vol.iv_year_low) * 100, 2), 0.00) as market_iv_rank,
   spdr.to_sector_etf(market.sector),
-  trunc(sector_vol.iv_current * 100, 2) as sector_iv,
-  trunc((sector_vol.iv_current - sector_vol.iv_year_low) / (sector_vol.iv_year_high - sector_vol.iv_year_low) * 100, 2) as sector_iv_rank,
+  coalesce(trunc(sector_vol.iv_current * 100, 2), 0.00) as sector_iv,
+  coalesce(trunc((sector_vol.iv_current - sector_vol.iv_year_low) / (sector_vol.iv_year_high - sector_vol.iv_year_low) * 100, 2), 0.00) as sector_iv_rank,
   coalesce(industry.etf_symbol, ''),
   coalesce(trunc(industry_vol.iv_current * 100, 2), 0.00) as industry_iv,
   coalesce(trunc((industry_vol.iv_current - industry_vol.iv_year_low) / (industry_vol.iv_year_high - industry_vol.iv_year_low) * 100, 2), 0.00) as industry_iv_rank,
@@ -491,6 +492,25 @@ where
                symbol
                (date->iso8601 start-date)
                (date->iso8601 end-date)))
+
+(define (get-next-earnings-date symbol start-date end-date)
+  (iso8601->date (query-value dbc "
+select
+  coalesce(ec.date::text, ed.end_date)
+from
+  (select
+    $1 as symbol,
+    $3::text as end_date) ed
+left outer join
+  ecnet.earnings_calendar ec
+on
+  ec.act_symbol = $1 and
+  ec.date >= $2::text::date and
+  ec.date <= $3::text::date;
+"
+                              symbol
+                              (date->iso8601 start-date)
+                              (date->iso8601 end-date))))
 
 (define (insert-execution execution)
   (query-exec dbc "

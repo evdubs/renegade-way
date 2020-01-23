@@ -270,28 +270,31 @@
   (define ref-price (order-stock-entry (send order-box get-data 0)))
   (define prices (map (λ (i) (/ (* i ref-price) 100))
                       (range 90 111 0.5)))
+  (define earnings-date (get-next-earnings-date (order-symbol (send order-box get-data 0))
+                                                (today)
+                                                (order-end-date (send order-box get-data 0)))) 
   (define first-expiry (foldl (λ (i res) (if (date<? (order-expiration (send order-box get-data i)) res)
                                              (order-expiration (send order-box get-data i))
                                              res))
-                              (order-expiration (send order-box get-data 0))
+                              earnings-date
                               (range (send order-box get-number))))
   (define eval-date (if (date<? (order-end-date (send order-box get-data 0)) first-expiry)
                         (order-end-date (send order-box get-data 0))
                         first-expiry))
   (define 1-month-rate (get-1-month-rate (date->iso8601 (today))))
-  (define price-profit-loss
+  (define (price-profit-loss vol-multiplier)
     (map (λ (p)
            (vector p (foldl (λ (i res)
                               (define order (send order-box get-data i))
                               (define yte (if (date=? eval-date (order-expiration order))
-                                              1/10000
+                                              1/100000
                                               (/ (days-between eval-date (order-expiration order)) 365)))
                               (+ res (* (- (black-scholes p
                                                           yte
                                                           (order-strike order)
                                                           (order-call-put order)
                                                           1-month-rate
-                                                          (order-vol order)
+                                                          (* (order-vol order) vol-multiplier)
                                                           (list))
                                            (order-price order))
                                         (order-quantity order) 100)))
@@ -300,8 +303,18 @@
          prices))
   (send profit-loss-canvas set-snip
         (plot-snip (list (tick-grid)
-                         (lines price-profit-loss))
-                   #:title "Order Profit/Loss at First Expiration/Exit"
+                         (lines (price-profit-loss 1.5)
+                                #:color 1
+                                #:style 'long-dash
+                                #:label "Vol * 1.5")
+                         (lines (price-profit-loss 1)
+                                #:color 2
+                                #:label "Vol")
+                         (lines (price-profit-loss 0.5)
+                                #:color 3
+                                #:style 'long-dash
+                                #:label "Vol * 0.5"))
+                   #:title (string-append "Order Profit/Loss at " (date->iso8601 eval-date))
                    #:x-label "Stock Price"
                    #:y-label "Profit/Loss")))
 
@@ -318,7 +331,7 @@
        [callback (λ (b e)
                    (set! ibkr (new ibkr-session%
                                    [handle-contract-details-rsp (λ (cd)
-                                                                  (async-channel-put contract-id-channel (contract-details-rsp-contract-id cd))
+                                                                  (async-channel-put contract-channel cd)
                                                                   (insert-contract cd))]
                                    [handle-execution-rsp (λ (e) (insert-execution e)
                                                             (thread (λ () (send ibkr send-msg
@@ -343,7 +356,15 @@
                                                      [strike (order-strike item)]
                                                      [right (order-call-put item)]
                                                      [exchange "SMART"]))
-                            (async-channel-get contract-id-channel))
+                            ; go through channel to find our contract. trades may have happened, so we need
+                            ; to ignore those entries in the contract channel
+                            (do ([c (async-channel-get contract-channel) (async-channel-get contract-channel)])
+                                ((and (equal? (order-symbol item) (contract-details-rsp-symbol c))
+                                      (equal? 'opt (contract-details-rsp-security-type c))
+                                      (date=? (order-expiration item) (contract-details-rsp-expiry c))
+                                      (equal? (order-strike item) (contract-details-rsp-strike c))
+                                      (equal? (order-call-put item) (contract-details-rsp-right c)))
+                                 (contract-details-rsp-contract-id c))))
                           (range (send order-box get-number))))
                    (define first-item (send order-box get-data 0))
                    (send ibkr send-msg (new contract-details-req%
@@ -351,7 +372,12 @@
                                             [security-type 'stk]
                                             [exchange "SMART"]
                                             [currency "USD"]))
-                   (define underlying-contract-id (async-channel-get contract-id-channel))
+                   ; go through channel to find our contract. trades may have happened, so we need
+                   ; to ignore those entries in the contract channel
+                   (define underlying-contract-id (do ([c (async-channel-get contract-channel) (async-channel-get contract-channel)])
+                                                      ((and (equal? (order-symbol first-item) (contract-details-rsp-symbol c))
+                                                            (equal? 'stk (contract-details-rsp-security-type c)))
+                                                       (contract-details-rsp-contract-id c))))
                    (define quantity
                      (apply gcd (map (λ (i) (order-quantity (send order-box get-data i)))
                                      (range (send order-box get-number)))))
@@ -506,6 +532,6 @@
 
 (define next-order-id 0)
 
-(define contract-id-channel (make-async-channel))
+(define contract-channel (make-async-channel))
 
 (define ibkr #f)
