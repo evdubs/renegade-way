@@ -71,5 +71,6 @@ You will need to either use data from these projects or provide a database schem
 * [oic-options-chains](https://github.com/evdubs/oic-options-chains)
 * [spdr-etf-components](https://github.com/evdubs/spdr-etf-components)
 * [yahoo-dividends-splits](https://github.com/evdubs/yahoo-dividends-splits)
+* [zacks-estimates-financial-statements](https://github.com/evdubs/zacks-estimates-financial-statements)
 
 Requires Racket 7.0 or greater.
