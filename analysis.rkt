@@ -4,6 +4,7 @@
          racket/class
          racket/gui/base
          racket/match
+         "position-analysis.rkt"
          "price-analysis.rkt"
          "rank-analysis.rkt"
          "vol-analysis.rkt")
@@ -75,7 +76,7 @@
     ["Price" (price-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))]
     ["Rank" (rank-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))]
     ["Vol" (vol-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))]
-    ["Position" #f]))
+    ["Position" (position-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))]))
 
 (define analyze-button
   (new button%
@@ -93,7 +94,9 @@
                      ["Vol" (run-vol-analysis (send market-field get-value) (send sector-field get-value)
                                               (send start-date-field get-value) (send end-date-field get-value))
                             (refresh-tab-panel)]
-                     ["Position" #f])
+                     ["Position" (run-position-analysis (send market-field get-value) (send sector-field get-value)
+                                                        (send start-date-field get-value) (send end-date-field get-value))
+                                 (refresh-tab-panel)])
                    (send b enable #t))]))
 
 (define (show-analysis)

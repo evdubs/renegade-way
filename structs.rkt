@@ -15,6 +15,7 @@
          (struct-out price-analysis)
          (struct-out rank-analysis)
          (struct-out vol-analysis)
+         (struct-out position-analysis)
          (struct-out option)
          (contract-out
           [struct order
@@ -100,6 +101,9 @@
 
 (struct vol-analysis (market market-iv market-iv-rank sector sector-iv sector-iv-rank industry industry-iv industry-iv-rank
                              stock stock-iv stock-iv-rank earnings-date option-spread)
+  #:transparent)
+
+(struct position-analysis (sector stock expiration strike call-put account signed-shares stock-stop stock-close stock-target end-date)
   #:transparent)
 
 (struct option (symbol expiration dte strike call-put date bid mid ask vol delta gamma theta vega rho)

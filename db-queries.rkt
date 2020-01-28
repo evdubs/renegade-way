@@ -15,6 +15,7 @@
          get-dividend-estimates
          get-next-earnings-date
          get-options
+         get-position-analysis
          get-price-analysis
          get-rank-analysis
          get-security-name
@@ -172,7 +173,7 @@ on
   div.ex_date > $4::text::date - interval '1 year' and
   div.ex_date <= $4::text::date - interval '1 year' + interval '2 months'
 left outer join
-  ecnet.earnings_calendar ec
+  zacks.earnings_calendar ec
 on
   market.component_symbol = ec.act_symbol and
   ec.date >= $4::text::date - interval '1 day' and
@@ -290,7 +291,7 @@ join
 on
   market.component_symbol = component_avg_rank.act_symbol
 left outer join
-  ecnet.earnings_calendar ec
+  zacks.earnings_calendar ec
 on
   market.component_symbol = ec.act_symbol and
   ec.date >= $2::text::date - interval '1 week' and
@@ -370,7 +371,7 @@ on
   market.component_symbol = component_vol.act_symbol and
   component_vol.date = (select max(date) from oic.volatility_history where date <= $2::text::date)
 left outer join
-  ecnet.earnings_calendar ec
+  zacks.earnings_calendar ec
 on
   market.component_symbol = ec.act_symbol and
   ec.date >= $2::text::date - interval '1 week' and
@@ -397,6 +398,96 @@ order by
   component_iv_rank desc;
 "
                    market
+                   date)))
+
+(define (get-position-analysis date)
+  (map (λ (row) (position-analysis (vector-ref row 0) (vector-ref row 1) (vector-ref row 2) (vector-ref row 3)
+                                   (vector-ref row 4) (vector-ref row 5) (vector-ref row 6) (vector-ref row 7)
+                                   (vector-ref row 8) (vector-ref row 9) (vector-ref row 10)))
+       (query-rows dbc "
+with earnings_end_date as (
+  select
+    act_symbol,
+    case when \"when\" = 'Before market open'
+      then case when date_part('dow', date) = 1
+        then (date - interval '3 days')::date
+        else (date - interval '1 days')::date
+      end
+      else date
+    end as end_date
+  from
+    zacks.earnings_calendar
+  where
+    date >= $1::text::date
+)
+select
+  spdr.to_sector_etf(eh.sector) as etf_symbol,
+  c.symbol,
+  to_char(c.expiry, 'YY-MM-DD'),
+  c.strike,
+  c.right::text,
+  e.account,
+  e.signed_shares,
+  trunc(n.underlying_stop_price, 2),
+  trunc(ch.close, 2),
+  trunc(n.underlying_target_price, 2),
+  to_char(case when ed.end_date is not null and ed.end_date < n.end_date
+    then ed.end_date
+    else n.end_date
+  end, 'YY-MM-DD') as end_date
+from
+  (select
+    max(order_id) as order_id,
+    contract_id,
+    account,
+     sum(
+        case execution.side
+            when 'BOT'::text then execution.shares
+            when 'SLD'::text then execution.shares * '-1'::integer::numeric
+            else NULL::numeric
+        end) as signed_shares
+  from
+    ibkr.execution
+  group by
+    contract_id, account) e
+join
+  ibkr.contract c
+on
+  e.contract_id = c.contract_id
+left outer join
+  ibkr.order_note n
+on
+  e.order_id = n.order_id
+join
+  (select distinct
+    component_symbol,
+    sector
+  from
+    spdr.etf_holding
+  where
+    date = (select max(date) from spdr.etf_holding where date <= $1::text::date) and
+    sector is not null) eh
+on
+  c.symbol = eh.component_symbol
+left outer join
+  earnings_end_date ed
+on
+  c.symbol = ed.act_symbol
+join
+  iex.chart ch
+on
+  c.symbol = ch.act_symbol and
+  ch.date = (select max(date) from iex.chart where date <= $1::text::date)
+where
+  c.expiry > $1::text::date and
+  signed_shares != 0
+order by
+  etf_symbol,
+  symbol,
+  expiry,
+  strike,
+  \"right\";
+"
                    date)))
 
 (define (get-security-name act-symbol)
@@ -502,7 +593,7 @@ from
     $1 as symbol,
     $3::text as end_date) ed
 left outer join
-  ecnet.earnings_calendar ec
+  zacks.earnings_calendar ec
 on
   ec.act_symbol = $1 and
   ec.date >= $2::text::date and

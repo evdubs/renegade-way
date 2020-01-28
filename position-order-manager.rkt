@@ -417,9 +417,15 @@
                                                 [symbol (order-symbol first-item)]
                                                 [security-type 'bag]
                                                 [order-type "LMT"]
-                                                [limit-price (abs total-price)]
+                                                [limit-price (if (or (equal? 'call-ratio-spread (order-strategy first-item))
+                                                                     (equal? 'put-ratio-spread (order-strategy first-item)))
+                                                                 total-price
+                                                                 (abs total-price))]
                                                 [time-in-force 'gtc]
-                                                [action (if (< 0 total-price) 'buy 'sell)]
+                                                [action (if (or (equal? 'call-ratio-spread (order-strategy first-item))
+                                                                (equal? 'put-ratio-spread (order-strategy first-item)))
+                                                            'buy
+                                                            (if (< 0 total-price) 'buy 'sell))]
                                                 [total-quantity quantity]
                                                 [exchange "SMART"]
                                                 [currency "USD"]
