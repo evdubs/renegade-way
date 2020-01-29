@@ -330,6 +330,7 @@
        [parent button-pane]
        [callback (λ (b e)
                    (set! ibkr (new ibkr-session%
+                                   [handle-accounts-rsp (λ (as) (set! account (first as)))]
                                    [handle-contract-details-rsp (λ (cd)
                                                                   (async-channel-put contract-channel cd)
                                                                   (insert-contract cd))]
@@ -388,7 +389,7 @@
                                0
                                (range (send order-box get-number)))
                         quantity))
-                   (insert-order-note next-order-id (send order-box get-data 0))
+                   (insert-order-note account next-order-id (send order-box get-data 0))
                    (if (= 1 (length contract-ids))
                        (send ibkr send-msg (new place-order-req%
                                                 [order-id next-order-id]
@@ -537,6 +538,8 @@
               (range order-num-cols))))
 
 (define next-order-id 0)
+
+(define account "")
 
 (define contract-channel (make-async-channel))
 

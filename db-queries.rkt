@@ -428,13 +428,13 @@ select
   c.right::text,
   e.account,
   e.signed_shares,
-  trunc(n.underlying_stop_price, 2),
+  coalesce(trunc(n.underlying_stop_price, 2), 0.00),
   trunc(ch.close, 2),
-  trunc(n.underlying_target_price, 2),
-  to_char(case when ed.end_date is not null and ed.end_date < n.end_date
+  coalesce(trunc(n.underlying_target_price, 2), 0.00),
+  coalesce(to_char(case when ed.end_date is not null and ed.end_date < n.end_date
     then ed.end_date
     else n.end_date
-  end, 'YY-MM-DD') as end_date
+  end, 'YY-MM-DD'), '') as end_date
 from
   (select
     max(order_id) as order_id,
@@ -457,6 +457,7 @@ on
 left outer join
   ibkr.order_note n
 on
+  e.account = n.account and
   e.order_id = n.order_id
 join
   (select distinct
@@ -769,7 +770,7 @@ insert into ibkr.order (
   $12,
   $13,
   current_timestamp
-) on conflict (order_id) do nothing;
+) on conflict (account, order_id) do nothing;
 "
               (open-order-rsp-order-id order)
               (open-order-rsp-contract-id order)
@@ -787,6 +788,7 @@ insert into ibkr.order (
   (for-each (λ (leg)
               (query-exec dbc "
 insert into ibkr.order_leg (
+  account,
   order_id,
   contract_id,
   ratio,
@@ -800,14 +802,16 @@ insert into ibkr.order_leg (
   $1,
   $2,
   $3,
-  $4::text::ibkr.action,
-  $5,
-  $6::text::ibkr.open_close,
-  $7,
+  $4,
+  $5::text::ibkr.action,
+  $6,
+  $7::text::ibkr.open_close,
   $8,
-  $9
-) on conflict (order_id, contract_id) do nothing;
+  $9,
+  $10
+) on conflict (account, order_id, contract_id) do nothing;
 "
+                          (open-order-rsp-account order)
                           (open-order-rsp-order-id order)
                           (combo-leg-contract-id leg)
                           (combo-leg-ratio leg)
@@ -821,6 +825,7 @@ insert into ibkr.order_leg (
   (for-each (λ (con)
               (query-exec dbc "
 insert into ibkr.order_condition (
+  account,
   order_id,
   contract_id,
   \"type\",
@@ -832,14 +837,16 @@ insert into ibkr.order_condition (
 ) values (
   $1,
   $2,
-  $3::text::ibkr.condition_type,
-  $4::text::ibkr.condition_operator,
-  $5::text::ibkr.condition_comparator,
-  $6,
+  $3,
+  $4::text::ibkr.condition_type,
+  $5::text::ibkr.condition_operator,
+  $6::text::ibkr.condition_comparator,
   $7,
-  $8::text::ibkr.condition_trigger_method
-) on conflict (order_id, \"type\") do nothing;
+  $8,
+  $9::text::ibkr.condition_trigger_method
+) on conflict (account, order_id, \"type\") do nothing;
 "
+                          (open-order-rsp-account order)
                           (open-order-rsp-order-id order)
                           (condition-contract-id con)
                           (string-replace (string-upcase (symbol->string (condition-type con))) "-" " ")
@@ -852,9 +859,10 @@ insert into ibkr.order_condition (
                           (string-replace (string-upcase (symbol->string (condition-trigger-method con))) "-" " ")))
             (open-order-rsp-conditions order)))
 
-(define (insert-order-note order-id order-note)
+(define (insert-order-note account order-id order-note)
   (query-exec dbc "
 insert into ibkr.order_note (
+  account,
   order_id,
   order_strategy,
   underlying_entry_price,
@@ -863,13 +871,15 @@ insert into ibkr.order_note (
   end_date
 ) values (
   $1,
-  $2::text::ibkr.order_strategy,
-  $3,
+  $2,
+  $3::text::ibkr.order_strategy,
   $4,
   $5,
-  $6::text::date
-) on conflict (order_id) do nothing;
+  $6,
+  $7::text::date
+) on conflict (account, order_id) do nothing;
 "
+              account
               order-id
               (string-replace (string-upcase (symbol->string (order-strategy order-note))) "-" " ")
               (order-stock-entry order-note)

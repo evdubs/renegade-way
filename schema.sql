@@ -159,17 +159,18 @@ CREATE TABLE ibkr."order"
     limit_price numeric,
     aux_price numeric,
     time_in_force ibkr.time_in_force,
-    account text,
+    account text NOT NULL,
     open_close ibkr.open_close,
     order_ref text,
     client_id integer,
     perm_id integer,
     "timestamp" timestamp with time zone,
-    CONSTRAINT order_pkey PRIMARY KEY (order_id)
+    CONSTRAINT order_pkey PRIMARY KEY (account, order_id)
 );
 
 CREATE TABLE ibkr.order_condition
 (
+    account text NOT NULL,
     order_id integer NOT NULL,
     contract_id bigint,
     type ibkr.condition_type NOT NULL,
@@ -178,15 +179,16 @@ CREATE TABLE ibkr.order_condition
     value text,
     exchange text,
     trigger_method ibkr.condition_trigger_method,
-    CONSTRAINT order_condition_pkey PRIMARY KEY (order_id, type),
-    CONSTRAINT order_condition_order_id_fkey FOREIGN KEY (order_id)
-        REFERENCES ibkr."order" (order_id) MATCH SIMPLE
+    CONSTRAINT order_condition_pkey PRIMARY KEY (account, order_id, type),
+    CONSTRAINT order_condition_order_id_fkey FOREIGN KEY (account, order_id)
+        REFERENCES ibkr."order" (account, order_id) MATCH SIMPLE
         ON UPDATE NO ACTION
         ON DELETE NO ACTION
 );
 
 CREATE TABLE ibkr.order_leg
 (
+    account text NOT NULL,
     order_id integer NOT NULL,
     contract_id bigint NOT NULL,
     ratio integer,
@@ -196,22 +198,23 @@ CREATE TABLE ibkr.order_leg
     short_sale_slot smallint,
     designated_location text,
     exempt_code integer,
-    CONSTRAINT order_leg_pkey PRIMARY KEY (order_id, contract_id),
-    CONSTRAINT order_leg_order_id_fkey FOREIGN KEY (order_id)
-        REFERENCES ibkr."order" (order_id) MATCH SIMPLE
+    CONSTRAINT order_leg_pkey PRIMARY KEY (account, order_id, contract_id),
+    CONSTRAINT order_leg_order_id_fkey FOREIGN KEY (account, order_id)
+        REFERENCES ibkr."order" (account, order_id) MATCH SIMPLE
         ON UPDATE NO ACTION
         ON DELETE NO ACTION
 );
 
 CREATE TABLE ibkr.order_note
 (
+    account text NOT NULL,
     order_id integer NOT NULL,
     order_strategy ibkr.order_strategy,
     underlying_entry_price numeric,
     underlying_stop_price numeric,
     underlying_target_price numeric,
     end_date date,
-    CONSTRAINT order_note_order_id_key UNIQUE (order_id)
+    CONSTRAINT order_note_order_id_key UNIQUE (account, order_id)
 );
 
 CREATE OR REPLACE VIEW ibkr."position"
