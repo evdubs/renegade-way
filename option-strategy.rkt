@@ -96,11 +96,11 @@
                                           (first options)
                                           options)]
                       [short-put (first (filter (λ (o) (and (= (option-dte o) (option-dte closest-dte))
-                                                            (< (option-delta o) -7/10)
+                                                            (< (option-delta o) -6/10)
                                                             (equal? (option-call-put o) "Put")))
                                                 options))]
                       [long-put (last (filter (λ (o) (and (= (option-dte o) (option-dte closest-dte))
-                                                          (> (option-delta o) -4/10)
+                                                          (> (option-delta o) -25/100)
                                                           (equal? (option-call-put o) "Put")))
                                               options))])
                  (list short-put long-put))
@@ -195,11 +195,11 @@
                                           (first options)
                                           options)]
                       [short-call (last (filter (λ (o) (and (= (option-dte o) (option-dte closest-dte))
-                                                            (> (option-delta o) 7/10)
+                                                            (> (option-delta o) 6/10)
                                                             (equal? (option-call-put o) "Call")))
                                                 options))]
                       [long-call (first (filter (λ (o) (and (= (option-dte o) (option-dte closest-dte))
-                                                            (< (option-delta o) 4/10)
+                                                            (< (option-delta o) 25/100)
                                                             (equal? (option-call-put o) "Call")))
                                                 options))])
                  (list short-call long-call))

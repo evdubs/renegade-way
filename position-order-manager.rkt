@@ -418,12 +418,16 @@
                                                 [symbol (order-symbol first-item)]
                                                 [security-type 'bag]
                                                 [order-type "LMT"]
-                                                [limit-price (if (or (equal? 'call-ratio-spread (order-strategy first-item))
+                                                [limit-price (if (or (equal? 'bull-put-vertical-spread (order-strategy first-item))
+                                                                     (equal? 'bear-call-vertical-spread (order-strategy first-item))
+                                                                     (equal? 'call-ratio-spread (order-strategy first-item))
                                                                      (equal? 'put-ratio-spread (order-strategy first-item)))
                                                                  total-price
                                                                  (abs total-price))]
                                                 [time-in-force 'gtc]
-                                                [action (if (or (equal? 'call-ratio-spread (order-strategy first-item))
+                                                [action (if (or (equal? 'bull-put-vertical-spread (order-strategy first-item))
+                                                                (equal? 'bear-call-vertical-spread (order-strategy first-item))
+                                                                (equal? 'call-ratio-spread (order-strategy first-item))
                                                                 (equal? 'put-ratio-spread (order-strategy first-item)))
                                                             'buy
                                                             (if (< 0 total-price) 'buy 'sell))]

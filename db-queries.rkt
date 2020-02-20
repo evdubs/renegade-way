@@ -429,7 +429,7 @@ select
   e.account,
   e.signed_shares,
   coalesce(trunc(n.underlying_stop_price, 2), 0.00),
-  trunc(ch.close, 2),
+  coalesce(trunc(ch.close, 2), 0.00),
   coalesce(trunc(n.underlying_target_price, 2), 0.00),
   coalesce(to_char(case when ed.end_date is not null and ed.end_date < n.end_date
     then ed.end_date
@@ -474,7 +474,7 @@ left outer join
   earnings_end_date ed
 on
   c.symbol = ed.act_symbol
-join
+left outer join
   iex.chart ch
 on
   c.symbol = ch.act_symbol and
