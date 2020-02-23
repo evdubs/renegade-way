@@ -35,6 +35,7 @@
              (quantity (or/c rational? #f))
              (price rational?)
              (vol rational?)
+             (spread rational?)
              (stock-entry rational?)
              (stock-stop (or/c rational? #f))
              (stock-target (or/c rational? #f))
@@ -109,5 +110,5 @@
 (struct option (symbol expiration dte strike call-put date bid mid ask vol delta gamma theta vega rho)
   #:transparent)
 
-(struct order (strategy symbol expiration strike call-put quantity price vol stock-entry stock-stop stock-target end-date)
+(struct order (strategy symbol expiration strike call-put quantity price vol spread stock-entry stock-stop stock-target end-date)
   #:transparent)

@@ -531,6 +531,7 @@
                                                                                #f
                                                                                (option-mid o)
                                                                                (option-vol o)
+                                                                               (- (option-ask o) (option-bid o))
                                                                                (string->number (send ref-price-field get-value))
                                                                                #f
                                                                                #f
