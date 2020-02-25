@@ -7,10 +7,10 @@
          racket/contract
          racket/list
          racket/gui/base
-         "../interactive-brokers-api/base-structs.rkt"
-         "../interactive-brokers-api/main.rkt"
-         "../interactive-brokers-api/request-messages.rkt"
-         "../interactive-brokers-api/response-messages.rkt"
+         interactive-brokers-api/base-structs
+         interactive-brokers-api/main
+         interactive-brokers-api/request-messages
+         interactive-brokers-api/response-messages
          "db-queries.rkt"
          "plot-util.rkt"
          "pricing-risk.rkt"

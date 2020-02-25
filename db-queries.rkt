@@ -5,8 +5,8 @@
          gregor
          racket/list
          racket/string
-         "../interactive-brokers-api/base-structs.rkt"
-         "../interactive-brokers-api/response-messages.rkt"
+         interactive-brokers-api/base-structs
+         interactive-brokers-api/response-messages
          "cmd-line.rkt"
          "structs.rkt")
 
