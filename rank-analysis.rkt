@@ -18,7 +18,7 @@
   (set! rank-analysis-list (get-rank-analysis market end-date)))
 
 (define analysis-box-columns (list "Market" "MktRnk" "Sector" "SctRnk" "Industry" "IndRnk"
-                                   "Stock" "StkRnk" "StkAvg" "ErnDt" "OptSprd"))
+                                   "Stock" "StkRnk" "StkBst" "StkAvg" "StkWrst" "ErnDt" "OptSprd"))
 
 (define (rank-analysis-box parent-panel start-date end-date)
   (define analysis-box
@@ -62,7 +62,9 @@
         (map (λ (m) (real->decimal-string (rank-analysis-industry-rank m))) rank-analysis-list)
         (map (λ (m) (rank-analysis-stock m)) rank-analysis-list)
         (map (λ (m) (real->decimal-string (rank-analysis-stock-rank m))) rank-analysis-list)
+        (map (λ (m) (real->decimal-string (rank-analysis-stock-best-rank m))) rank-analysis-list)
         (map (λ (m) (real->decimal-string (rank-analysis-stock-avg-rank m))) rank-analysis-list)
+        (map (λ (m) (real->decimal-string (rank-analysis-stock-worst-rank m))) rank-analysis-list)
         (map (λ (m) (rank-analysis-earnings-date m)) rank-analysis-list)
         (map (λ (m) (rank-analysis-option-spread m)) rank-analysis-list))
   ; We set data here so that we can retrieve it later with `get-data`

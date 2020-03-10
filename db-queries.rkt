@@ -221,7 +221,8 @@ order by
 (define (get-rank-analysis market date)
   (map (λ (row) (rank-analysis (vector-ref row 0) (vector-ref row 1) (vector-ref row 2) (vector-ref row 3)
                                (vector-ref row 4) (vector-ref row 5) (vector-ref row 6) (vector-ref row 7)
-                               (vector-ref row 8) (vector-ref row 9) (vector-ref row 10)))
+                               (vector-ref row 8) (vector-ref row 9) (vector-ref row 10) (vector-ref row 11)
+                               (vector-ref row 12)))
        (query-rows dbc "
 with etf_rank as (
   select
@@ -249,7 +250,9 @@ select
   coalesce(trunc(industry_rank.rank, 2), 0.00) as industry_rank,
   market.component_symbol,
   zacks.to_integer_rank(component_rank.rank) as component_rank,
+  best_rank as component_best_rank,
   trunc(component_avg_rank.rank, 2) as component_avg_rank,
+  worst_rank as component_worst_rank,
   coalesce(to_char(ec.date, 'YY-MM-DD'), '') as earnings_date,
   coalesce(trunc(option_spread.spread * 100, 2)::text, '') as option_spread
 from
@@ -280,7 +283,9 @@ on
 join
   (select
     act_symbol,
-    avg(zacks.to_integer_rank(rank)) as \"rank\"
+    min(zacks.to_integer_rank(rank)) as best_rank,
+    avg(zacks.to_integer_rank(rank)) as \"rank\",
+    max(zacks.to_integer_rank(rank)) as worst_rank
    from
     zacks.rank_score
    where

@@ -97,7 +97,8 @@
 (struct price-analysis (market sector sector-vs-market industry stock stock-vs-sector next-div-date earnings-date option-spread zacks-rank)
   #:transparent)
 
-(struct rank-analysis (market market-rank sector sector-rank industry industry-rank stock stock-rank stock-avg-rank earnings-date option-spread)
+(struct rank-analysis (market market-rank sector sector-rank industry industry-rank stock stock-rank stock-best-rank stock-avg-rank
+                              stock-worst-rank earnings-date option-spread)
   #:transparent)
 
 (struct vol-analysis (market market-iv market-iv-rank sector sector-iv sector-iv-rank industry industry-iv industry-iv-rank
