@@ -485,7 +485,7 @@ on
   c.symbol = ch.act_symbol and
   ch.date = (select max(date) from iex.chart where date <= $1::text::date)
 where
-  c.expiry > $1::text::date and
+  c.expiry >= $1::text::date and
   signed_shares != 0
 order by
   etf_symbol,
