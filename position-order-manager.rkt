@@ -20,7 +20,7 @@
          show-position-order-manager)
 
 (define manager-frame
-  (new frame% [label "Position/Order Manager"] [width 600] [height 600]))
+  (new frame% [label "Position/Order Manager"] [width 650] [height 600]))
 
 (define manager-pane
   (new vertical-pane% [parent manager-frame]))
@@ -355,7 +355,7 @@
 (define (update-profit-loss-chart)
   (define ref-price (order-stock-entry (send order-box get-data 0)))
   (define prices (map (λ (i) (/ (* i ref-price) 100))
-                      (range 90 111 0.5)))
+                      (range 80 121 0.5)))
   (define earnings-date (get-next-earnings-date (order-symbol (send order-box get-data 0))
                                                 (today)
                                                 (order-end-date (send order-box get-data 0)))) 

@@ -32,28 +32,17 @@
 select
   date::text,
   open,
-  case
-    when high is null and open >= close then open
-    when high is null and open < close then close
-    else high
-  end as high,
-  case
-    when low is null and open >= close then close
-    when low is null and open < close then open
-    else low
-  end as low,
+  high,
+  low,
   close
 from
-  iex.chart
-where
-  act_symbol = $1 and
-  case
-    when $2::text::date > (select max(date) from iex.chart) then date >= (select max(date) from iex.chart)
-    else date >= $2::text::date
-  end and
-  date <= $3::text::date
-order by
-  date;
+  iex.split_adjusted_chart(
+    $1,
+    case
+      when $2::text::date > (select max(date) from iex.chart) then (select max(date) from iex.chart)
+      else $2::text::date
+    end,
+    $3::text::date);
 "
                                  ticker-symbol
                                  start-date
