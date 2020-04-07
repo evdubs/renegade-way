@@ -402,7 +402,9 @@
                                 #:label "Vol * 0.5"))
                    #:title (string-append "Order Profit/Loss at " (date->iso8601 eval-date))
                    #:x-label "Stock Price"
-                   #:y-label "Profit/Loss")))
+                   #:y-label "Profit/Loss"
+                   #:width (- (send profit-loss-canvas get-width) 12)
+                   #:height (- (send profit-loss-canvas get-height) 12))))
 
 (define button-pane
   (new horizontal-pane%

@@ -60,7 +60,7 @@
                 (< close sma-20)
                 (> 0 sma-20-slope)
                 (< close open)
-                (> (+ dc-20-low satr) low)
+                (< (+ dc-20-low satr) low)
                 (> high sma-20 low)
                 (> (- sma-50 sma-20) (- sma-20 dc-20-low)))
            (let ([new-test (test 20
