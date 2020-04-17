@@ -62,7 +62,7 @@
             [dc-50-low (dv-value (stream-first (high-base-in-dc-50-low i)))])
         (cond
           ; found satisfactory conditions for entry
-          [(and (< satr (* close 4/100))
+          [(and (< satr (* close 10/100))
                 (> sma-20 sma-50)
                 (< 0 sma-50-slope)
                 (> close sma-20)

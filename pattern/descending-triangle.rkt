@@ -50,7 +50,7 @@
             [dc-25-prev-low (dv-value (stream-first (descending-triangle-in-dc-25-prev-low i)))])
         (cond
           ; found satisfactory conditions for entry
-          [(and (< satr (* close 4/100))
+          [(and (< satr (* close 10/100))
                 (< sma-20 sma-50)
                 (> 0 sma-50-slope)
                 (< close sma-20)

@@ -47,9 +47,9 @@
             [csr-3 (dv-value (stream-first (range-rally-in-csr-3 i)))])
         (cond
           ; found satisfactory conditions for entry
-          [(and (< satr (* close 4/100))
-                (> sma-50 dc-50-low) ; (+ dc-25-low satr))
-                (< sma-50 dc-50-high) ; (- dc-25-high satr))
+          [(and (< satr (* close 10/100))
+                ; (> sma-50 dc-50-low) ; (+ dc-25-low satr))
+                ; (< sma-50 dc-50-high) ; (- dc-25-high satr))
                 (< sma-50-slope 0)
                 (> (- dc-50-high dc-50-low) (* satr 3))
                 (< (- dc-50-high dc-50-low) (* satr 6))

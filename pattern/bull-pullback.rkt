@@ -54,7 +54,7 @@
             [dc-20-low (dv-value (stream-first (bull-pullback-in-dc-20-low i)))])
         (cond
           ; found satisfactory conditions for entry
-          [(and (< satr (* close 4/100))
+          [(and (< satr (* close 10/100))
                 (> sma-20 sma-50)
                 (< 0 sma-50-slope)
                 (> close sma-20)
@@ -62,8 +62,7 @@
                 (> close open)
                 (> (- dc-20-high satr) high)
                 (> high sma-20 low)
-                (> (- sma-20 sma-50) (- dc-20-high sma-20))
-                )
+                (> (- sma-20 sma-50) (- dc-20-high sma-20)))
            (let ([new-test (test 20
                                  (+ high 5/100)
                                  (- high (* satr 2))
