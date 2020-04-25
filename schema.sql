@@ -53,6 +53,19 @@ CREATE TYPE ibkr.order_strategy AS ENUM
      'CALL CONDOR',
      'PUT CONDOR');
 
+CREATE TYPE ibkr.pattern AS ENUM
+    ('BULL PULLBACK',
+     'BEAR RALLY',
+     'HIGH BASE',
+     'LOW BASE',
+     'ASCENDING TRIANGLE',
+     'DESCENDING TRIANGLE',
+     'RANGE RALLY',
+     'RANGE PULLBACK',
+     'INCREASING RANK',
+     'DECREASING RANK',
+     'INCREASING VOL',
+     'DECREASING VOL');
 
 CREATE TYPE ibkr."right" AS ENUM
     ('CALL',
@@ -214,6 +227,7 @@ CREATE TABLE ibkr.order_note
     underlying_stop_price numeric,
     underlying_target_price numeric,
     end_date date,
+    pattern ibkr.pattern,
     CONSTRAINT order_note_order_id_key UNIQUE (account, order_id)
 );
 

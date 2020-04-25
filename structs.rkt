@@ -19,7 +19,13 @@
          (struct-out option)
          (contract-out
           [struct order
-            ((strategy (or/c 'long-call 'long-put
+            ((pattern (or/c 'bull-pullback 'bear-rally
+                            'high-base 'low-base
+                            'ascending-triangle 'descending-triangle
+                            'range-rally 'range-pullback
+                            'increasing-rank 'decreasing-rank
+                            'increasing-vol 'decreasing-vol))
+             (strategy (or/c 'long-call 'long-put
                              'bull-call-vertical-spread 'bear-call-vertical-spread
                              'bull-put-vertical-spread 'bear-put-vertical-spread
                              'long-straddle 'long-strangle
@@ -111,5 +117,5 @@
 (struct option (symbol expiration dte strike call-put date bid mid ask vol delta gamma theta vega rho)
   #:transparent)
 
-(struct order (strategy symbol expiration strike call-put quantity price vol spread stock-entry stock-stop stock-target end-date)
+(struct order (pattern strategy symbol expiration strike call-put quantity price vol spread stock-entry stock-stop stock-target end-date)
   #:transparent)

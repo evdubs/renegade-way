@@ -4,6 +4,7 @@
          racket/class
          racket/gui/base
          racket/list
+         racket/match
          racket/string
          "db-queries.rkt"
          "position-order-manager.rkt"
@@ -522,8 +523,22 @@
                                      [columns option-columns]
                                      [choices (list "")]
                                      [callback (λ (b e)
+                                                 (define pattern (match (first (string-split patterns " "))
+                                                                   ["BP" 'bull-pullback]
+                                                                   ["BR" 'bear-rally]
+                                                                   ["HB" 'high-base]
+                                                                   ["LB" 'low-base]
+                                                                   ["AT" 'ascending-triangle]
+                                                                   ["DT" 'descending-triangle]
+                                                                   ["RR" 'range-rally]
+                                                                   ["RP" 'range-pullback]
+                                                                   ["IR" 'increasing-rank]
+                                                                   ["DR" 'decreasing-rank]
+                                                                   ["IV" 'increasing-vol]
+                                                                   ["DV" 'decreasing-vol]))
                                                  (set-order-data (map (λ (o)
-                                                                        (order (string->symbol (string-replace (string-downcase k) " " "-"))
+                                                                        (order pattern
+                                                                               (string->symbol (string-replace (string-downcase k) " " "-"))
                                                                                (option-symbol o)
                                                                                (parse-date (option-expiration o) "yy-MM-dd")
                                                                                (option-strike o)

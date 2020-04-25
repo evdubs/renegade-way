@@ -174,10 +174,13 @@ left outer join
   from
     oic.option_chain
   where
+    date = (select max(date) from oic.option_chain where date <= $4::text::date ) and
     expiration > $4::text::date and
     expiration <= $4::text::date + interval '3 months' and
     bid > 0.0 and
-    ask > 0.0
+    ask > 0.0 and
+    ((delta >= 0.2 and delta <= 0.8) or
+    (delta <= -0.2 and delta >= -0.8))
   group by
     act_symbol) option_spread
 on
@@ -297,10 +300,13 @@ left outer join
   from
     oic.option_chain
   where
+    date = (select max(date) from oic.option_chain where date <= $2::text::date ) and 
     expiration > $2::text::date and
     expiration <= $2::text::date + interval '3 months' and
     bid > 0.0 and
-    ask > 0.0
+    ask > 0.0 and
+    ((delta >= 0.2 and delta <= 0.8) or
+    (delta <= -0.2 and delta >= -0.8))
   group by
     act_symbol) option_spread
 on
@@ -377,10 +383,13 @@ left outer join
   from
     oic.option_chain
   where
+    date = (select max(date) from oic.option_chain where date <= $2::text::date ) and
     expiration > $2::text::date and
     expiration <= $2::text::date + interval '3 months' and
     bid > 0.0 and
-    ask > 0.0
+    ask > 0.0 and
+    ((delta >= 0.2 and delta <= 0.8) or
+    (delta <= -0.2 and delta >= -0.8))
   group by
     act_symbol) option_spread
 on
@@ -862,7 +871,8 @@ insert into ibkr.order_note (
   underlying_entry_price,
   underlying_stop_price,
   underlying_target_price,
-  end_date
+  end_date,
+  pattern
 ) values (
   $1,
   $2,
@@ -870,7 +880,8 @@ insert into ibkr.order_note (
   $4,
   $5,
   $6,
-  $7::text::date
+  $7::text::date,
+  $8::text::ibkr.pattern
 ) on conflict (account, order_id) do nothing;
 "
               account
@@ -879,4 +890,5 @@ insert into ibkr.order_note (
               (order-stock-entry order-note)
               (order-stock-stop order-note)
               (order-stock-target order-note)
-              (date->iso8601 (order-end-date order-note))))
+              (date->iso8601 (order-end-date order-note))
+              (string-replace (string-upcase (symbol->string (order-pattern order-note))) "-" " ")))
