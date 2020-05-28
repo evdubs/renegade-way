@@ -5,8 +5,9 @@
          racket/async-channel
          racket/class
          racket/contract
-         racket/list
          racket/gui/base
+         racket/list
+         racket/set
          interactive-brokers-api/base-structs
          interactive-brokers-api/main
          interactive-brokers-api/request-messages
@@ -423,8 +424,10 @@
                                                                   (async-channel-put contract-channel cd)
                                                                   (insert-contract cd))]
                                    [handle-execution-rsp (λ (e) (insert-execution e)
-                                                            (thread (λ () (send ibkr send-msg
-                                                                                (new contract-details-req% [contract-id (execution-rsp-contract-id e)])))))]
+                                                            (cond [(not (set-member? handled-contract-ids (execution-rsp-contract-id e)))
+                                                                   (set-add! handled-contract-ids (execution-rsp-contract-id e))
+                                                                   (thread (λ () (send ibkr send-msg
+                                                                                       (new contract-details-req% [contract-id (execution-rsp-contract-id e)]))))]))]
                                    [handle-open-order-rsp (λ (oo) (insert-order oo))]
                                    [handle-next-valid-id-rsp (λ (id) (set! next-order-id (next-valid-id-rsp-order-id id)))]
                                    [write-messages #t]))
@@ -640,3 +643,5 @@
 (define contract-channel (make-async-channel))
 
 (define ibkr #f)
+
+(define handled-contract-ids (mutable-set))

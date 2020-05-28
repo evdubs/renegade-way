@@ -22,6 +22,7 @@
          "pattern/range-pullback.rkt")
 
 (provide price-analysis-box
+         price-analysis-filter
          run-price-analysis)
 
 (define (vector-first v)
@@ -92,6 +93,20 @@
 
 (define analysis-hash (hash))
 
+(define analysis-box-ref #f)
+
+(define hide-hold (make-parameter #f))
+
+(define hide-no-pattern (make-parameter #f))
+
+(define hide-large-spread (make-parameter #f))
+
+(define (price-analysis-filter #:hide-hold hold #:hide-no-pattern no-pattern #:hide-large-spread large-spread)
+  (hide-hold hold)
+  (hide-no-pattern no-pattern)
+  (hide-large-spread large-spread)
+  (update-analysis-box price-analysis-list analysis-hash))
+
 (define (run-price-analysis market sector start-date end-date)
   (let ([new-price-analysis-list (get-price-analysis market sector start-date end-date)]
         [new-analysis-hash (make-hash)])
@@ -106,24 +121,39 @@
                        (hash-set! new-analysis-hash (price-analysis-industry pa) (msi-rating (price-analysis-industry pa) end-date))])
                 (hash-set! new-analysis-hash (price-analysis-stock pa) (stock-patterns (price-analysis-stock pa) start-date end-date)))
               new-price-analysis-list)
-    ; (update-analysis-box new-price-analysis-list new-analysis-hash)
     (set! price-analysis-list new-price-analysis-list)
-    (set! analysis-hash new-analysis-hash)))
+    (set! analysis-hash new-analysis-hash)
+    (update-analysis-box price-analysis-list analysis-hash)))
 
-; (define (update-analysis-box price-analysis-list analysis-hash)
-;   (let* ([filter-hold (if (send hide-hold-check-box get-value)
-;                           (filter (λ (m) (not (equal? "Hold" (price-analysis-zacks-rank m)))) price-analysis-list)
-;                           price-analysis-list)]
-;          [filter-pattern (if (send hide-no-pattern-check-box get-value)
-;                              (filter (λ (m) (not (equal? "" (hash-ref analysis-hash (price-analysis-stock m))))) filter-hold)
-;                              filter-hold)]
-;          [filter-spread (if (send hide-spread-20-check-box get-value)
-;                             (filter (λ (m) (and (not (equal? "" (price-analysis-option-spread m)))
-;                                                 (> 25 (string->number (price-analysis-option-spread m))))) filter-pattern)
-;                             filter-pattern)])
-    
-    
-;     ))
+(define (update-analysis-box price-analysis-list analysis-hash)
+  (let* ([filter-hold (if (hide-hold)
+                          (filter (λ (m) (not (equal? "Hold" (price-analysis-zacks-rank m)))) price-analysis-list)
+                          price-analysis-list)]
+         [filter-pattern (if (hide-no-pattern)
+                             (filter (λ (m) (not (equal? "" (hash-ref analysis-hash (price-analysis-stock m))))) filter-hold)
+                             filter-hold)]
+         [filter-spread (if (hide-large-spread)
+                            (filter (λ (m) (and (not (equal? "" (price-analysis-option-spread m)))
+                                                (> 20 (string->number (price-analysis-option-spread m))))) filter-pattern)
+                            filter-pattern)])
+    (send analysis-box-ref set
+          (map (λ (m) (price-analysis-market m)) filter-spread)
+          (map (λ (m) (number->string (hash-ref analysis-hash (price-analysis-market m)))) filter-spread)
+          (map (λ (m) (price-analysis-sector m)) filter-spread)
+          (map (λ (m) (real->decimal-string (price-analysis-sector-vs-market m))) filter-spread)
+          (map (λ (m) (number->string (hash-ref analysis-hash (price-analysis-sector m)))) filter-spread)
+          (map (λ (m) (price-analysis-industry m)) filter-spread)
+          (map (λ (m) (number->string (hash-ref analysis-hash (price-analysis-industry m)))) filter-spread)
+          (map (λ (m) (price-analysis-stock m)) filter-spread)
+          (map (λ (m) (real->decimal-string (price-analysis-stock-vs-sector m))) filter-spread)
+          (map (λ (m) (price-analysis-next-div-date m)) filter-spread)
+          (map (λ (m) (price-analysis-earnings-date m)) filter-spread)
+          (map (λ (m) (price-analysis-option-spread m)) filter-spread)
+          (map (λ (m) (price-analysis-zacks-rank m)) filter-spread)
+          (map (λ (m) (hash-ref analysis-hash (price-analysis-stock m))) filter-spread))
+    ; We set data here so that we can retrieve it later with `get-data`
+    (map (λ (m i) (send analysis-box-ref set-data i (list m (hash-ref analysis-hash (price-analysis-stock m)))))
+         filter-spread (range (length filter-spread)))))
 
 (define analysis-box-columns (list "Market" "MktRtg" "Sector" "Sct/Mkt" "SctRtg" "Industry" "IndRtg"
                                    "Stock" "Stk/Sct" "DivDt" "ErnDt" "OptSprd" "ZckRnk" "Patterns"))
@@ -155,21 +185,5 @@
         [num-cols (length analysis-box-columns)])
     (for-each (λ (i) (send analysis-box set-column-width i 80 80 80))
               (range num-cols)))
-  (send analysis-box set
-          (map (λ (m) (price-analysis-market m)) price-analysis-list)
-          (map (λ (m) (number->string (hash-ref analysis-hash (price-analysis-market m)))) price-analysis-list)
-          (map (λ (m) (price-analysis-sector m)) price-analysis-list)
-          (map (λ (m) (real->decimal-string (price-analysis-sector-vs-market m))) price-analysis-list)
-          (map (λ (m) (number->string (hash-ref analysis-hash (price-analysis-sector m)))) price-analysis-list)
-          (map (λ (m) (price-analysis-industry m)) price-analysis-list)
-          (map (λ (m) (number->string (hash-ref analysis-hash (price-analysis-industry m)))) price-analysis-list)
-          (map (λ (m) (price-analysis-stock m)) price-analysis-list)
-          (map (λ (m) (real->decimal-string (price-analysis-stock-vs-sector m))) price-analysis-list)
-          (map (λ (m) (price-analysis-next-div-date m)) price-analysis-list)
-          (map (λ (m) (price-analysis-earnings-date m)) price-analysis-list)
-          (map (λ (m) (price-analysis-option-spread m)) price-analysis-list)
-          (map (λ (m) (price-analysis-zacks-rank m)) price-analysis-list)
-          (map (λ (m) (hash-ref analysis-hash (price-analysis-stock m))) price-analysis-list))
-  ; We set data here so that we can retrieve it later with `get-data`
-  (map (λ (m i) (send analysis-box set-data i (list m (hash-ref analysis-hash (price-analysis-stock m)))))
-         price-analysis-list (range (length price-analysis-list))))
+  (set! analysis-box-ref analysis-box)
+  (update-analysis-box price-analysis-list analysis-hash))

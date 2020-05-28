@@ -9,12 +9,46 @@
          "structs.rkt")
 
 (provide vol-analysis-box
+         vol-analysis-filter
          run-vol-analysis)
 
 (define vol-analysis-list (list))
 
+(define analysis-box-ref #f)
+
+(define hide-large-spread (make-parameter #f))
+
+(define (vol-analysis-filter #:hide-large-spread large-spread)
+  (hide-large-spread large-spread)
+  (update-analysis-box vol-analysis-list))
+
 (define (run-vol-analysis market sector start-date end-date)
-  (set! vol-analysis-list (get-vol-analysis market end-date)))
+  (set! vol-analysis-list (get-vol-analysis market end-date))
+  (update-analysis-box vol-analysis-list))
+
+(define (update-analysis-box vol-analysis-list)
+  (let ([filter-spread (if (hide-large-spread)
+                            (filter (λ (m) (and (not (equal? "" (vol-analysis-option-spread m)))
+                                                (> 20 (string->number (vol-analysis-option-spread m))))) vol-analysis-list)
+                            vol-analysis-list)])
+    (send analysis-box-ref set
+        (map (λ (m) (vol-analysis-market m)) filter-spread)
+        (map (λ (m) (real->decimal-string (vol-analysis-market-iv m))) filter-spread)
+        (map (λ (m) (real->decimal-string (vol-analysis-market-iv-rank m))) filter-spread)
+        (map (λ (m) (vol-analysis-sector m)) filter-spread)
+        (map (λ (m) (real->decimal-string (vol-analysis-sector-iv m))) filter-spread)
+        (map (λ (m) (real->decimal-string (vol-analysis-sector-iv-rank m))) filter-spread)
+        (map (λ (m) (vol-analysis-industry m)) filter-spread)
+        (map (λ (m) (real->decimal-string (vol-analysis-industry-iv m))) filter-spread)
+        (map (λ (m) (real->decimal-string (vol-analysis-industry-iv-rank m))) filter-spread)
+        (map (λ (m) (vol-analysis-stock m)) filter-spread)
+        (map (λ (m) (real->decimal-string (vol-analysis-stock-iv m))) filter-spread)
+        (map (λ (m) (real->decimal-string (vol-analysis-stock-iv-rank m))) filter-spread)
+        (map (λ (m) (vol-analysis-earnings-date m)) filter-spread)
+        (map (λ (m) (vol-analysis-option-spread m)) filter-spread))
+    ; We set data here so that we can retrieve it later with `get-data`
+    (map (λ (m i) (send analysis-box-ref set-data i m))
+       filter-spread (range (length filter-spread)))))
 
 (define analysis-box-columns (list "Market" "MktIv" "MktIvRnk" "Sector" "SctIv" "SctIvRnk" "Industry" "IndIv" "IndIvRnk"
                                    "Stock" "StkIv" "StkIvRnk" "ErnDt" "OptSprd"))
@@ -47,21 +81,5 @@
         [num-cols (length analysis-box-columns)])
     (for-each (λ (i) (send analysis-box set-column-width i 80 80 80))
               (range num-cols)))
-  (send analysis-box set
-        (map (λ (m) (vol-analysis-market m)) vol-analysis-list)
-        (map (λ (m) (real->decimal-string (vol-analysis-market-iv m))) vol-analysis-list)
-        (map (λ (m) (real->decimal-string (vol-analysis-market-iv-rank m))) vol-analysis-list)
-        (map (λ (m) (vol-analysis-sector m)) vol-analysis-list)
-        (map (λ (m) (real->decimal-string (vol-analysis-sector-iv m))) vol-analysis-list)
-        (map (λ (m) (real->decimal-string (vol-analysis-sector-iv-rank m))) vol-analysis-list)
-        (map (λ (m) (vol-analysis-industry m)) vol-analysis-list)
-        (map (λ (m) (real->decimal-string (vol-analysis-industry-iv m))) vol-analysis-list)
-        (map (λ (m) (real->decimal-string (vol-analysis-industry-iv-rank m))) vol-analysis-list)
-        (map (λ (m) (vol-analysis-stock m)) vol-analysis-list)
-        (map (λ (m) (real->decimal-string (vol-analysis-stock-iv m))) vol-analysis-list)
-        (map (λ (m) (real->decimal-string (vol-analysis-stock-iv-rank m))) vol-analysis-list)
-        (map (λ (m) (vol-analysis-earnings-date m)) vol-analysis-list)
-        (map (λ (m) (vol-analysis-option-spread m)) vol-analysis-list))
-  ; We set data here so that we can retrieve it later with `get-data`
-  (map (λ (m i) (send analysis-box set-data i m))
-       vol-analysis-list (range (length vol-analysis-list))))
+  (set! analysis-box-ref analysis-box)
+  (update-analysis-box vol-analysis-list))

@@ -52,17 +52,31 @@
 (define hide-hold-check-box
   (new check-box%
        [parent filter-input-pane]
-       [label "Hide Hold"]))
+       [label "Hide Hold"]
+       [callback (λ (b e)
+                   (price-analysis-filter #:hide-hold (send hide-hold-check-box get-value)
+                                          #:hide-no-pattern (send hide-no-pattern-check-box get-value)
+                                          #:hide-large-spread (send hide-spread-20-check-box get-value)))]))
 
 (define hide-no-pattern-check-box
   (new check-box%
        [parent filter-input-pane]
-       [label "Hide No Pattern"]))
+       [label "Hide No Pattern"]
+       [callback (λ (b e)
+                   (price-analysis-filter #:hide-hold (send hide-hold-check-box get-value)
+                                          #:hide-no-pattern (send hide-no-pattern-check-box get-value)
+                                          #:hide-large-spread (send hide-spread-20-check-box get-value)))]))
 
 (define hide-spread-20-check-box
   (new check-box%
        [parent filter-input-pane]
-       [label "Hide Large Spread"]))
+       [label "Hide Large Spread"]
+       [callback (λ (b e)
+                   (price-analysis-filter #:hide-hold (send hide-hold-check-box get-value)
+                                          #:hide-no-pattern (send hide-no-pattern-check-box get-value)
+                                          #:hide-large-spread (send hide-spread-20-check-box get-value))
+                   (rank-analysis-filter #:hide-large-spread (send hide-spread-20-check-box get-value))
+                   (vol-analysis-filter #:hide-large-spread (send hide-spread-20-check-box get-value)))]))
 
 (define analysis-tab-panel
   (new tab-panel%
@@ -85,19 +99,21 @@
        [callback (λ (b e)
                    (send b enable #f)
                    (match (send analysis-tab-panel get-item-label (send analysis-tab-panel get-selection))
-                     ["Price" (run-price-analysis (send market-field get-value) (send sector-field get-value)
-                                                  (send start-date-field get-value) (send end-date-field get-value))
-                              (refresh-tab-panel)]
-                     ["Rank" (run-rank-analysis (send market-field get-value) (send sector-field get-value)
-                                                (send start-date-field get-value) (send end-date-field get-value))
-                             (refresh-tab-panel)]
-                     ["Vol" (run-vol-analysis (send market-field get-value) (send sector-field get-value)
-                                              (send start-date-field get-value) (send end-date-field get-value))
-                            (refresh-tab-panel)]
-                     ["Position" (run-position-analysis (send market-field get-value) (send sector-field get-value)
-                                                        (send start-date-field get-value) (send end-date-field get-value))
-                                 (refresh-tab-panel)])
+                     ["Price" (refresh-tab-panel)
+                              (run-price-analysis (send market-field get-value) (send sector-field get-value)
+                                                  (send start-date-field get-value) (send end-date-field get-value))]
+                     ["Rank" (refresh-tab-panel)
+                             (run-rank-analysis (send market-field get-value) (send sector-field get-value)
+                                                (send start-date-field get-value) (send end-date-field get-value))]
+                     ["Vol" (refresh-tab-panel)
+                            (run-vol-analysis (send market-field get-value) (send sector-field get-value)
+                                              (send start-date-field get-value) (send end-date-field get-value))]
+                     ["Position" (refresh-tab-panel)
+                                 (run-position-analysis (send market-field get-value) (send sector-field get-value)
+                                                        (send start-date-field get-value) (send end-date-field get-value))])
                    (send b enable #t))]))
 
 (define (show-analysis)
   (send analysis-frame show #t))
+
+(refresh-tab-panel)

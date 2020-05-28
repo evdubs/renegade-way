@@ -13,8 +13,28 @@
 
 (define position-analysis-list (list))
 
+(define analysis-box-ref #f)
+
 (define (run-position-analysis market sector start-date end-date)
-  (set! position-analysis-list (get-position-analysis end-date)))
+  (set! position-analysis-list (get-position-analysis end-date))
+  (update-analysis-box position-analysis-list))
+
+(define (update-analysis-box position-analysis-list)
+  (send analysis-box-ref set
+        (map (λ (m) (position-analysis-sector m)) position-analysis-list)
+        (map (λ (m) (position-analysis-stock m)) position-analysis-list)
+        (map (λ (m) (position-analysis-expiration m)) position-analysis-list)
+        (map (λ (m) (real->decimal-string (position-analysis-strike m))) position-analysis-list)
+        (map (λ (m) (position-analysis-call-put m)) position-analysis-list)
+        (map (λ (m) (position-analysis-account m)) position-analysis-list)
+        (map (λ (m) (real->decimal-string (position-analysis-signed-shares m))) position-analysis-list)
+        (map (λ (m) (real->decimal-string (position-analysis-stock-stop m))) position-analysis-list)
+        (map (λ (m) (real->decimal-string (position-analysis-stock-close m))) position-analysis-list)
+        (map (λ (m) (real->decimal-string (position-analysis-stock-target m))) position-analysis-list)
+        (map (λ (m) (position-analysis-end-date m)) position-analysis-list))
+  ; We set data here so that we can retrieve it later with `get-data`
+  (map (λ (m i) (send analysis-box-ref set-data i m))
+       position-analysis-list (range (length position-analysis-list))))
 
 (define analysis-box-columns (list "Sector" "Stock" "Expiry" "Strike" "CallPut" "Account"
                                    "Qty" "StkStop" "StkPrc" "StkTgt" "EndDt"))
@@ -48,18 +68,5 @@
         [num-cols (length analysis-box-columns)])
     (for-each (λ (i) (send analysis-box set-column-width i 80 80 80))
               (range num-cols)))
-  (send analysis-box set
-        (map (λ (m) (position-analysis-sector m)) position-analysis-list)
-        (map (λ (m) (position-analysis-stock m)) position-analysis-list)
-        (map (λ (m) (position-analysis-expiration m)) position-analysis-list)
-        (map (λ (m) (real->decimal-string (position-analysis-strike m))) position-analysis-list)
-        (map (λ (m) (position-analysis-call-put m)) position-analysis-list)
-        (map (λ (m) (position-analysis-account m)) position-analysis-list)
-        (map (λ (m) (real->decimal-string (position-analysis-signed-shares m))) position-analysis-list)
-        (map (λ (m) (real->decimal-string (position-analysis-stock-stop m))) position-analysis-list)
-        (map (λ (m) (real->decimal-string (position-analysis-stock-close m))) position-analysis-list)
-        (map (λ (m) (real->decimal-string (position-analysis-stock-target m))) position-analysis-list)
-        (map (λ (m) (position-analysis-end-date m)) position-analysis-list))
-  ; We set data here so that we can retrieve it later with `get-data`
-  (map (λ (m i) (send analysis-box set-data i m))
-       position-analysis-list (range (length position-analysis-list))))
+  (set! analysis-box-ref analysis-box)
+  (update-analysis-box position-analysis-list))
