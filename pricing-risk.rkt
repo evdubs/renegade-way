@@ -39,7 +39,7 @@
      100))
 
 (define (black-scholes-theta price years-left strike call-put rate vol divs)
-  (- (black-scholes price (max (+ years-left 1/365) 0) strike call-put rate vol divs)
+  (- (black-scholes price (max (- years-left 1/365) 0) strike call-put rate vol divs)
      (black-scholes price years-left strike call-put rate vol divs)))
 
 (define (black-scholes-vega price years-left strike call-put rate vol divs)
