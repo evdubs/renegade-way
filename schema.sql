@@ -1,3 +1,5 @@
+CREATE SCHEMA ibkr;
+
 CREATE TYPE ibkr.action AS ENUM
     ('BUY',
      'SELL',
