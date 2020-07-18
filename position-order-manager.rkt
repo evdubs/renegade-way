@@ -1,6 +1,7 @@
 #lang racket/base
 
 (require gregor
+         gregor/period
          plot
          racket/async-channel
          racket/class
@@ -12,6 +13,7 @@
          interactive-brokers-api/main
          interactive-brokers-api/request-messages
          interactive-brokers-api/response-messages
+         "cmd-line.rkt"
          "db-queries.rkt"
          "plot-util.rkt"
          "pricing-risk.rkt"
@@ -419,7 +421,10 @@
        [parent button-pane]
        [callback (λ (b e)
                    (set! ibkr (new ibkr-session%
+                                   [hostname (ibkr-hostname)]
+                                   [port-no (ibkr-port-no)]
                                    [handle-accounts-rsp (λ (as) (set! account (first as)))]
+                                   [handle-commission-report-rsp (λ (cr) (insert-commission-report cr))]
                                    [handle-contract-details-rsp (λ (cd)
                                                                   (async-channel-put contract-channel cd)
                                                                   (insert-contract cd))]
@@ -568,7 +573,7 @@
        [label "Save Trades"]
        [parent button-pane]
        [callback (λ (b e)
-                   (send ibkr send-msg (new executions-req%)))]))
+                   (send ibkr send-msg (new executions-req% [timestamp (-period (now/moment) (days 7))])))]))
 
 (define (set-order-data order-data)
   (send order-box set

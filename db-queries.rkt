@@ -20,6 +20,7 @@
          get-rank-analysis
          get-security-name
          get-vol-analysis
+         insert-commission-report
          insert-contract
          insert-execution
          insert-order
@@ -54,6 +55,23 @@ from
 ;; Get market/sector/industry/stock breakdown for ETF components
 (define (get-price-analysis market sector start-date end-date)
   (let ([msis-query (query-rows dbc "
+with start_close as (
+  select
+    act_symbol,
+    close
+  from
+    iex.chart
+  where
+    date = (select min(date) from iex.chart where date >= $3::text::date)
+), end_close as (
+  select
+    act_symbol,
+    close
+  from
+    iex.chart
+  where
+    date = (select max(date) from iex.chart where date <= $4::text::date )
+)
 select
   market.market_symbol as market,
   market.sector_symbol as sector,
@@ -96,63 +114,27 @@ on
   market.date = industry.date and
   industry.sub_industry is not null
 join
-  (select
-    act_symbol,
-    close
-  from
-    iex.chart
-  where
-    date = (select min(date) from iex.chart where date >= $3::text::date)) as market_start_close
+  start_close as market_start_close
 on
   market.market_symbol = market_start_close.act_symbol
 join
-  (select
-    act_symbol,
-    close
-  from
-    iex.chart
-  where
-    date = (select max(date) from iex.chart where date <= $4::text::date )) as market_end_close
+  end_close as market_end_close
 on
   market.market_symbol = market_end_close.act_symbol
 join
-  (select
-    act_symbol,
-    close
-  from
-    iex.chart
-  where
-    date = (select min(date) from iex.chart where date >= $3::text::date )) as sector_start_close
+  start_close as sector_start_close
 on
   market.sector_symbol = sector_start_close.act_symbol
 join
-  (select
-    act_symbol,
-    close
-  from
-    iex.chart
-  where
-    date = (select max(date) from iex.chart where date <= $4::text::date )) as sector_end_close
+  end_close as sector_end_close
 on
   market.sector_symbol = sector_end_close.act_symbol
 join
-  (select
-    act_symbol,
-    close
-  from
-    iex.chart
-  where
-    date = (select min(date) from iex.chart where date >= $3::text::date )) as stock_start_close
+  start_close as stock_start_close
 on
   market.component_symbol = stock_start_close.act_symbol
 join
-  (select
-    act_symbol,
-    close
-  from
-    iex.chart
-  where
-    date = (select max(date) from iex.chart where date <= $4::text::date )) as stock_end_close
+  end_close as stock_end_close
 on
   market.component_symbol = stock_end_close.act_symbol
 left outer join
@@ -606,6 +588,31 @@ on
                               symbol
                               (date->iso8601 start-date)
                               (date->iso8601 end-date))))
+
+(define (insert-commission-report commission-report)
+  (query-exec dbc "
+insert into ibkr.commission_report (
+  execution_id,
+  commission,
+  currency,
+  realized_pnl,
+  yield,
+  yield_redemption_date
+) values (
+  $1,
+  $2,
+  $3,
+  $4,
+  $5,
+  $6
+) on conflict (execution_id) do nothing;
+"
+              (commission-report-rsp-execution-id commission-report)
+              (commission-report-rsp-commission commission-report)
+              (commission-report-rsp-currency commission-report)
+              (if (commission-report-rsp-realized-pnl commission-report) (commission-report-rsp-realized-pnl commission-report) sql-null)
+              (if (commission-report-rsp-yield commission-report) (commission-report-rsp-yield commission-report) sql-null)
+              (if (commission-report-rsp-yield-redemption-date commission-report) (commission-report-rsp-yield-redemption-date commission-report) sql-null)))
 
 (define (insert-execution execution)
   (query-exec dbc "

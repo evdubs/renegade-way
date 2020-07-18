@@ -164,6 +164,21 @@ CREATE TABLE ibkr.execution
 
 CREATE INDEX ON ibkr.execution ("timestamp");
 
+CREATE TABLE ibkr.commission_report
+(
+    execution_id text,
+    commission numeric,
+    currency text,
+    realized_pnl numeric,
+    yield numeric,
+    yield_redemption_date integer,
+    CONSTRAINT commission_report_execution_id_key UNIQUE (execution_id),
+    CONSTRAINT commission_report_execution_id_fkey FOREIGN KEY (execution_id)
+        REFERENCES ibkr.execution (execution_id) MATCH SIMPLE
+	ON UPDATE NO ACTION
+	ON DELETE NO ACTION
+);
+
 CREATE TABLE ibkr."order"
 (
     order_id integer NOT NULL,
