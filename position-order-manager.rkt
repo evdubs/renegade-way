@@ -340,8 +340,8 @@
 (define order-box
   (new list-box%
        [parent manager-pane]
-       [label #f]
-       [style (list 'single 'column-headers)]
+       [label ""]
+       [style (list 'single 'column-headers 'vertical-label)]
        [columns order-box-columns]
        [choices (list "")]
        [min-height 125]
@@ -354,6 +354,26 @@
 (define profit-loss-canvas
   (new settable-snip-canvas%
        [parent manager-pane]))
+
+(define ratio-requirement
+  (hash 'long-call ""
+        'long-put ""
+        'bull-call-vertical-spread "1.00"
+        'bear-put-vertical-spread "1.00"
+        'long-straddle ""
+        'long-strangle ""
+        'call-ratio-spread ""
+        'put-ratio-spread ""
+        'bear-call-vertical-spread "0.67"
+        'bull-put-vertical-spread "0.67"
+        'call-horizontal-spread "1.00"
+        'put-horizontal-spread "1.00"
+        'call-diagonal-spread "0.50"
+        'put-diagonal-spread "0.50"
+        'call-butterfly "2.00"
+        'put-butterfly "2.00"
+        'call-condor "0.50"
+        'put-condor "0.50"))
 
 (define (update-profit-loss-chart)
   (define ref-price (order-stock-entry (send order-box get-data 0)))
@@ -371,7 +391,7 @@
                         (order-end-date (send order-box get-data 0))
                         first-expiry))
   (define 1-month-rate (get-1-month-rate (date->iso8601 (today))))
-  (define (price-profit-loss vol-multiplier)
+  (define (price-profit-loss vol-multiplier prices)
     (map (λ (p)
            (vector p (foldl (λ (i res)
                               (define order (send order-box get-data i))
@@ -390,16 +410,26 @@
                             0
                             (range (send order-box get-number)))))
          prices))
+  (define current-vol-profit-loss
+    (map (λ (pl) (vector-ref pl 1))
+         (price-profit-loss 1 (map (λ (i) (/ (* i ref-price) 100))
+                                   (range 70 131 0.5)))))
+  (send order-box set-label
+        (string-append "Risk: " (real->decimal-string (apply min current-vol-profit-loss))
+                       " Reward: " (real->decimal-string (apply max current-vol-profit-loss))
+                       " Ratio: " (real->decimal-string (abs (/ (apply max current-vol-profit-loss)
+                                                                (apply min current-vol-profit-loss))))
+                       " Requirement: " (hash-ref ratio-requirement (order-strategy (send order-box get-data 0)))))
   (send profit-loss-canvas set-snip
         (plot-snip (list (tick-grid)
-                         (lines (price-profit-loss 1.5)
+                         (lines (price-profit-loss 1.5 prices)
                                 #:color 1
                                 #:style 'long-dash
                                 #:label "Vol * 1.5")
-                         (lines (price-profit-loss 1)
+                         (lines (price-profit-loss 1 prices)
                                 #:color 2
                                 #:label "Vol")
-                         (lines (price-profit-loss 0.5)
+                         (lines (price-profit-loss 0.5 prices)
                                 #:color 3
                                 #:style 'long-dash
                                 #:label "Vol * 0.5"))
@@ -543,30 +573,41 @@
                                                                               -1))
                                                                  (range (send order-box get-number))
                                                                  contract-ids)]
-                                                [conditions (if (or (equal? 'long-straddle (order-strategy first-item))
-                                                                    (equal? 'long-strangle (order-strategy first-item))
-                                                                    (equal? 'call-butterfly (order-strategy first-item))
-                                                                    (equal? 'put-butterfly (order-strategy first-item))
-                                                                    (equal? 'call-condor (order-strategy first-item))
-                                                                    (equal? 'put-condor (order-strategy first-item))) (list)
-                                                                (list (condition 'price
-                                                                                 'and
-                                                                                 (cond [(or (equal? 'bull-call-vertical-spread (order-strategy first-item))
-                                                                                            (equal? 'bull-put-vertical-spread (order-strategy first-item))
-                                                                                            (equal? 'call-ratio-spread (order-strategy first-item))
-                                                                                            (equal? 'call-diagonal-spread (order-strategy first-item))
-                                                                                            (equal? 'call-horizontal-spread (order-strategy first-item)))
-                                                                                        'greater-than]
-                                                                                       [(or (equal? 'bear-call-vertical-spread (order-strategy first-item))
-                                                                                            (equal? 'bear-put-vertical-spread (order-strategy first-item))
-                                                                                            (equal? 'put-ratio-spread (order-strategy first-item))
-                                                                                            (equal? 'put-diagonal-spread (order-strategy first-item))
-                                                                                            (equal? 'put-horizontal-spread (order-strategy first-item)))
-                                                                                        'less-than])
-                                                                                 (order-stock-entry first-item)
-                                                                                 underlying-contract-id
-                                                                                 "SMART"
-                                                                                 'default)))]
+                                                [conditions (cond [(or (equal? 'bull-call-vertical-spread (order-strategy first-item))
+                                                                       (equal? 'bull-put-vertical-spread (order-strategy first-item))
+                                                                       (equal? 'call-ratio-spread (order-strategy first-item))
+                                                                       (equal? 'call-diagonal-spread (order-strategy first-item))
+                                                                       (equal? 'call-horizontal-spread (order-strategy first-item)))
+                                                                   (list (condition 'price 'and 'greater-than (order-stock-entry first-item)
+                                                                                    underlying-contract-id "SMART" 'default))]
+                                                                  [(or (equal? 'bear-call-vertical-spread (order-strategy first-item))
+                                                                       (equal? 'bear-put-vertical-spread (order-strategy first-item))
+                                                                       (equal? 'put-ratio-spread (order-strategy first-item))
+                                                                       (equal? 'put-diagonal-spread (order-strategy first-item))
+                                                                       (equal? 'put-horizontal-spread (order-strategy first-item)))
+                                                                   (list (condition 'price 'and 'less-than (order-stock-entry first-item)
+                                                                                    underlying-contract-id "SMART" 'default))]
+                                                                  [(equal? 'call-condor (order-strategy first-item))
+                                                                   (let* ([low-short-strike (order-strike (send order-box get-data 1))]
+                                                                          [high-short-strike (order-strike (send order-box get-data 2))]
+                                                                          [difference (- high-short-strike low-short-strike)])
+                                                                     (list (condition 'price 'and 'greater-than (+ low-short-strike (* 1/4 difference))
+                                                                                      underlying-contract-id "SMART" 'default)
+                                                                           (condition 'price 'and 'less-than (- high-short-strike (* 1/4 difference))
+                                                                                      underlying-contract-id "SMART" 'default)))]
+                                                                  [(equal? 'put-condor (order-strategy first-item))
+                                                                   (let* ([high-short-strike (order-strike (send order-box get-data 1))]
+                                                                          [low-short-strike (order-strike (send order-box get-data 2))]
+                                                                          [difference (- high-short-strike low-short-strike)])
+                                                                     (list (condition 'price 'and 'greater-than (+ low-short-strike (* 1/4 difference))
+                                                                                      underlying-contract-id "SMART" 'default)
+                                                                           (condition 'price 'and 'less-than (- high-short-strike (* 1/4 difference))
+                                                                                      underlying-contract-id "SMART" 'default)))]
+                                                                  [(or (equal? 'long-straddle (order-strategy first-item))
+                                                                       (equal? 'long-strangle (order-strategy first-item))
+                                                                       (equal? 'call-butterfly (order-strategy first-item))
+                                                                       (equal? 'put-butterfly (order-strategy first-item)))
+                                                                   (list)])]
                                                 [use-price-management-algo #t])))
                    (set! next-order-id (add1 next-order-id)))]))
 
