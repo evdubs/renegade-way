@@ -57,12 +57,25 @@ from
   (let ([msis-query (query-rows dbc "
 with start_close as (
   select
-    act_symbol,
-    close
+    c.act_symbol,
+    c.close / coalesce(split_ratio, 1) as close
   from
-    iex.chart
+    iex.chart c
+  left join
+    (select
+      act_symbol,
+      mul(to_factor / for_factor) as split_ratio
+    from
+      iex.split
+    where
+      ex_date >= $3::text::date and
+      ex_date <= $4::text::date
+    group by
+      act_symbol) s
+  on
+    c.act_symbol = s.act_symbol
   where
-    date = (select min(date) from iex.chart where date >= $3::text::date)
+    c.date = (select min(date) from iex.chart where date >= $3::text::date)
 ), end_close as (
   select
     act_symbol,
