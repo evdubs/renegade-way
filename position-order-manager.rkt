@@ -55,7 +55,7 @@
   (new text-field%
        [parent input-pane]
        [label "Spread Pct"]
-       [init-value "0.25"]))
+       [init-value "0.10"]))
 
 (define recalc-button
   (new button%
@@ -156,7 +156,10 @@
                                                [stock-target (* (- 1 (string->number (send target-percent-field get-value)))
                                                                 (order-stock-entry ord))])]
                                  [(equal? 'call-horizontal-spread (order-strategy ord))
-                                  (define risk (- (order-price (send order-box get-data 1)) (order-price (send order-box get-data 0))))
+                                  ; ideally, the strikes would be the same, but sometimes we do not get the same strikes across expirations
+                                  ; as a result, we need to take the difference between the strikes
+                                  (define risk (- (- (order-price (send order-box get-data 1)) (order-price (send order-box get-data 0)))
+                                                  (min 0 (- (order-strike (send order-box get-data 0)) (order-strike (send order-box get-data 1))))))
                                   (struct-copy order ord
                                                [quantity (truncate (/ (string->number (send trade-risk-field get-value))
                                                                       (* 100 risk (if (= i 0) -1 1))))]
@@ -164,7 +167,9 @@
                                                               (order-stock-entry ord))]
                                                [stock-target (order-strike (send order-box get-data 0))])]
                                  [(equal? 'put-horizontal-spread (order-strategy ord))
-                                  (define risk (- (order-price (send order-box get-data 1)) (order-price (send order-box get-data 0))))
+                                  ; see call-horizontal-spread note
+                                  (define risk (- (- (order-price (send order-box get-data 1)) (order-price (send order-box get-data 0)))
+                                                  (min 0 (- (order-strike (send order-box get-data 1)) (order-strike (send order-box get-data 0))))))
                                   (struct-copy order ord
                                                [quantity (truncate (/ (string->number (send trade-risk-field get-value))
                                                                       (* 100 risk (if (= i 0) -1 1))))]
