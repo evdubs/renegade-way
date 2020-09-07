@@ -656,8 +656,8 @@
           (new text-field% [parent editor-pane] [label "Spread"] [init-value (real->decimal-string (order-spread row))])
           (new text-field% [parent editor-pane] [label "StkEntry"] [init-value (real->decimal-string (order-stock-entry row))])
           (new text-field% [parent editor-pane] [label "StkStop"] [init-value (if (order-stock-stop row) (real->decimal-string (order-stock-stop row)) "")])
-          (new text-field% [parent editor-pane] [label "StkTarget"] [init-value (if (order-stock-stop row) (real->decimal-string (order-stock-target row)) "")])
-          (new text-field% [parent editor-pane] [label "EndDate"] [init-value (~t (order-expiration row) "yy-MM-dd")])))
+          (new text-field% [parent editor-pane] [label "StkTarget"] [init-value (if (order-stock-target row) (real->decimal-string (order-stock-target row)) "")])
+          (new text-field% [parent editor-pane] [label "EndDate"] [init-value (~t (order-end-date row) "yy-MM-dd")])))
   (define save-button
     (new button%
          [label "Save"]
