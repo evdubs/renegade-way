@@ -579,9 +579,9 @@ where
   latest.ex_date = (select max(ex_date) from yahoo.dividend where act_symbol = $1) and 
   previous.ex_date between $2::text::date - interval '1 year' and $3::text::date - interval '1 year';
 "
-               symbol
-               (date->iso8601 start-date)
-               (date->iso8601 end-date)))
+              symbol
+              (date->iso8601 start-date)
+              (date->iso8601 end-date)))
 
 (define (get-next-earnings-date symbol start-date end-date)
   (iso8601->date (query-value dbc "
@@ -603,7 +603,11 @@ on
                               (date->iso8601 end-date))))
 
 (define (insert-commission-report commission-report)
-  (query-exec dbc "
+  (with-handlers ([exn:fail? (λ (error)
+                               (displayln "Could not insert commission report into DB")
+                               (displayln commission-report)
+                               (displayln ((error-value->string-handler) error 1000)))])
+    (query-exec dbc "
 insert into ibkr.commission_report (
   execution_id,
   commission,
@@ -620,12 +624,18 @@ insert into ibkr.commission_report (
   $6
 ) on conflict (execution_id) do nothing;
 "
-              (commission-report-rsp-execution-id commission-report)
-              (commission-report-rsp-commission commission-report)
-              (commission-report-rsp-currency commission-report)
-              (if (commission-report-rsp-realized-pnl commission-report) (commission-report-rsp-realized-pnl commission-report) sql-null)
-              (if (commission-report-rsp-yield commission-report) (commission-report-rsp-yield commission-report) sql-null)
-              (if (commission-report-rsp-yield-redemption-date commission-report) (commission-report-rsp-yield-redemption-date commission-report) sql-null)))
+                (commission-report-rsp-execution-id commission-report)
+                (commission-report-rsp-commission commission-report)
+                (commission-report-rsp-currency commission-report)
+                (if (commission-report-rsp-realized-pnl commission-report)
+                    (commission-report-rsp-realized-pnl commission-report)
+                    sql-null)
+                (if (commission-report-rsp-yield commission-report)
+                    (commission-report-rsp-yield commission-report)
+                    sql-null)
+                (if (commission-report-rsp-yield-redemption-date commission-report)
+                    (commission-report-rsp-yield-redemption-date commission-report)
+                    sql-null))))
 
 (define (insert-execution execution)
   (query-exec dbc "
@@ -738,9 +748,15 @@ insert into ibkr.contract (
 "
               (contract-details-rsp-symbol contract)
               (string-upcase (symbol->string (contract-details-rsp-security-type contract)))
-              (if (contract-details-rsp-expiry contract) (date->iso8601 (contract-details-rsp-expiry contract)) sql-null)
-              (if (contract-details-rsp-strike contract) (contract-details-rsp-strike contract) sql-null)
-              (if (contract-details-rsp-right contract) (string-upcase (symbol->string (contract-details-rsp-right contract))) sql-null)
+              (if (contract-details-rsp-expiry contract)
+                  (date->iso8601 (contract-details-rsp-expiry contract))
+                  sql-null)
+              (if (contract-details-rsp-strike contract)
+                  (contract-details-rsp-strike contract)
+                  sql-null)
+              (if (contract-details-rsp-right contract)
+                  (string-upcase (symbol->string (contract-details-rsp-right contract)))
+                  sql-null)
               (contract-details-rsp-exchange contract)
               (contract-details-rsp-currency contract)
               (contract-details-rsp-local-symbol contract)
@@ -748,7 +764,9 @@ insert into ibkr.contract (
               (contract-details-rsp-trading-class contract)
               (contract-details-rsp-contract-id contract)
               (contract-details-rsp-minimum-tick-increment contract)
-              (if (equal? "" (contract-details-rsp-multiplier contract)) sql-null (contract-details-rsp-multiplier contract))
+              (if (equal? "" (contract-details-rsp-multiplier contract))
+                  sql-null
+                  (contract-details-rsp-multiplier contract))
               (contract-details-rsp-price-magnifier contract)
               (contract-details-rsp-underlying-contract-id contract)
               (contract-details-rsp-long-name contract)
@@ -804,7 +822,9 @@ insert into ibkr.order (
               (open-order-rsp-aux-price order)
               (string-upcase (symbol->string (open-order-rsp-time-in-force order)))
               (open-order-rsp-account order)
-              (if (open-order-rsp-open-close order) (string-upcase (symbol->string (open-order-rsp-open-close order))) sql-null)
+              (if (open-order-rsp-open-close order)
+                  (string-upcase (symbol->string (open-order-rsp-open-close order)))
+                  sql-null)
               (open-order-rsp-order-ref order)
               (open-order-rsp-client-id order)
               (open-order-rsp-perm-id order))
@@ -867,7 +887,7 @@ insert into ibkr.order_condition (
   $7,
   $8,
   $9::text::ibkr.condition_trigger_method
-) on conflict (account, order_id, \"type\") do nothing;
+) on conflict (account, order_id, \"type\", \"comparator\") do nothing;
 "
                           (open-order-rsp-account order)
                           (open-order-rsp-order-id order)
