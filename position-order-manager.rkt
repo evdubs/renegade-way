@@ -584,30 +584,30 @@
                                                                        (equal? 'call-diagonal-spread (order-strategy first-item))
                                                                        (equal? 'call-horizontal-spread (order-strategy first-item)))
                                                                    (list (condition 'price 'and 'greater-than (order-stock-entry first-item)
-                                                                                    underlying-contract-id "SMART" 'default))]
+                                                                                    underlying-contract-id "SMART" 'default #f #f))]
                                                                   [(or (equal? 'bear-call-vertical-spread (order-strategy first-item))
                                                                        (equal? 'bear-put-vertical-spread (order-strategy first-item))
                                                                        (equal? 'put-ratio-spread (order-strategy first-item))
                                                                        (equal? 'put-diagonal-spread (order-strategy first-item))
                                                                        (equal? 'put-horizontal-spread (order-strategy first-item)))
                                                                    (list (condition 'price 'and 'less-than (order-stock-entry first-item)
-                                                                                    underlying-contract-id "SMART" 'default))]
+                                                                                    underlying-contract-id "SMART" 'default #f #f))]
                                                                   [(equal? 'call-condor (order-strategy first-item))
                                                                    (let* ([low-short-strike (order-strike (send order-box get-data 1))]
                                                                           [high-short-strike (order-strike (send order-box get-data 2))]
                                                                           [difference (- high-short-strike low-short-strike)])
                                                                      (list (condition 'price 'and 'greater-than (+ low-short-strike (* 1/4 difference))
-                                                                                      underlying-contract-id "SMART" 'default)
+                                                                                      underlying-contract-id "SMART" 'default #f #f)
                                                                            (condition 'price 'and 'less-than (- high-short-strike (* 1/4 difference))
-                                                                                      underlying-contract-id "SMART" 'default)))]
+                                                                                      underlying-contract-id "SMART" 'default #f #f)))]
                                                                   [(equal? 'put-condor (order-strategy first-item))
                                                                    (let* ([high-short-strike (order-strike (send order-box get-data 1))]
                                                                           [low-short-strike (order-strike (send order-box get-data 2))]
                                                                           [difference (- high-short-strike low-short-strike)])
                                                                      (list (condition 'price 'and 'greater-than (+ low-short-strike (* 1/4 difference))
-                                                                                      underlying-contract-id "SMART" 'default)
+                                                                                      underlying-contract-id "SMART" 'default #f #f)
                                                                            (condition 'price 'and 'less-than (- high-short-strike (* 1/4 difference))
-                                                                                      underlying-contract-id "SMART" 'default)))]
+                                                                                      underlying-contract-id "SMART" 'default #f #f)))]
                                                                   [(or (equal? 'long-straddle (order-strategy first-item))
                                                                        (equal? 'long-strangle (order-strategy first-item))
                                                                        (equal? 'call-butterfly (order-strategy first-item))
