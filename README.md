@@ -14,7 +14,7 @@ We see:
 * MktRtg (Market Rating), SctRtg (Sector Rating), IndRtg (Industry Rating). These simple score range from -3 to +3 and
   reflect the relationship of the current price to 20-day and 50-day moving averages
 * Sct/Mkt (Sector vs Market), Stk/Sct (Stock vs Sector). This is the price percentage performance difference over the start-date and end-date period.
-* DivDt. Upcoming estimated dividend. This is computed by taking a dividend from last year + one month and adding a year. It is rarely precise.
+* DivDt. Upcoming estimated dividend. This is computed by taking a dividend from last year and adding a year. It is rarely precise.
 * ErnDt. Upcoming earnings announcement date.
 * OptSprd. Average spread of select options having a bid.
 * ZckRnk. Current analyst rank of the stock
