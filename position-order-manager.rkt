@@ -543,7 +543,9 @@
                                                                              (order-stock-entry first-item)
                                                                              underlying-contract-id
                                                                              "SMART"
-                                                                             'default))]
+                                                                             'default
+                                                                             #f
+                                                                             #f))]
                                                 [use-price-management-algo #t]))
                        (send ibkr send-msg (new place-order-req%
                                                 [order-id next-order-id]
