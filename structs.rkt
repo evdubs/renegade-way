@@ -111,7 +111,7 @@
                              stock stock-iv stock-iv-rank earnings-date option-spread)
   #:transparent)
 
-(struct position-analysis (sector stock expiration strike call-put account signed-shares stock-stop stock-close stock-target end-date)
+(struct position-analysis (sector stock expiration strike call-put account signed-shares stock-stop stock-close stock-target end-date strategy)
   #:transparent)
 
 (struct option (symbol expiration dte strike call-put date bid mid ask vol delta gamma theta vega rho)

@@ -401,7 +401,7 @@ order by
 (define (get-position-analysis date)
   (map (λ (row) (position-analysis (vector-ref row 0) (vector-ref row 1) (vector-ref row 2) (vector-ref row 3)
                                    (vector-ref row 4) (vector-ref row 5) (vector-ref row 6) (vector-ref row 7)
-                                   (vector-ref row 8) (vector-ref row 9) (vector-ref row 10)))
+                                   (vector-ref row 8) (vector-ref row 9) (vector-ref row 10) (vector-ref row 11)))
        (query-rows dbc "
 with earnings_end_date as (
   select
@@ -432,7 +432,8 @@ select
   coalesce(to_char(case when ed.end_date is not null and ed.end_date < n.end_date
     then ed.end_date
     else n.end_date
-  end, 'YY-MM-DD'), '') as end_date
+  end, 'YY-MM-DD'), '') as end_date,
+  coalesce(n.order_strategy::text, '') as order_strategy
 from
   (select
     max(order_id) as order_id,

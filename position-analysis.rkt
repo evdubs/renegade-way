@@ -34,7 +34,37 @@
         (map (λ (m) (position-analysis-end-date m)) position-analysis-list))
   ; We set data here so that we can retrieve it later with `get-data`
   (map (λ (m i) (send analysis-box-ref set-data i m))
-       position-analysis-list (range (length position-analysis-list))))
+       position-analysis-list (range (length position-analysis-list)))
+  (define bull-bear-roo
+    (foldl (λ (p m)
+             (let ([s (position-analysis-strategy p)])
+               (cond [(or (equal? "LONG CALL" s)
+                          (equal? "BULL CALL VERTICAL SPREAD" s)
+                          (equal? "BULL PUT VERTICAL SPREAD" s)
+                          (equal? "CALL RATIO SPREAD" s)
+                          (equal? "CALL HORIZONTAL SPREAD" s)
+                          (equal? "CALL DIAGONAL SPREAD" s))
+                      (hash-set m (position-analysis-stock p) 'bull)]
+                     [(or (equal? "LONG PUT" s)
+                          (equal? "BEAR CALL VERTICAL SPREAD" s)
+                          (equal? "BEAR PUT VERTICAL SPREAD" s)
+                          (equal? "PUT RATIO SPREAD" s)
+                          (equal? "PUT HORIZONTAL SPREAD" s)
+                          (equal? "PUT DIAGONAL SPREAD" s))
+                      (hash-set m (position-analysis-stock p) 'bear)]
+                     [(or (equal? "LONG STRADDLE" s)
+                          (equal? "LONG STRANGLE" s)
+                          (equal? "CALL BUTTERFLY" s)
+                          (equal? "PUT BUTTERFLY" s)
+                          (equal? "CALL CONDOR" s)
+                          (equal? "PUT CONDOR" s))
+                      (hash-set m (position-analysis-stock p) 'roo)])))
+           (hash)
+           position-analysis-list))
+  (send analysis-box-ref set-label
+        (string-append "Bulls: " (number->string (length (indexes-of (hash-values bull-bear-roo) 'bull)))
+                       " Bears: " (number->string (length (indexes-of (hash-values bull-bear-roo) 'bear)))
+                       " Roos: " (number->string (length (indexes-of (hash-values bull-bear-roo) 'roo))))))
 
 (define analysis-box-columns (list "Sector" "Stock" "Expiry" "Strike" "CallPut" "Account"
                                    "Qty" "StkStop" "StkPrc" "StkTgt" "EndDt"))
@@ -43,7 +73,7 @@
   (define analysis-box
     (new list-box%
          [parent parent-panel]
-         [label #f]
+         [label ""]
          [callback (λ (b e)
                      (let ([market "SPY"]
                            [sector (position-analysis-sector (send b get-data (first (send b get-selections))))]
