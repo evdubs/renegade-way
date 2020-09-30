@@ -23,8 +23,8 @@
 (define market-field
   (new text-field%
        [parent analysis-input-pane]
-       [label "Market"]
-       [init-value "SPY"]))
+       [label "Market(s)"]
+       [init-value "SPY,MDY,SLY"]))
 
 (define sector-field
   (new text-field%

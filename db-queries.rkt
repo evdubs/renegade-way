@@ -107,19 +107,8 @@ from
   from
     spdr.etf_holding
   where
-    etf_symbol = $1 and
-    date = (select max(date) from spdr.etf_holding where date <= $4::text::date)
-  union
-  select
-    etf_symbol as market_symbol,
-    spdr.to_sector_etf(sector::text::spdr.sector) as sector_symbol,
-    component_symbol,
-    date
-  from
-    invesco.etf_holding
-  where
-    etf_symbol = $1 and
-    date = (select max(date) from invesco.etf_holding where date <= $4::text::date)) as market
+    etf_symbol = any(string_to_array($1, ',')) and
+    date = (select max(date) from spdr.etf_holding where date <= $4::text::date)) as market
 left outer join
   spdr.etf_holding industry
 on
@@ -191,10 +180,8 @@ where
     else true
   end
 order by
-  ((sector_end_close.close - sector_start_close.close) / sector_start_close.close) - 
-    ((market_end_close.close - market_start_close.close) / market_start_close.close) desc,
-  ((stock_end_close.close - stock_start_close.close) / stock_start_close.close) - 
-    ((sector_end_close.close - sector_start_close.close) / sector_start_close.close) desc;
+  ((sector_end_close.close - sector_start_close.close) / sector_start_close.close) desc,
+  ((stock_end_close.close - stock_start_close.close) / stock_start_close.close) desc;
 "
                                 market
                                 sector
@@ -307,7 +294,7 @@ left outer join
 on
   market.component_symbol = option_spread.act_symbol
 where
-  market.etf_symbol = $1 and
+  market.etf_symbol = any(string_to_array($1, ',')) and
   market.date = (select max(date) from spdr.etf_holding where date <= $2::text::date) and
   component_rank.rank in ('Strong Buy', 'Buy', 'Sell', 'Strong Sell')
 order by
@@ -390,7 +377,7 @@ left outer join
 on
   market.component_symbol = option_spread.act_symbol
 where
-  market.etf_symbol = $1 and
+  market.etf_symbol = any(string_to_array($1, ',')) and
   market.date = (select max(date) from spdr.etf_holding where date <= $2::text::date)
 order by
   component_iv_rank desc;
