@@ -404,11 +404,32 @@ with earnings_end_date as (
     zacks.earnings_calendar
   where
     date >= $1::text::date
+), expiry_end_date as (
+  select
+    o.account,
+    o.order_id,
+    min(c.expiry) as expiry
+  from
+    ibkr.order o
+  join
+    ibkr.order_leg ol
+  on
+    o.account = ol.account and
+    o.order_id = ol.order_id
+  join
+    ibkr.contract c
+  on
+    ol.contract_id = c.contract_id
+  where
+    c.expiry >= $1::text::date
+  group by
+    o.account,
+    o.order_id
 )
 select
   spdr.to_sector_etf(eh.sector) as etf_symbol,
   c.symbol,
-  to_char(c.expiry, 'YY-MM-DD'),
+  to_char(c.expiry, 'YY-MM-DD') as expiry,
   c.strike,
   c.right::text,
   e.account,
@@ -417,8 +438,10 @@ select
   coalesce(trunc(ch.close, 2), 0.00),
   coalesce(trunc(n.underlying_target_price, 2), 0.00),
   coalesce(to_char(case when ed.end_date is not null and ed.end_date < n.end_date
-    then ed.end_date
-    else n.end_date
+    then case when eed.expiry is not null and eed.expiry < ed.end_date
+      then eed.expiry else ed.end_date end
+    else case when eed.expiry is not null and eed.expiry < n.end_date
+      then eed.expiry else n.end_date end
   end, 'YY-MM-DD'), '') as end_date,
   coalesce(n.order_strategy::text, '') as order_strategy
 from
@@ -465,6 +488,11 @@ left outer join
 on
   c.symbol = ch.act_symbol and
   ch.date = (select max(date) from iex.chart where date <= $1::text::date)
+left outer join
+  expiry_end_date eed
+on
+  e.account = eed.account and
+  e.order_id = eed.order_id
 where
   c.expiry >= $1::text::date and
   signed_shares != 0
