@@ -114,6 +114,12 @@
                    (send b enable #t))]))
 
 (define (show-analysis)
-  (send analysis-frame show #t))
+  ; init everything so we don't get errors when selecting elements to hide
+  (price-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))
+  (rank-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))
+  (vol-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))
+  (position-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))
 
-(refresh-tab-panel)
+  (refresh-tab-panel)
+
+  (send analysis-frame show #t))
