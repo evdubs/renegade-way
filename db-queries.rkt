@@ -97,7 +97,11 @@ select
   coalesce(to_char(div.ex_date + interval '1 year', 'YY-MM-DD'), '') as anticipated_dividend_ex_date,
   coalesce(to_char(ec.date, 'YY-MM-DD'), '') as earnings_date,
   coalesce(trunc(option_spread.spread * 100, 2)::text, '') as option_spread,
-  coalesce(replace(rank.rank::text, 'Strong', 'Str'), '') as rank
+  coalesce(replace(rank.rank::text, 'Strong', 'Str'), '') as rank,
+  case
+    when w.act_symbol is not null then true
+    else false
+  end as is_weekly
 from
   (select
     etf_symbol as market_symbol,
@@ -174,6 +178,11 @@ left outer join
 on
   market.component_symbol = rank.act_symbol and
   rank.date > (select max(date) - interval '3 days' from zacks.rank_score)
+left outer join
+  oic.weekly w
+on
+  market.component_symbol = w.act_symbol and
+  w.last_seen = (select max(last_seen) from oic.weekly where last_seen <= $4::text::date)
 where
   case
     when $2::text != '' then market.sector_symbol = $2::text
@@ -189,14 +198,14 @@ order by
                                 end-date)])
     (map (λ (row) (price-analysis (vector-ref row 0) (vector-ref row 1) (vector-ref row 2) (vector-ref row 3)
                                   (vector-ref row 4) (vector-ref row 5) (vector-ref row 6) (vector-ref row 7)
-                                  (vector-ref row 8) (vector-ref row 9)))
+                                  (vector-ref row 8) (vector-ref row 9) (vector-ref row 10)))
          msis-query)))
 
 (define (get-rank-analysis market date)
   (map (λ (row) (rank-analysis (vector-ref row 0) (vector-ref row 1) (vector-ref row 2) (vector-ref row 3)
                                (vector-ref row 4) (vector-ref row 5) (vector-ref row 6) (vector-ref row 7)
                                (vector-ref row 8) (vector-ref row 9) (vector-ref row 10) (vector-ref row 11)
-                               (vector-ref row 12)))
+                               (vector-ref row 12) (vector-ref row 13)))
        (query-rows dbc "
 with etf_rank as (
   select
@@ -228,7 +237,11 @@ select
   trunc(component_avg_rank.rank, 2) as component_avg_rank,
   worst_rank as component_worst_rank,
   coalesce(to_char(ec.date, 'YY-MM-DD'), '') as earnings_date,
-  coalesce(trunc(option_spread.spread * 100, 2)::text, '') as option_spread
+  coalesce(trunc(option_spread.spread * 100, 2)::text, '') as option_spread,
+  case
+    when w.act_symbol is not null then true
+    else false
+  end as is_weekly
 from
   spdr.etf_holding market
 join
@@ -293,12 +306,17 @@ left outer join
     act_symbol) option_spread
 on
   market.component_symbol = option_spread.act_symbol
+left outer join
+  oic.weekly w
+on
+  market.component_symbol = w.act_symbol and
+  w.last_seen = (select max(last_seen) from oic.weekly where last_seen <= $2::text::date)
 where
   market.etf_symbol = any(string_to_array($1, ',')) and
   market.date = (select max(date) from spdr.etf_holding where date <= $2::text::date) and
   component_rank.rank in ('Strong Buy', 'Buy', 'Sell', 'Strong Sell')
 order by
-  component_rank.rank, zacks.to_integer_rank(component_rank.rank) - component_avg_rank.rank;
+  component_rank.rank, zacks.to_integer_rank(component_rank.rank) - component_avg_rank.rank, market.component_symbol;
 "
                    market
                    date)))
@@ -307,7 +325,7 @@ order by
   (map (λ (row) (vol-analysis (vector-ref row 0) (vector-ref row 1) (vector-ref row 2) (vector-ref row 3)
                               (vector-ref row 4) (vector-ref row 5) (vector-ref row 6) (vector-ref row 7)
                               (vector-ref row 8) (vector-ref row 9) (vector-ref row 10) (vector-ref row 11)
-                              (vector-ref row 12) (vector-ref row 13)))
+                              (vector-ref row 12) (vector-ref row 13) (vector-ref row 14)))
        (query-rows dbc "
 select
   market.etf_symbol,
@@ -323,7 +341,11 @@ select
   coalesce(trunc(component_vol.iv_current * 100, 2), 0.00) as component_iv,
   coalesce(trunc((component_vol.iv_current - component_vol.iv_year_low) / (component_vol.iv_year_high - component_vol.iv_year_low) * 100, 2), 0.00) as component_iv_rank,
   coalesce(to_char(ec.date, 'YY-MM-DD'), '') as earnings_date,
-  coalesce(trunc(option_spread.spread * 100, 2)::text, '') as option_spread
+  coalesce(trunc(option_spread.spread * 100, 2)::text, '') as option_spread,
+  case
+    when w.act_symbol is not null then true
+    else false
+  end as is_weekly
 from
   spdr.etf_holding market
 join
@@ -376,6 +398,11 @@ left outer join
     act_symbol) option_spread
 on
   market.component_symbol = option_spread.act_symbol
+left outer join
+  oic.weekly w
+on
+  market.component_symbol = w.act_symbol and
+  w.last_seen = (select max(last_seen) from oic.weekly where last_seen <= $2::text::date)
 where
   market.etf_symbol = any(string_to_array($1, ',')) and
   market.date = (select max(date) from spdr.etf_holding where date <= $2::text::date)

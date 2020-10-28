@@ -56,7 +56,8 @@
        [callback (λ (b e)
                    (price-analysis-filter #:hide-hold (send hide-hold-check-box get-value)
                                           #:hide-no-pattern (send hide-no-pattern-check-box get-value)
-                                          #:hide-large-spread (send hide-spread-20-check-box get-value)))]))
+                                          #:hide-large-spread (send hide-spread-20-check-box get-value)
+                                          #:hide-non-weekly (send hide-non-weekly-check-box get-value)))]))
 
 (define hide-no-pattern-check-box
   (new check-box%
@@ -65,7 +66,8 @@
        [callback (λ (b e)
                    (price-analysis-filter #:hide-hold (send hide-hold-check-box get-value)
                                           #:hide-no-pattern (send hide-no-pattern-check-box get-value)
-                                          #:hide-large-spread (send hide-spread-20-check-box get-value)))]))
+                                          #:hide-large-spread (send hide-spread-20-check-box get-value)
+                                          #:hide-non-weekly (send hide-non-weekly-check-box get-value)))]))
 
 (define hide-spread-20-check-box
   (new check-box%
@@ -74,9 +76,26 @@
        [callback (λ (b e)
                    (price-analysis-filter #:hide-hold (send hide-hold-check-box get-value)
                                           #:hide-no-pattern (send hide-no-pattern-check-box get-value)
-                                          #:hide-large-spread (send hide-spread-20-check-box get-value))
-                   (rank-analysis-filter #:hide-large-spread (send hide-spread-20-check-box get-value))
-                   (vol-analysis-filter #:hide-large-spread (send hide-spread-20-check-box get-value)))]))
+                                          #:hide-large-spread (send hide-spread-20-check-box get-value)
+                                          #:hide-non-weekly (send hide-non-weekly-check-box get-value))
+                   (rank-analysis-filter #:hide-large-spread (send hide-spread-20-check-box get-value)
+                                         #:hide-non-weekly (send hide-non-weekly-check-box get-value))
+                   (vol-analysis-filter #:hide-large-spread (send hide-spread-20-check-box get-value)
+                                        #:hide-non-weekly (send hide-non-weekly-check-box get-value)))]))
+
+(define hide-non-weekly-check-box
+  (new check-box%
+       [parent filter-input-pane]
+       [label "Hide Non-Weekly"]
+       [callback (λ (b e)
+                   (price-analysis-filter #:hide-hold (send hide-hold-check-box get-value)
+                                          #:hide-no-pattern (send hide-no-pattern-check-box get-value)
+                                          #:hide-large-spread (send hide-spread-20-check-box get-value)
+                                          #:hide-non-weekly (send hide-non-weekly-check-box get-value))
+                   (rank-analysis-filter #:hide-large-spread (send hide-spread-20-check-box get-value)
+                                         #:hide-non-weekly (send hide-non-weekly-check-box get-value))
+                   (vol-analysis-filter #:hide-large-spread (send hide-spread-20-check-box get-value)
+                                        #:hide-non-weekly (send hide-non-weekly-check-box get-value)))]))
 
 (define analysis-tab-panel
   (new tab-panel%

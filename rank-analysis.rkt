@@ -19,8 +19,11 @@
 
 (define hide-large-spread (make-parameter #f))
 
-(define (rank-analysis-filter #:hide-large-spread large-spread)
+(define hide-non-weekly (make-parameter #f))
+
+(define (rank-analysis-filter #:hide-large-spread large-spread #:hide-non-weekly non-weekly)
   (hide-large-spread large-spread)
+  (hide-non-weekly non-weekly)
   (update-analysis-box rank-analysis-list))
 
 (define (run-rank-analysis market sector start-date end-date)
@@ -28,27 +31,30 @@
   (update-analysis-box rank-analysis-list))
 
 (define (update-analysis-box rank-analysis-list)
-  (let ([filter-spread (if (hide-large-spread)
+  (let* ([filter-spread (if (hide-large-spread)
                             (filter (λ (m) (and (not (equal? "" (rank-analysis-option-spread m)))
                                                 (> 20 (string->number (rank-analysis-option-spread m))))) rank-analysis-list)
-                            rank-analysis-list)])
+                            rank-analysis-list)]
+         [filter-weekly (if (hide-non-weekly)
+                            (filter (λ (m) (rank-analysis-is-weekly m)) filter-spread)
+                            filter-spread)])
     (send analysis-box-ref set
-        (map (λ (m) (rank-analysis-market m)) filter-spread)
-        (map (λ (m) (real->decimal-string (rank-analysis-market-rank m))) filter-spread)
-        (map (λ (m) (rank-analysis-sector m)) filter-spread)
-        (map (λ (m) (real->decimal-string (rank-analysis-sector-rank m))) filter-spread)
-        (map (λ (m) (rank-analysis-industry m)) filter-spread)
-        (map (λ (m) (real->decimal-string (rank-analysis-industry-rank m))) filter-spread)
-        (map (λ (m) (rank-analysis-stock m)) filter-spread)
-        (map (λ (m) (real->decimal-string (rank-analysis-stock-rank m))) filter-spread)
-        (map (λ (m) (real->decimal-string (rank-analysis-stock-best-rank m))) filter-spread)
-        (map (λ (m) (real->decimal-string (rank-analysis-stock-avg-rank m))) filter-spread)
-        (map (λ (m) (real->decimal-string (rank-analysis-stock-worst-rank m))) filter-spread)
-        (map (λ (m) (rank-analysis-earnings-date m)) filter-spread)
-        (map (λ (m) (rank-analysis-option-spread m)) filter-spread))
+          (map (λ (m) (rank-analysis-market m)) filter-weekly)
+          (map (λ (m) (real->decimal-string (rank-analysis-market-rank m))) filter-weekly)
+          (map (λ (m) (rank-analysis-sector m)) filter-weekly)
+          (map (λ (m) (real->decimal-string (rank-analysis-sector-rank m))) filter-weekly)
+          (map (λ (m) (rank-analysis-industry m)) filter-weekly)
+          (map (λ (m) (real->decimal-string (rank-analysis-industry-rank m))) filter-weekly)
+          (map (λ (m) (rank-analysis-stock m)) filter-weekly)
+          (map (λ (m) (real->decimal-string (rank-analysis-stock-rank m))) filter-weekly)
+          (map (λ (m) (real->decimal-string (rank-analysis-stock-best-rank m))) filter-weekly)
+          (map (λ (m) (real->decimal-string (rank-analysis-stock-avg-rank m))) filter-weekly)
+          (map (λ (m) (real->decimal-string (rank-analysis-stock-worst-rank m))) filter-weekly)
+          (map (λ (m) (rank-analysis-earnings-date m)) filter-weekly)
+          (map (λ (m) (rank-analysis-option-spread m)) filter-weekly))
     ; We set data here so that we can retrieve it later with `get-data`
     (map (λ (m i) (send analysis-box-ref set-data i m))
-       filter-spread (range (length filter-spread)))))
+         filter-weekly (range (length filter-weekly)))))
 
 (define analysis-box-columns (list "Market" "MktRnk" "Sector" "SctRnk" "Industry" "IndRnk"
                                    "Stock" "StkRnk" "StkBst" "StkAvg" "StkWrst" "ErnDt" "OptSprd"))

@@ -100,15 +100,15 @@
 (struct history (test trade)
   #:transparent)
 
-(struct price-analysis (market sector sector-vs-market industry stock stock-vs-sector next-div-date earnings-date option-spread zacks-rank)
+(struct price-analysis (market sector sector-vs-market industry stock stock-vs-sector next-div-date earnings-date option-spread zacks-rank is-weekly)
   #:transparent)
 
 (struct rank-analysis (market market-rank sector sector-rank industry industry-rank stock stock-rank stock-best-rank stock-avg-rank
-                              stock-worst-rank earnings-date option-spread)
+                              stock-worst-rank earnings-date option-spread is-weekly)
   #:transparent)
 
 (struct vol-analysis (market market-iv market-iv-rank sector sector-iv sector-iv-rank industry industry-iv industry-iv-rank
-                             stock stock-iv stock-iv-rank earnings-date option-spread)
+                             stock stock-iv stock-iv-rank earnings-date option-spread is-weekly)
   #:transparent)
 
 (struct position-analysis (sector stock expiration strike call-put account signed-shares stock-stop stock-close stock-target end-date strategy)
