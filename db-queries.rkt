@@ -934,15 +934,21 @@ insert into ibkr.order_condition (
 "
                           (open-order-rsp-account order)
                           (open-order-rsp-order-id order)
-                          (condition-contract-id con)
+                          (if (condition-contract-id con)
+                              (condition-contract-id con)
+                              sql-null)
                           (string-replace (string-upcase (symbol->string (condition-type con))) "-" " ")
                           (string-upcase (symbol->string (condition-boolean-operator con)))
                           (string-replace (string-upcase (symbol->string (condition-comparator con))) "-" " ")
                           (cond
                             [(moment? (condition-value con)) (moment->iso8601 (condition-value con))]
                             [(rational? (condition-value con)) (real->decimal-string (condition-value con) 2)])
-                          (condition-exchange con)
-                          (string-replace (string-upcase (symbol->string (condition-trigger-method con))) "-" " ")))
+                          (if (condition-exchange con)
+                              (condition-exchange con)
+                              sql-null)
+                          (if (condition-trigger-method con)
+                              (string-replace (string-upcase (symbol->string (condition-trigger-method con))) "-" " ")
+                              sql-null)))
             (open-order-rsp-conditions order)))
 
 (define (insert-order-note account order-id order-note)
