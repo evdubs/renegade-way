@@ -381,7 +381,7 @@
                                                                     (> (option-strike o) (+ (option-strike closest-strike) (option-mid closest-strike)))
                                                                     (equal? (option-call-put o) "Call")))
                                                         options))]
-                      [long-short-distance (* 1/4 (- (option-strike second-short-call) (option-strike first-short-call)))]
+                      [long-short-distance (* 1/2 (- (option-strike second-short-call) (option-strike first-short-call)))]
                       [first-long-call (last (filter (λ (o) (and (= (option-dte o) (option-dte closest-dte))
                                                                  (<= (option-strike o) (- (option-strike first-short-call) long-short-distance))
                                                                  (equal? (option-call-put o) "Call")))
@@ -436,7 +436,7 @@
                                                                   (< (option-strike o) (- (option-strike closest-strike) (option-mid closest-strike)))
                                                                   (equal? (option-call-put o) "Put")))
                                                       options))]
-                      [long-short-distance (* 1/4 (- (option-strike first-short-put) (option-strike second-short-put)))]
+                      [long-short-distance (* 1/2 (- (option-strike first-short-put) (option-strike second-short-put)))]
                       [first-long-put (first (filter (λ (o) (and (= (option-dte o) (option-dte closest-dte))
                                                                  (>= (option-strike o) (+ (option-strike first-short-put) long-short-distance))
                                                                  (equal? (option-call-put o) "Put")))
