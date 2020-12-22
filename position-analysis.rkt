@@ -63,8 +63,8 @@
            position-analysis-list))
   (send analysis-box-ref set-label
         (string-append "Bulls: " (number->string (length (indexes-of (hash-values bull-bear-roo) 'bull)))
-                       " Bears: " (number->string (length (indexes-of (hash-values bull-bear-roo) 'bear)))
-                       " Roos: " (number->string (length (indexes-of (hash-values bull-bear-roo) 'roo))))))
+                       " Roos: " (number->string (length (indexes-of (hash-values bull-bear-roo) 'roo)))
+                       " Bears: " (number->string (length (indexes-of (hash-values bull-bear-roo) 'bear))))))
 
 (define analysis-box-columns (list "Sector" "Stock" "Expiry" "Strike" "CallPut" "Account"
                                    "Qty" "StkStop" "StkPrc" "StkTgt" "EndDt"))
