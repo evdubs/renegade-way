@@ -40,31 +40,29 @@
          [dohlc (list->vector (get-date-ohlc symbol (date->iso8601 start-date) (date->iso8601 end-date)))]
          [sma-20 (simple-moving-average dohlc 20)]
          [sma-50 (simple-moving-average dohlc 50)]
-         [sma-20-distance (* 1/2
-                             (statistics-stddev
-                              (foldl (λ (d s r)
-                                       (update-statistics r (- (dohlc-close d) (dv-value s))))
-                                     empty-statistics
-                                     (vector->list (vector-drop dohlc (- (vector-length dohlc)
-                                                                         (vector-length sma-20))))
-                                     (vector->list sma-20))))]
-         [sma-50-distance (* 1/2
-                             (statistics-stddev
-                              (foldl (λ (d s r)
-                                       (update-statistics r (- (dohlc-close d) (dv-value s))))
-                                     empty-statistics
-                                     (vector->list (vector-drop dohlc (- (vector-length dohlc)
-                                                                         (vector-length sma-50))))
-                                     (vector->list sma-50))))])
-    (+ (cond [(> (dohlc-close (vector-last dohlc))
-                 (+ (dv-value (vector-last sma-20)) sma-20-distance)) 1]
-             [(< (dohlc-close (vector-last dohlc))
-                 (- (dv-value (vector-last sma-20)) sma-20-distance)) -1]
+         [sma-20-distance (* 1/2 (statistics-stddev
+                                  (foldl (λ (d s r)
+                                           (update-statistics r (/ (dohlc-close d) (dv-value s))))
+                                         empty-statistics
+                                         (vector->list (vector-drop dohlc (- (vector-length dohlc)
+                                                                             (vector-length sma-20))))
+                                         (vector->list sma-20))))]
+         [sma-50-distance (* 1/2 (statistics-stddev
+                                  (foldl (λ (d s r)
+                                           (update-statistics r (/ (dohlc-close d) (dv-value s))))
+                                         empty-statistics
+                                         (vector->list (vector-drop dohlc (- (vector-length dohlc)
+                                                                             (vector-length sma-50))))
+                                         (vector->list sma-50))))])
+    (+ (cond [(> (/ (dohlc-close (vector-last dohlc)) (dv-value (vector-last sma-20)))
+                 (+ 1 sma-20-distance)) 1]
+             [(< (/ (dohlc-close (vector-last dohlc)) (dv-value (vector-last sma-20)))
+                 (- 1 sma-20-distance)) -1]
              [else 0])
-       (cond [(> (dohlc-close (vector-last dohlc))
-                 (+ (dv-value (vector-last sma-50)) sma-50-distance)) 1]
-             [(< (dohlc-close (vector-last dohlc))
-                 (- (dv-value (vector-last sma-50)) sma-50-distance)) -1]
+       (cond [(> (/ (dohlc-close (vector-last dohlc)) (dv-value (vector-last sma-50)))
+                 (+ 1 sma-50-distance)) 1]
+             [(< (/ (dohlc-close (vector-last dohlc)) (dv-value (vector-last sma-50)))
+                 (- 1 sma-50-distance)) -1]
              [else 0])
        (cond [(> (dv-value (vector-ref sma-20 (- (vector-length sma-20) 2)))
                  (dv-value (vector-ref sma-20 (- (vector-length sma-20) 1)))) -1/2]
