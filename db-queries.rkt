@@ -327,19 +327,44 @@ order by
                               (vector-ref row 8) (vector-ref row 9) (vector-ref row 10) (vector-ref row 11)
                               (vector-ref row 12) (vector-ref row 13) (vector-ref row 14)))
        (query-rows dbc "
+with hist_vol as (
+  select
+    vh.act_symbol,
+    min(vh.iv_current) as iv_year_low,
+    max(vh.iv_current) as iv_year_high
+  from
+    oic.volatility_history vh
+  where
+    vh.date <= $2::text::date and
+    vh.date > $2::text::date - '1 year'::interval
+  group by
+    vh.act_symbol
+)
 select
   market.etf_symbol,
   coalesce(trunc(market_vol.iv_current * 100, 2), 0.00) as market_iv,
-  coalesce(trunc((market_vol.iv_current - market_vol.iv_year_low) / (market_vol.iv_year_high - market_vol.iv_year_low) * 100, 2), 0.00) as market_iv_rank,
+  case when market_vol.iv_year_low is null or market_vol.iv_year_high is null
+    then coalesce(trunc((market_vol.iv_current - market_hist_vol.iv_year_low) / (market_hist_vol.iv_year_high - market_hist_vol.iv_year_low) * 100, 2), 0.00)
+    else coalesce(trunc((market_vol.iv_current - market_vol.iv_year_low) / (market_vol.iv_year_high - market_vol.iv_year_low) * 100, 2), 0.00)
+  end as market_iv_rank,
   spdr.to_sector_etf(market.sector),
   coalesce(trunc(sector_vol.iv_current * 100, 2), 0.00) as sector_iv,
-  coalesce(trunc((sector_vol.iv_current - sector_vol.iv_year_low) / (sector_vol.iv_year_high - sector_vol.iv_year_low) * 100, 2), 0.00) as sector_iv_rank,
+  case when sector_vol.iv_year_low is null or sector_vol.iv_year_high is null
+    then coalesce(trunc((sector_vol.iv_current - sector_hist_vol.iv_year_low) / (sector_hist_vol.iv_year_high - sector_hist_vol.iv_year_low) * 100, 2), 0.00)
+    else coalesce(trunc((sector_vol.iv_current - sector_vol.iv_year_low) / (sector_vol.iv_year_high - sector_vol.iv_year_low) * 100, 2), 0.00)
+  end as sector_iv_rank,
   coalesce(industry.etf_symbol, ''),
   coalesce(trunc(industry_vol.iv_current * 100, 2), 0.00) as industry_iv,
-  coalesce(trunc((industry_vol.iv_current - industry_vol.iv_year_low) / (industry_vol.iv_year_high - industry_vol.iv_year_low) * 100, 2), 0.00) as industry_iv_rank,
+  case when industry_vol.iv_year_low is null or industry_vol.iv_year_high is null
+    then coalesce(trunc((industry_vol.iv_current - industry_hist_vol.iv_year_low) / (industry_hist_vol.iv_year_high - industry_hist_vol.iv_year_low) * 100, 2), 0.00)
+    else coalesce(trunc((industry_vol.iv_current - industry_vol.iv_year_low) / (industry_vol.iv_year_high - industry_vol.iv_year_low) * 100, 2), 0.00)
+  end as industry_iv_rank,
   market.component_symbol,
   coalesce(trunc(component_vol.iv_current * 100, 2), 0.00) as component_iv,
-  coalesce(trunc((component_vol.iv_current - component_vol.iv_year_low) / (component_vol.iv_year_high - component_vol.iv_year_low) * 100, 2), 0.00) as component_iv_rank,
+  case when component_vol.iv_year_low is null or component_vol.iv_year_high is null
+    then coalesce(trunc((component_vol.iv_current - component_hist_vol.iv_year_low) / (component_hist_vol.iv_year_high - component_hist_vol.iv_year_low) * 100, 2), 0.00)
+    else coalesce(trunc((component_vol.iv_current - component_vol.iv_year_low) / (component_vol.iv_year_high - component_vol.iv_year_low) * 100, 2), 0.00)
+  end as component_iv_rank,
   coalesce(to_char(ec.date, 'YY-MM-DD'), '') as earnings_date,
   coalesce(trunc(option_spread.spread * 100, 2)::text, '') as option_spread,
   case
@@ -354,10 +379,18 @@ on
   market.etf_symbol = market_vol.act_symbol and
   market_vol.date = (select max(date) from oic.volatility_history where date <= $2::text::date)
 join
+  hist_vol market_hist_vol
+on
+  market.etf_symbol = market_hist_vol.act_symbol
+join
   oic.volatility_history sector_vol
 on
   spdr.to_sector_etf(market.sector) = sector_vol.act_symbol and 
   sector_vol.date = (select max(date) from oic.volatility_history where date <= $2::text::date)
+join
+  hist_vol sector_hist_vol
+on
+  spdr.to_sector_etf(market.sector) = sector_hist_vol.act_symbol
 left outer join
   spdr.etf_holding industry
 on
@@ -369,11 +402,19 @@ left outer join
 on
   industry.etf_symbol = industry_vol.act_symbol and
   industry_vol.date = (select max(date) from oic.volatility_history where date <= $2::text::date)
+left outer join
+  hist_vol industry_hist_vol
+on
+  industry.etf_symbol = industry_hist_vol.act_symbol
 join
   oic.volatility_history component_vol
 on
   market.component_symbol = component_vol.act_symbol and
   component_vol.date = (select max(date) from oic.volatility_history where date <= $2::text::date)
+join
+  hist_vol component_hist_vol
+on
+  market.component_symbol = component_hist_vol.act_symbol
 left outer join
   zacks.earnings_calendar ec
 on
