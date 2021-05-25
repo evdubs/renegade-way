@@ -84,6 +84,8 @@
 (define chart-plot-pane (new vertical-pane%
                              [parent chart-frame]))
 
+(define prev-time-stamp (current-milliseconds))
+
 (define (chart-price-plot symbol-field canvas)
   (if (equal? (send symbol-field get-value) "")
       (plot-snip (lines (list #(0 0) #(1 0)))
@@ -134,14 +136,17 @@
         (define (get-ohlc dv d)
           (filter (λ (e) (date=? (->date (posix->datetime d)) (->date (posix->datetime (dohlc-date e))))) dv))
         (define ((make-current-value-renderer dv) snip event x y)
-          (define overlays
-            (and x y (eq? (send event get-event-type) 'motion)
-                 (let ([shift (if (< 43200 (modulo (round x) 86400)) 86400 0)])
-                   (list (vrule (+ (- x (modulo (round x) 86400)) shift) #:style 'long-dash)
-                         (point-pict (vector (+ (- x (modulo (round x) 86400)) shift) y)
-                                     (make-tag (get-ohlc dv (+ x 43200)))
-                                     #:anchor 'auto)))))
-          (send snip set-overlay-renderers overlays))
+          (define delta (- (current-milliseconds) prev-time-stamp))
+          (cond [(< 40 delta)
+                 (define overlays
+                   (and x y (eq? (send event get-event-type) 'motion)
+                        (let ([shift (if (< 43200 (modulo (round x) 86400)) 86400 0)])
+                          (list (vrule (+ (- x (modulo (round x) 86400)) shift) #:style 'long-dash)
+                                (point-pict (vector (+ (- x (modulo (round x) 86400)) shift) y)
+                                            (make-tag (get-ohlc dv (+ x 43200)))
+                                            #:anchor 'auto)))))
+                 (send snip set-overlay-renderers overlays)
+                 (set! prev-time-stamp (current-milliseconds))]))
         (send snip set-mouse-event-callback (make-current-value-renderer date-ohlc-vector))
         snip)))
 
