@@ -373,21 +373,21 @@ select
   end as is_weekly
 from
   spdr.etf_holding market
-join
+left outer join
   oic.volatility_history market_vol
 on
   market.etf_symbol = market_vol.act_symbol and
   market_vol.date = (select max(date) from oic.volatility_history where date <= $2::text::date)
-join
+left outer join
   hist_vol market_hist_vol
 on
   market.etf_symbol = market_hist_vol.act_symbol
-join
+left outer join
   oic.volatility_history sector_vol
 on
   spdr.to_sector_etf(market.sector) = sector_vol.act_symbol and 
   sector_vol.date = (select max(date) from oic.volatility_history where date <= $2::text::date)
-join
+left outer join
   hist_vol sector_hist_vol
 on
   spdr.to_sector_etf(market.sector) = sector_hist_vol.act_symbol
