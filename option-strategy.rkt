@@ -422,8 +422,8 @@
                                                          res))
                                           (first options)
                                           options)]
-                      [closest-strike (foldl (λ (o res) (if (< (abs (- 5/10 (option-delta o)))
-                                                               (abs (- 5/10 (option-delta res))))
+                      [closest-strike (foldl (λ (o res) (if (< (abs (- -5/10 (option-delta o)))
+                                                               (abs (- -5/10 (option-delta res))))
                                                             o
                                                             res))
                                              (first options)
