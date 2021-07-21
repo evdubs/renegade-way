@@ -1,7 +1,9 @@
 #lang racket/base
 
+; cmd-line moved up here to be loaded before other bits that need params set by cmd-line
+(require "cmd-line.rkt")
+
 (require "chart.rkt"
-         "cmd-line.rkt"
          "option-strategy.rkt"
          "position-order-manager.rkt"
          "analysis.rkt")

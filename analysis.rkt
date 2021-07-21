@@ -6,6 +6,7 @@
          racket/match
          "position-analysis.rkt"
          "price-analysis.rkt"
+         "price-analysis-box.rkt"
          "rank-analysis.rkt"
          "vol-analysis.rkt")
 
@@ -120,7 +121,8 @@
                    (match (send analysis-tab-panel get-item-label (send analysis-tab-panel get-selection))
                      ["Price" (refresh-tab-panel)
                               (run-price-analysis (send market-field get-value) (send sector-field get-value)
-                                                  (send start-date-field get-value) (send end-date-field get-value))]
+                                                  (send start-date-field get-value) (send end-date-field get-value))
+                              (update-price-analysis-box price-analysis-list analysis-hash)]
                      ["Rank" (refresh-tab-panel)
                              (run-rank-analysis (send market-field get-value) (send sector-field get-value)
                                                 (send start-date-field get-value) (send end-date-field get-value))]

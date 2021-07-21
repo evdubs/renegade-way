@@ -7,7 +7,7 @@
          racket/string
          interactive-brokers-api/base-structs
          interactive-brokers-api/response-messages
-         "cmd-line.rkt"
+         "params.rkt"
          "structs.rkt")
 
 (provide get-1-month-rate
@@ -23,6 +23,7 @@
          insert-commission-report
          insert-contract
          insert-execution
+         insert-price-analysis
          insert-order
          insert-order-note)
 
@@ -862,6 +863,91 @@ insert into ibkr.contract (
               (contract-details-rsp-time-zone-id contract)
               (contract-details-rsp-ev-rule contract)
               (contract-details-rsp-ev-multiplier contract)))
+
+(define (insert-price-analysis date price-analysis market-rating sector-rating industry-rating stock-patterns)
+  (query-exec dbc "
+insert into renegade.price_analysis (
+  date,
+  market_act_symbol,
+  market_rating,
+  sector_act_symbol,
+  sector_vs_market,
+  sector_rating,
+  industry_act_symbol,
+  industry_rating,
+  stock_act_symbol,
+  stock_vs_sector,
+  dividend_date,
+  earnings_date,
+  option_spread,
+  zacks_rank,
+  patterns
+) values (
+  $1::text::date,
+  case
+    when $2 = '' then null
+    else $2
+  end,
+  case
+    when $2 = '' then null
+    else $3::smallint
+  end,
+  case
+    when $4 = '' then null
+    else $4
+  end,
+  case
+    when $4 = '' then null
+    else $5::numeric
+  end,
+  case
+    when $4 = '' then null
+    else $6::smallint
+  end,
+  case
+    when $7 = '' then null
+    else $7
+  end,
+  case
+    when $7 = '' then null
+    else $8::smallint
+  end,
+  $9,
+  $10,
+  case
+    when $11::text = '' then null
+    else to_date($11::text, 'YY-MM-DD')
+  end,
+  case
+    when $12::text = '' then null
+    else to_date($12::text, 'YY-MM-DD')
+  end,
+  case
+    when $13::text = '' then null
+    else $13::text::numeric
+  end,
+  case
+    when $14::text = '' then null
+    else zacks.to_integer_rank($14::text::zacks.rank)
+  end,
+  $15
+) on conflict (date, stock_act_symbol) do nothing;
+"
+              date
+              (price-analysis-market price-analysis)
+              market-rating
+              (price-analysis-sector price-analysis)
+              (price-analysis-sector-vs-market price-analysis)
+              sector-rating
+              (price-analysis-industry price-analysis)
+              industry-rating
+              (price-analysis-stock price-analysis)
+              (price-analysis-stock-vs-sector price-analysis)
+              (price-analysis-next-div-date price-analysis)
+              (price-analysis-earnings-date price-analysis)
+              (price-analysis-option-spread price-analysis)
+              (string-replace (price-analysis-zacks-rank price-analysis) "Str" "Strong")
+              stock-patterns))
 
 (define (insert-order order)
   (query-exec dbc "

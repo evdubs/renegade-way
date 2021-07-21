@@ -13,8 +13,8 @@
          interactive-brokers-api/main
          interactive-brokers-api/request-messages
          interactive-brokers-api/response-messages
-         "cmd-line.rkt"
          "db-queries.rkt"
+         "params.rkt"
          "plot-util.rkt"
          "pricing-risk.rkt"
          "structs.rkt")

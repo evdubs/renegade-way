@@ -1,22 +1,7 @@
 #lang racket/base
 
-(require racket/cmdline)
-
-(provide db-user
-         db-name
-         db-pass
-         ibkr-hostname
-         ibkr-port-no)
-
-(define db-user (make-parameter "user"))
-
-(define db-name (make-parameter "local"))
-
-(define db-pass (make-parameter ""))
-
-(define ibkr-hostname (make-parameter "127.0.0.1"))
-
-(define ibkr-port-no (make-parameter 7497))
+(require racket/cmdline
+         "params.rkt")
 
 (command-line
  #:program "racket main.rkt"
