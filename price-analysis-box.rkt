@@ -39,7 +39,7 @@
                              filter-hold)]
          [filter-spread (if (hide-large-spread)
                             (filter (λ (m) (and (not (equal? "" (price-analysis-option-spread m)))
-                                                (> 20 (string->number (price-analysis-option-spread m))))) filter-pattern)
+                                                (> 30 (string->number (price-analysis-option-spread m))))) filter-pattern)
                             filter-pattern)]
          [filter-weekly (if (hide-non-weekly)
                             (filter (λ (m) (price-analysis-is-weekly m)) filter-spread)

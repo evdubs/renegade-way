@@ -33,7 +33,7 @@
 (define (update-analysis-box rank-analysis-list)
   (let* ([filter-spread (if (hide-large-spread)
                             (filter (λ (m) (and (not (equal? "" (rank-analysis-option-spread m)))
-                                                (> 20 (string->number (rank-analysis-option-spread m))))) rank-analysis-list)
+                                                (> 30 (string->number (rank-analysis-option-spread m))))) rank-analysis-list)
                             rank-analysis-list)]
          [filter-weekly (if (hide-non-weekly)
                             (filter (λ (m) (rank-analysis-is-weekly m)) filter-spread)

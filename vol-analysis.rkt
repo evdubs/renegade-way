@@ -32,7 +32,7 @@
 (define (update-analysis-box vol-analysis-list)
   (let* ([filter-spread (if (hide-large-spread)
                             (filter (λ (m) (and (not (equal? "" (vol-analysis-option-spread m)))
-                                                (> 20 (string->number (vol-analysis-option-spread m))))) vol-analysis-list)
+                                                (> 30 (string->number (vol-analysis-option-spread m))))) vol-analysis-list)
                             vol-analysis-list)]
          [filter-weekly (if (hide-non-weekly)
                             (filter (λ (m) (vol-analysis-is-weekly m)) filter-spread)
