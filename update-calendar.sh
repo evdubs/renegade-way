@@ -2,5 +2,4 @@
 
 dir=$(dirname "$0")
 
-racket ${dir}/update-calendar.rkt -s "$1" -r
-racket ${dir}/update-calendar.rkt -s "$1" -i "$2" -p "$3"
+racket ${dir}/update-calendar.rkt -i "$1" -k "$2" -p "$3" -s "$4"

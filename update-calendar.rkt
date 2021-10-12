@@ -1,21 +1,15 @@
 #lang racket/base
 
 (require db
-         google/calendar
-         google/oauth
-         google/simple-token-store
          gregor
+         net/http-easy
+         net/jwt
          racket/cmdline
+         racket/port
          racket/pretty
          racket/string)
 
-(define auth-code (make-parameter ""))
-
-(define auth-request-url? (make-parameter #f))
-
 (define calendar-id (make-parameter ""))
-
-(define client-secret-file (make-parameter ""))
 
 (define db-user (make-parameter "user"))
 
@@ -23,61 +17,53 @@
 
 (define db-pass (make-parameter ""))
 
-(define refresh-token? (make-parameter #f))
+; To generate this file, take the private key from the service account JSON and do:
+; $ openssl pkcs8 -in private-key.pem -outform DER -out private-key.der -nocrypt -topk8
+;
+; PKCS8/DER format is required by `crypto` when using "RS256". "RS256" is required by Google.
+(define private-key-file (make-parameter ""))
 
-(define store-token? (make-parameter #f))
-
-; Steps to follow:
-; 1. Generate the client secret file.
-; 2. Generate an Authentication Request URL to receive a permission code
-; 3. Use the permission code to generate and store a token that can be used to interact with the calendar.
-;    When the token is stored, you can use it without generating new permission codes.
-; 4. After a period of time, refresh the token to continue interacting with the calendar.
-; See https://developers.google.com/calendar/auth for more info
+(define service-account (make-parameter ""))
 
 (command-line
  #:program "update-calendar.rkt"
  #:once-each
- [("-c" "--authorization-code") c
-                                "Authorization code received from the Authentication Request URL. This is required to generate and store the token."
-                                (auth-code c)]
- [("-i" "--calendar-id") i
+ [("-i" "--calendar-id") email-address
                          "Calendar ID (as an email address)"
-                         (calendar-id i)]
- [("-l" "--authentication-request-url") "Show the Authentication Request URL that can be used to grant permissions"
-                                        (auth-request-url? #t)]
+                         (calendar-id email-address)]
+ [("-k" "--private-key-file") pkey-file
+                              "Private Key File (as PKCS8 / DER formatted)"
+                              (private-key-file pkey-file)]
  [("-n" "--db-name") name
                      "Database name. Defaults to 'local'"
                      (db-name name)]
  [("-p" "--db-pass") password
                      "Database password"
                      (db-pass password)]
- [("-r" "--refresh-token") "Attempt to refresh the token previously stored with --stored-token."
-                           (refresh-token? #t)]
- [("-s" "--client-secret") s
-                           "Client secret file from the credentials console https://console.developers.google.com"
-                           (client-secret-file s)]
- [("-t" "--store-token") "Store the token associated with the code received from the Authentication Request URL"
-                         (store-token? #t)]
+ [("-s" "--service-account") email-address
+                             "Service account email address"
+                             (service-account email-address)]
  [("-u" "--db-user") user
                      "Database user name. Defaults to 'user'"
                      (db-user user)])
 
-(define client-secret (file->client (client-secret-file)))
+(define jwt (encode/sign "RS256"
+                         (port->bytes (open-input-file (private-key-file)))
+                         #:iss (service-account)
+                         #:aud "https://oauth2.googleapis.com/token"
+                         #:exp (seconds-between (datetime 1970) (+hours (now/utc) 1))
+                         #:iat (seconds-between (datetime 1970) (now/utc))
+                         #:other (hash 'scope "https://www.googleapis.com/auth/calendar.events")))
 
-(cond
-  [(auth-request-url?) (displayln "Click the following URL to allow read/write access to Calendar Events:")
-                       (displayln (authentication-request-url client-secret (list "https://www.googleapis.com/auth/calendar.events")))]
-  [(store-token?) (displayln "Generating and saving new token.")
-                  (define token (authorization-code->token client-secret (auth-code)))
-                  (store-google-token! client-secret "Renegade Way" token)]
-  [(refresh-token?) (displayln "Refreshing token.")
-                    (define token (lookup-google-token client-secret))
-                    (define new-token (refresh-token client-secret token))
-                    (replace-google-token! client-secret new-token)]
-  [else (define token (lookup-google-token client-secret))
-        (define dbc (postgresql-connect #:user (db-user) #:database (db-name) #:password (db-pass)))
-        (define current-positions (query-rows dbc "
+(define grant-response (post "https://oauth2.googleapis.com/token"
+                             #:form (list (cons 'grant_type "urn:ietf:params:oauth:grant-type:jwt-bearer")
+                                          (cons 'assertion jwt))))
+
+(define access-token (hash-ref (response-json grant-response) 'access_token))
+
+(define dbc (postgresql-connect #:user (db-user) #:database (db-name) #:password (db-pass)))
+
+(define current-positions (query-rows dbc "
 with earnings_end_date as (
   select
     act_symbol,
@@ -169,28 +155,33 @@ order by
   strike,
   \"right\";
 "))
-        (define expiring-positions (filter (λ (p) (date>=? (+days (today) 7)
-                                                           (iso8601->date (vector-ref p 6))))
-                                           current-positions))
-        (define grouped-positions (foldl (λ (p acc)
-                                           (if (hash-has-key? acc (vector-ref p 6))
-                                               (hash-set acc (vector-ref p 6) (append (hash-ref acc (vector-ref p 6)) (list p)))
-                                               (hash-set acc (vector-ref p 6) (list p))))
-                                         (hash)
-                                         expiring-positions))
-        (if (> (hash-count grouped-positions) 0)
-            (displayln "Creating calendar event(s).")
-            #f)
-        (hash-for-each grouped-positions
-                       (λ (date-str positions)
-                         (insert-events (hash 'start (hash 'dateTime (string-append date-str "T15:30:00") 'timeZone "America/New_York")
-                                              'end (hash 'dateTime (string-append date-str "T16:00:00") 'timeZone "America/New_York")
-                                              'summary "Close Positions"
-                                              'description (string-join (map (λ (p) (format "~a" (vector->list p))) positions) "\n")
-                                              'defaultReminders (list)
-                                              'reminders (hash 'overrides (list (hash 'method "popup"
-                                                                                      'minutes 1))
-                                                               'useDefault #f
-                                                               ))
-                                        (calendar-id)
-                                        #:token token)))])
+
+(define expiring-positions (filter (λ (p) (date>=? (+days (today) 7)
+                                                   (iso8601->date (vector-ref p 6))))
+                                   current-positions))
+
+(define grouped-positions (foldl (λ (p acc)
+                                   (if (hash-has-key? acc (vector-ref p 6))
+                                       (hash-set acc (vector-ref p 6) (append (hash-ref acc (vector-ref p 6)) (list p)))
+                                       (hash-set acc (vector-ref p 6) (list p))))
+                                 (hash)
+                                 expiring-positions))
+
+(if (> (hash-count grouped-positions) 0)
+    (displayln "Creating calendar event(s).")
+    #f)
+
+(hash-for-each grouped-positions
+               (λ (date-str positions)
+                 (post (string-append "https://www.googleapis.com/calendar/v3/calendars/"
+                                      (calendar-id)
+                                      "/events")
+                       #:headers (hash 'Authorization (string-append "Bearer " access-token))
+                       #:json (hash 'start (hash 'dateTime (string-append date-str "T15:30:00") 'timeZone "America/New_York")
+                                    'end (hash 'dateTime (string-append date-str "T16:00:00") 'timeZone "America/New_York")
+                                    'summary "Close Positions"
+                                    'description (string-join (map (λ (p) (format "~a" (vector->list p))) positions) "\n")
+                                    'defaultReminders (list)
+                                    'reminders (hash 'overrides (list (hash 'method "popup"
+                                                                            'minutes 1))
+                                                     'useDefault #f)))))
