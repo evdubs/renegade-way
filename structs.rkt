@@ -15,6 +15,7 @@
          (struct-out price-analysis)
          (struct-out rank-analysis)
          (struct-out vol-analysis)
+         (struct-out condor-analysis)
          (struct-out position-analysis)
          (struct-out option)
          (contract-out
@@ -109,6 +110,10 @@
 
 (struct vol-analysis (market market-iv market-iv-rank sector sector-iv sector-iv-rank industry industry-iv industry-iv-rank
                              stock stock-iv stock-iv-rank earnings-date option-spread is-weekly)
+  #:transparent)
+
+(struct condor-analysis (market market-rtg market-rr sector sector-rtg sector-rr industry industry-rtg industry-rr stock stock-rtg
+                                stock-rr earnings-date option-spread is-weekly)
   #:transparent)
 
 (struct position-analysis (sector stock expiration strike call-put account signed-shares stock-stop stock-close stock-target end-date strategy)

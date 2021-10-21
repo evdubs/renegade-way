@@ -4,6 +4,8 @@
          racket/class
          racket/gui/base
          racket/match
+         "condor-analysis.rkt"
+         "condor-analysis-box.rkt"
          "position-analysis.rkt"
          "price-analysis.rkt"
          "price-analysis-box.rkt"
@@ -57,7 +59,7 @@
        [callback (λ (b e)
                    (price-analysis-filter #:hide-hold (send hide-hold-check-box get-value)
                                           #:hide-no-pattern (send hide-no-pattern-check-box get-value)
-                                          #:hide-large-spread (send hide-spread-20-check-box get-value)
+                                          #:hide-large-spread (send hide-spread-check-box get-value)
                                           #:hide-non-weekly (send hide-non-weekly-check-box get-value)))]))
 
 (define hide-no-pattern-check-box
@@ -67,22 +69,24 @@
        [callback (λ (b e)
                    (price-analysis-filter #:hide-hold (send hide-hold-check-box get-value)
                                           #:hide-no-pattern (send hide-no-pattern-check-box get-value)
-                                          #:hide-large-spread (send hide-spread-20-check-box get-value)
+                                          #:hide-large-spread (send hide-spread-check-box get-value)
                                           #:hide-non-weekly (send hide-non-weekly-check-box get-value)))]))
 
-(define hide-spread-20-check-box
+(define hide-spread-check-box
   (new check-box%
        [parent filter-input-pane]
        [label "Hide Large Spread"]
        [callback (λ (b e)
                    (price-analysis-filter #:hide-hold (send hide-hold-check-box get-value)
                                           #:hide-no-pattern (send hide-no-pattern-check-box get-value)
-                                          #:hide-large-spread (send hide-spread-20-check-box get-value)
+                                          #:hide-large-spread (send hide-spread-check-box get-value)
                                           #:hide-non-weekly (send hide-non-weekly-check-box get-value))
-                   (rank-analysis-filter #:hide-large-spread (send hide-spread-20-check-box get-value)
+                   (rank-analysis-filter #:hide-large-spread (send hide-spread-check-box get-value)
                                          #:hide-non-weekly (send hide-non-weekly-check-box get-value))
-                   (vol-analysis-filter #:hide-large-spread (send hide-spread-20-check-box get-value)
-                                        #:hide-non-weekly (send hide-non-weekly-check-box get-value)))]))
+                   (vol-analysis-filter #:hide-large-spread (send hide-spread-check-box get-value)
+                                        #:hide-non-weekly (send hide-non-weekly-check-box get-value))
+                   (condor-analysis-filter #:hide-large-spread (send hide-spread-check-box get-value)
+                                           #:hide-non-weekly (send hide-non-weekly-check-box get-value)))]))
 
 (define hide-non-weekly-check-box
   (new check-box%
@@ -91,16 +95,18 @@
        [callback (λ (b e)
                    (price-analysis-filter #:hide-hold (send hide-hold-check-box get-value)
                                           #:hide-no-pattern (send hide-no-pattern-check-box get-value)
-                                          #:hide-large-spread (send hide-spread-20-check-box get-value)
+                                          #:hide-large-spread (send hide-spread-check-box get-value)
                                           #:hide-non-weekly (send hide-non-weekly-check-box get-value))
-                   (rank-analysis-filter #:hide-large-spread (send hide-spread-20-check-box get-value)
+                   (rank-analysis-filter #:hide-large-spread (send hide-spread-check-box get-value)
                                          #:hide-non-weekly (send hide-non-weekly-check-box get-value))
-                   (vol-analysis-filter #:hide-large-spread (send hide-spread-20-check-box get-value)
-                                        #:hide-non-weekly (send hide-non-weekly-check-box get-value)))]))
+                   (vol-analysis-filter #:hide-large-spread (send hide-spread-check-box get-value)
+                                        #:hide-non-weekly (send hide-non-weekly-check-box get-value))
+                   (condor-analysis-filter #:hide-large-spread (send hide-spread-check-box get-value)
+                                           #:hide-non-weekly (send hide-non-weekly-check-box get-value)))]))
 
 (define analysis-tab-panel
   (new tab-panel%
-       [choices (list "Price" "Rank" "Vol" "Position")]
+       [choices (list "Price" "Rank" "Vol" "Condor" "Position")]
        [parent analysis-frame]
        [callback (λ (p e) (refresh-tab-panel))]))
 
@@ -110,6 +116,7 @@
     ["Price" (price-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))]
     ["Rank" (rank-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))]
     ["Vol" (vol-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))]
+    ["Condor" (condor-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))]
     ["Position" (position-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))]))
 
 (define analyze-button
@@ -122,13 +129,17 @@
                      ["Price" (refresh-tab-panel)
                               (run-price-analysis (send market-field get-value) (send sector-field get-value)
                                                   (send start-date-field get-value) (send end-date-field get-value))
-                              (update-price-analysis-box price-analysis-list analysis-hash)]
+                              (update-price-analysis-box price-analysis-list price-analysis-hash)]
                      ["Rank" (refresh-tab-panel)
                              (run-rank-analysis (send market-field get-value) (send sector-field get-value)
                                                 (send start-date-field get-value) (send end-date-field get-value))]
                      ["Vol" (refresh-tab-panel)
                             (run-vol-analysis (send market-field get-value) (send sector-field get-value)
                                               (send start-date-field get-value) (send end-date-field get-value))]
+                     ["Condor" (refresh-tab-panel)
+                               (run-condor-analysis (send market-field get-value) (send sector-field get-value)
+                                                    (send start-date-field get-value) (send end-date-field get-value))
+                               (update-condor-analysis-box condor-analysis-list condor-analysis-hash)]
                      ["Position" (refresh-tab-panel)
                                  (run-position-analysis (send market-field get-value) (send sector-field get-value)
                                                         (send start-date-field get-value) (send end-date-field get-value))])
@@ -139,6 +150,7 @@
   (price-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))
   (rank-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))
   (vol-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))
+  (condor-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))
   (position-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))
 
   (refresh-tab-panel)

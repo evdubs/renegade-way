@@ -5,7 +5,7 @@
          racket/gui/base
          "chart.rkt"
          "db-queries.rkt"
-         "option-strategy.rkt"
+         "option-strategy-frame.rkt"
          "price-analysis.rkt"
          "structs.rkt")
 
@@ -28,14 +28,14 @@
   (hide-no-pattern no-pattern)
   (hide-large-spread large-spread)
   (hide-non-weekly non-weekly)
-  (update-price-analysis-box price-analysis-list analysis-hash))
+  (update-price-analysis-box price-analysis-list price-analysis-hash))
 
-(define (update-price-analysis-box price-analysis-list analysis-hash)
+(define (update-price-analysis-box price-analysis-list price-analysis-hash)
   (let* ([filter-hold (if (hide-hold)
                           (filter (λ (m) (not (equal? "Hold" (price-analysis-zacks-rank m)))) price-analysis-list)
                           price-analysis-list)]
          [filter-pattern (if (hide-no-pattern)
-                             (filter (λ (m) (not (equal? "" (hash-ref analysis-hash (price-analysis-stock m))))) filter-hold)
+                             (filter (λ (m) (not (equal? "" (hash-ref price-analysis-hash (price-analysis-stock m))))) filter-hold)
                              filter-hold)]
          [filter-spread (if (hide-large-spread)
                             (filter (λ (m) (and (not (equal? "" (price-analysis-option-spread m)))
@@ -46,21 +46,21 @@
                             filter-spread)])
     (send analysis-box-ref set
           (map (λ (m) (price-analysis-market m)) filter-weekly)
-          (map (λ (m) (number->string (hash-ref analysis-hash (price-analysis-market m)))) filter-weekly)
+          (map (λ (m) (number->string (hash-ref price-analysis-hash (price-analysis-market m)))) filter-weekly)
           (map (λ (m) (price-analysis-sector m)) filter-weekly)
           (map (λ (m) (real->decimal-string (price-analysis-sector-vs-market m))) filter-weekly)
-          (map (λ (m) (number->string (hash-ref analysis-hash (price-analysis-sector m)))) filter-weekly)
+          (map (λ (m) (number->string (hash-ref price-analysis-hash (price-analysis-sector m)))) filter-weekly)
           (map (λ (m) (price-analysis-industry m)) filter-weekly)
-          (map (λ (m) (number->string (hash-ref analysis-hash (price-analysis-industry m)))) filter-weekly)
+          (map (λ (m) (number->string (hash-ref price-analysis-hash (price-analysis-industry m)))) filter-weekly)
           (map (λ (m) (price-analysis-stock m)) filter-weekly)
           (map (λ (m) (real->decimal-string (price-analysis-stock-vs-sector m))) filter-weekly)
           (map (λ (m) (price-analysis-next-div-date m)) filter-weekly)
           (map (λ (m) (price-analysis-earnings-date m)) filter-weekly)
           (map (λ (m) (price-analysis-option-spread m)) filter-weekly)
           (map (λ (m) (price-analysis-zacks-rank m)) filter-weekly)
-          (map (λ (m) (hash-ref analysis-hash (price-analysis-stock m))) filter-weekly))
+          (map (λ (m) (hash-ref price-analysis-hash (price-analysis-stock m))) filter-weekly))
     ; We set data here so that we can retrieve it later with `get-data`
-    (map (λ (m i) (send analysis-box-ref set-data i (list m (hash-ref analysis-hash (price-analysis-stock m)))))
+    (map (λ (m i) (send analysis-box-ref set-data i (list m (hash-ref price-analysis-hash (price-analysis-stock m)))))
          filter-weekly (range (length filter-weekly)))))
 
 (define analysis-box-columns (list "Market" "MktRtg" "Sector" "Sct/Mkt" "SctRtg" "Industry" "IndRtg"
@@ -94,4 +94,4 @@
     (for-each (λ (i) (send analysis-box set-column-width i 80 80 80))
               (range num-cols)))
   (set! analysis-box-ref analysis-box)
-  (update-price-analysis-box price-analysis-list analysis-hash))
+  (update-price-analysis-box price-analysis-list price-analysis-hash))

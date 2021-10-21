@@ -17,7 +17,7 @@
          "pattern/range-rally.rkt"
          "pattern/range-pullback.rkt")
 
-(provide analysis-hash
+(provide price-analysis-hash
          price-analysis-list
          run-price-analysis)
 
@@ -85,21 +85,21 @@
 
 (define price-analysis-list (list))
 
-(define analysis-hash (hash))
+(define price-analysis-hash (hash))
 
 (define (run-price-analysis market sector start-date end-date)
   (let ([new-price-analysis-list (get-price-analysis market sector start-date end-date)]
-        [new-analysis-hash (make-hash)])
+        [new-price-analysis-hash (make-hash)])
     ; this lets us avoid calling (msi-rating) with an empty symbol
-    (hash-set! new-analysis-hash "" 0)
+    (hash-set! new-price-analysis-hash "" 0)
     (for-each (λ (pa)
-                (cond [(not (hash-has-key? new-analysis-hash (price-analysis-market pa)))
-                       (hash-set! new-analysis-hash (price-analysis-market pa) (msi-rating (price-analysis-market pa) end-date))])
-                (cond [(not (hash-has-key? new-analysis-hash (price-analysis-sector pa)))
-                       (hash-set! new-analysis-hash (price-analysis-sector pa) (msi-rating (price-analysis-sector pa) end-date))])
-                (cond [(not (hash-has-key? new-analysis-hash (price-analysis-industry pa)))
-                       (hash-set! new-analysis-hash (price-analysis-industry pa) (msi-rating (price-analysis-industry pa) end-date))])
-                (hash-set! new-analysis-hash (price-analysis-stock pa) (stock-patterns (price-analysis-stock pa) start-date end-date)))
+                (cond [(not (hash-has-key? new-price-analysis-hash (price-analysis-market pa)))
+                       (hash-set! new-price-analysis-hash (price-analysis-market pa) (msi-rating (price-analysis-market pa) end-date))])
+                (cond [(not (hash-has-key? new-price-analysis-hash (price-analysis-sector pa)))
+                       (hash-set! new-price-analysis-hash (price-analysis-sector pa) (msi-rating (price-analysis-sector pa) end-date))])
+                (cond [(not (hash-has-key? new-price-analysis-hash (price-analysis-industry pa)))
+                       (hash-set! new-price-analysis-hash (price-analysis-industry pa) (msi-rating (price-analysis-industry pa) end-date))])
+                (hash-set! new-price-analysis-hash (price-analysis-stock pa) (stock-patterns (price-analysis-stock pa) start-date end-date)))
               new-price-analysis-list)
     (set! price-analysis-list new-price-analysis-list)
-    (set! analysis-hash new-analysis-hash)))
+    (set! price-analysis-hash new-price-analysis-hash)))

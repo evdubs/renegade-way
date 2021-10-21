@@ -42,8 +42,8 @@
                              (displayln ((error-value->string-handler) e 1000)))])
               (insert-price-analysis (date->iso8601 (save-end-date))
                                      msis
-                                     (hash-ref analysis-hash (price-analysis-market msis))
-                                     (hash-ref analysis-hash (price-analysis-sector msis))
-                                     (hash-ref analysis-hash (price-analysis-industry msis))
-                                     (hash-ref analysis-hash (price-analysis-stock msis)))))
+                                     (hash-ref price-analysis-hash (price-analysis-market msis))
+                                     (hash-ref price-analysis-hash (price-analysis-sector msis))
+                                     (hash-ref price-analysis-hash (price-analysis-industry msis))
+                                     (hash-ref price-analysis-hash (price-analysis-stock msis)))))
           price-analysis-list)

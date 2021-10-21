@@ -11,6 +11,7 @@
          "structs.rkt")
 
 (provide get-1-month-rate
+         get-condor-analysis
          get-date-ohlc
          get-dividend-estimates
          get-next-earnings-date
@@ -450,6 +451,65 @@ where
   market.date = (select max(date) from spdr.etf_holding where date <= $2::text::date)
 order by
   component_iv_rank desc;
+"
+                   market
+                   date)))
+
+(define (get-condor-analysis market date)
+  (map (λ (row) (condor-analysis (vector-ref row 0) "" "" (vector-ref row 1) "" "" (vector-ref row 2)  "" ""
+                                 (vector-ref row 3) "" "" (vector-ref row 4) (vector-ref row 5) (vector-ref row 6)))
+       (query-rows dbc "
+select 
+  market.etf_symbol as market,
+  spdr.to_sector_etf(market.sector) as sector,
+  coalesce(industry.etf_symbol, '') as industry,
+  market.component_symbol as stock,
+  coalesce(to_char(ec.date, 'YY-MM-DD'), '') as earnings_date,
+  coalesce(trunc(option_spread.spread * 100, 2)::text, '') as option_spread,
+  case
+    when w.act_symbol is not null then true
+    else false
+  end as is_weekly
+from 
+  spdr.etf_holding market
+left outer join
+  spdr.etf_holding industry
+on
+  market.component_symbol = industry.component_symbol and
+  market.date = industry.date and
+  industry.sub_industry is not null
+left outer join
+  zacks.earnings_calendar ec
+on
+  market.component_symbol = ec.act_symbol and
+  ec.date >= $2::text::date - interval '1 week' and
+  ec.date <= $2::text::date + interval '1 month'
+left outer join
+  (select
+    act_symbol,
+    avg((ask - bid) / ask) as spread
+  from
+    oic.option_chain
+  where
+    date = (select max(date) from oic.option_chain where date <= $2::text::date ) and
+    expiration > $2::text::date and
+    expiration <= $2::text::date + interval '3 months' and
+    bid > 0.0 and
+    ask > 0.0 and
+    ((delta >= 0.2 and delta <= 0.8) or
+    (delta <= -0.2 and delta >= -0.8))
+  group by
+    act_symbol) option_spread
+on
+  market.component_symbol = option_spread.act_symbol
+left outer join
+  oic.weekly w
+on
+  market.component_symbol = w.act_symbol and
+  w.last_seen = (select max(last_seen) from oic.weekly where last_seen <= $2::text::date)
+where 
+  market.etf_symbol = any(string_to_array($1, ',')) and
+  market.date = (select max(date) from spdr.etf_holding where date <= $2::text::date);
 "
                    market
                    date)))

@@ -4,7 +4,7 @@
 (require "cmd-line.rkt")
 
 (require "chart.rkt"
-         "option-strategy.rkt"
+         "option-strategy-frame.rkt"
          "position-order-manager.rkt"
          "analysis.rkt")
 
