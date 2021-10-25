@@ -1,10 +1,7 @@
 #lang racket/base
 
-(require gregor
-         math/statistics
+(require math/statistics
          racket/list
-         racket/string
-         racket/vector
          "db-queries.rkt"
          "option-strategy.rkt"
          "structs.rkt")
@@ -62,5 +59,5 @@
               new-condor-analysis-list)
     (set! condor-analysis-list (sort new-condor-analysis-list >
                                      #:key (λ (x) (let ([ref (hash-ref new-condor-analysis-hash (condor-analysis-stock x))])
-                                                    (* (first ref) (second ref))))))
+                                                    (* (first ref) (min 85/100 (second ref)))))))
     (set! condor-analysis-hash new-condor-analysis-hash)))

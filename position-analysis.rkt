@@ -5,7 +5,6 @@
          racket/list
          "chart.rkt"
          "db-queries.rkt"
-         "option-strategy-frame.rkt"
          "structs.rkt")
 
 (provide position-analysis-box

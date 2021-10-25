@@ -6,7 +6,6 @@
          net/jwt
          racket/cmdline
          racket/port
-         racket/pretty
          racket/string)
 
 (define calendar-id (make-parameter ""))

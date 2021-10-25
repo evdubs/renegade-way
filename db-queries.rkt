@@ -1,9 +1,7 @@
 #lang racket/base
 
 (require db
-         db/util/datetime
          gregor
-         racket/list
          racket/string
          interactive-brokers-api/base-structs
          interactive-brokers-api/response-messages

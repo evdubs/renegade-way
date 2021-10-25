@@ -5,7 +5,6 @@
          plot
          racket/async-channel
          racket/class
-         racket/contract
          racket/gui/base
          racket/list
          racket/set
