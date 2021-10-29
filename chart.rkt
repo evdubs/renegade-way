@@ -94,17 +94,23 @@
                  #:y-label "Price"
                  #:width (- (send canvas get-width) 12)
                  #:height (- (send canvas get-height) 12))
-      (let* ([date-ohlc-vector (get-date-ohlc (send symbol-field get-value)
-                                              (send chart-start-date-field get-value)
-                                              (send chart-end-date-field get-value))]
+      (let* ([dohlcs (get-date-ohlc (send symbol-field get-value)
+                                    (send chart-start-date-field get-value)
+                                    (send chart-end-date-field get-value))]
+             [min-low (apply min (map (λ (el) (dohlc-low el)) dohlcs))]
+             [earnings-dates-points (map (λ (d) (point-label (vector d min-low) "E" #:anchor 'bottom))
+                                         (get-earnings-dates (send symbol-field get-value)
+                                                             (send chart-start-date-field get-value)
+                                                             (send chart-end-date-field get-value)))]
              [snip (parameterize ([plot-x-ticks (date-ticks)]
                                   [plot-y-ticks (currency-ticks #:kind 'USD)]
                                   [plot-width (- (send canvas get-width) 12)]
                                   [plot-height (- (send canvas get-height) 12)])
-                     (plot-snip (list (tick-grid)
-                                      (candlesticks date-ohlc-vector #:width 86400)
-                                      (lines (simple-moving-average (list->vector date-ohlc-vector) 20) #:color 3 #:label "20-day SMA")
-                                      (lines (simple-moving-average (list->vector date-ohlc-vector) 50) #:color 4 #:label "50-day SMA"))
+                     (plot-snip (append (list (tick-grid)
+                                              (candlesticks dohlcs #:width 86400)
+                                              (lines (simple-moving-average (list->vector dohlcs) 20) #:color 3 #:label "20-day SMA")
+                                              (lines (simple-moving-average (list->vector dohlcs) 50) #:color 4 #:label "50-day SMA"))
+                                        earnings-dates-points)
                                 #:title (string-append (get-security-name (send symbol-field get-value)) " ("
                                                        (send symbol-field get-value) ")")
                                 #:x-label "Date"
@@ -147,7 +153,7 @@
                                             #:anchor 'auto)))))
                  (send snip set-overlay-renderers overlays)
                  (set! prev-time-stamp (current-milliseconds))]))
-        (send snip set-mouse-event-callback (make-current-value-renderer date-ohlc-vector))
+        (send snip set-mouse-event-callback (make-current-value-renderer dohlcs))
         snip)))
 
 (define chart-market-sector-pane (new horizontal-pane% 

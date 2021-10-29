@@ -12,6 +12,7 @@
          get-condor-analysis
          get-date-ohlc
          get-dividend-estimates
+         get-earnings-dates
          get-next-earnings-date
          get-options
          get-position-analysis
@@ -51,6 +52,24 @@ from
     (map (λ (row) (dohlc (->posix (iso8601->date (vector-ref row 0)))
                          (vector-ref row 1) (vector-ref row 2) (vector-ref row 3) (vector-ref row 4)))
          price-query)))
+
+(define (get-earnings-dates ticker-symbol start-date end-date)
+  (map (λ (el) (->posix (iso8601->date el)))
+       (query-list dbc "
+select
+  date::text
+from
+  zacks.earnings_calendar
+where
+  act_symbol = $1 and
+  date >= $2::text::date and
+  date <= $3::text::date
+order by
+  date;
+"
+                   ticker-symbol
+                   start-date
+                   end-date)))
 
 ;; Get market/sector/industry/stock breakdown for ETF components
 (define (get-price-analysis market sector start-date end-date)
@@ -153,7 +172,7 @@ left outer join
   zacks.earnings_calendar ec
 on
   market.component_symbol = ec.act_symbol and
-  ec.date >= $4::text::date - interval '1 day' and
+  ec.date >= $4::text::date and
   ec.date <= $4::text::date + interval '1 month'
 left outer join
   (select
@@ -286,7 +305,7 @@ left outer join
   zacks.earnings_calendar ec
 on
   market.component_symbol = ec.act_symbol and
-  ec.date >= $2::text::date - interval '1 week' and
+  ec.date >= $2::text::date and
   ec.date <= $2::text::date + interval '1 month'
 left outer join
   (select
@@ -419,7 +438,7 @@ left outer join
   zacks.earnings_calendar ec
 on
   market.component_symbol = ec.act_symbol and
-  ec.date >= $2::text::date - interval '1 week' and
+  ec.date >= $2::text::date and
   ec.date <= $2::text::date + interval '1 month'
 left outer join
   (select
@@ -480,7 +499,7 @@ left outer join
   zacks.earnings_calendar ec
 on
   market.component_symbol = ec.act_symbol and
-  ec.date >= $2::text::date - interval '1 week' and
+  ec.date >= $2::text::date and
   ec.date <= $2::text::date + interval '1 month'
 left outer join
   (select
