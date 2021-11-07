@@ -11,19 +11,19 @@ You will likely find that doing the following is a pain and is not worth it when
 ## Schema
 
 Once Racket and PostgreSQL are installed, you will need to set up your database schema. That can be done with the following schema.sql files:
- * [iex-stocks schema](https://github.com/evdubs/iex-stocks/schema.sql). These tables will provide end of day Open/High/Low/Close/Volume values for stocks as well as stock split information.
- * [nasdaq-symbols schema](https://github.com/evdubs/nasdaq-symbols/schema.sql). These tables will provide all symbols available for trading on US Stock Exchanges.
- * [oic-options-chains schema](https://github.com/evdubs/oic-options-chains/schema.sql). These tables will provide option prices, vols, and greeks.
- * [spdr-etf-holdings schema](https://github.com/evdubs/spdr-etf-holdings/schema.sql). These tables will provide SPDR ETF components. This is useful for having the compoents for the S&P 500, 400, 600 and sectors and industries.
- * [yahoo-dividends-splits schema](https://github.com/evdubs/yahoo-dividends-splits/schema.sql). These tables will provide dividend history. Splits are also available here, but we don't make use of splits from Yahoo.
- * [zacks-estimates-financial-statements schema](https://github.com/evdubs/zacks-estimates-financial-statements/schema.sql). These tables provide analyst estimates and sentiment.
+ * [iex-stocks schema](https://github.com/evdubs/iex-stocks/blob/master/schema.sql). These tables will provide end of day Open/High/Low/Close/Volume values for stocks as well as stock split information.
+ * [nasdaq-symbols schema](https://github.com/evdubs/nasdaq-symbols/blob/master/schema.sql). These tables will provide all symbols available for trading on US Stock Exchanges.
+ * [oic-options-chains schema](https://github.com/evdubs/oic-options-chains/blob/master/schema.sql). These tables will provide option prices, vols, and greeks.
+ * [spdr-etf-holdings schema](https://github.com/evdubs/spdr-etf-holdings/blob/master/schema.sql). These tables will provide SPDR ETF components. This is useful for having the compoents for the S&P 500, 400, 600 and sectors and industries.
+ * [yahoo-dividends-splits schema](https://github.com/evdubs/yahoo-dividends-splits/blob/master/schema.sql). These tables will provide dividend history. Splits are also available here, but we don't make use of splits from Yahoo.
+ * [zacks-estimates-financial-statements schema](https://github.com/evdubs/zacks-estimates-financial-statements/blob/master/schema.sql). These tables provide analyst estimates and sentiment.
 
 Simply pass these `schema.sql` files to `psql` or paste and run the contents in DBeaver. Please ensure you have configured your database in such a way that you can create schemas, tables, types (enums), and functions as that is what these `schema.sql` files will be doing.
 
 ## Data
 
 Next, we need to populate our database with data. The above `schema.sql` files are part of repositories that include `extract` and `transform-load` programs that will populate our data. Data is required from:
-* [iex-stocks](https://github.com/evdubs/iex-stocks). This extract program requires an account at iexcloud.io
+* [iex-stocks](https://github.com/evdubs/iex-stocks) This extract program requires an account at iexcloud.io
 * [nasdaq-symbols](https://github.com/evdubs/nasdaq-symbols)
 * [oic-options-chains](https://github.com/evdubs/oic-options-chains)
 * [spdr-etf-components](https://github.com/evdubs/spdr-etf-components)
