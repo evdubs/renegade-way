@@ -26,7 +26,7 @@ Next, we need to populate our database with data. The above `schema.sql` files a
 * [iex-stocks](https://github.com/evdubs/iex-stocks) This extract program requires an account at iexcloud.io
 * [nasdaq-symbols](https://github.com/evdubs/nasdaq-symbols)
 * [oic-options-chains](https://github.com/evdubs/oic-options-chains)
-* [spdr-etf-components](https://github.com/evdubs/spdr-etf-components)
+* [spdr-etf-holdings](https://github.com/evdubs/spdr-etf-holdings)
 * [yahoo-dividends-splits](https://github.com/evdubs/yahoo-dividends-splits)
 * [zacks-estimates-financial-statements](https://github.com/evdubs/zacks-estimates-financial-statements)
 
