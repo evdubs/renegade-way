@@ -27,38 +27,50 @@
 (define manager-pane
   (new vertical-pane% [parent manager-frame]))
 
-(define input-pane
+(define first-input-pane
   (new horizontal-pane%
        [parent manager-pane]
        [stretchable-height #f]))
 
+(define trade-risk-percent-field
+  (new text-field%
+       [parent first-input-pane]
+       [label "Trade Risk Pct"]
+       [init-value "0.02"]))
+
 (define trade-risk-field
   (new text-field%
-       [parent input-pane]
+       [parent first-input-pane]
        [label "Trade Risk"]
        [init-value "2000.00"]))
 
 (define stop-percent-field
   (new text-field%
-       [parent input-pane]
+       [parent first-input-pane]
        [label "Stop Pct"]
        [init-value "0.02"]))
 
 (define target-percent-field
   (new text-field%
-       [parent input-pane]
+       [parent first-input-pane]
        [label "Target Pct"]
        [init-value "0.04"]))
 
 (define spread-percent-field
   (new text-field%
-       [parent input-pane]
+       [parent first-input-pane]
        [label "Spread Pct"]
        [init-value "0.10"]))
 
+(define second-input-pane
+  (new horizontal-pane%
+       [parent manager-pane]
+       [alignment '(right center)]
+       [stretchable-height #f]))
+
 (define recalc-button
   (new button%
-       [parent input-pane]
+       [parent second-input-pane]
        [label "Recalc"]
        [callback (λ (b e)
                    (set-order-data
@@ -261,7 +273,7 @@
 
 (define add-spread-button
   (new button%
-       [parent input-pane]
+       [parent second-input-pane]
        [label "Add Spread"]
        [callback (λ (b e)
                    (define spread-pct (string->number (send spread-percent-field get-value)))
@@ -381,8 +393,14 @@
 
 (define (update-profit-loss-chart)
   (define ref-price (order-stock-entry (send order-box get-data 0)))
+  (define low-price (min (* 70/100 ref-price)
+                         (apply min (map (λ (i) (order-strike (send order-box get-data i)))
+                                         (range (send order-box get-number))))))
+  (define high-price (max (* 131/100 ref-price)
+                          (apply max (map (λ (i) (order-strike (send order-box get-data i)))
+                                          (range (send order-box get-number))))))
   (define prices (map (λ (i) (/ (* i ref-price) 100))
-                      (range 80 121 0.5)))
+                      (range (* 100 (/ low-price ref-price)) (* 100 (/ high-price ref-price)) 0.5)))
   (define earnings-date (get-next-earnings-date (order-symbol (send order-box get-data 0))
                                                 (today)
                                                 (order-end-date (send order-box get-data 0)))) 
@@ -417,7 +435,7 @@
   (define current-vol-profit-loss
     (map (λ (pl) (vector-ref pl 1))
          (price-profit-loss 1 (map (λ (i) (/ (* i ref-price) 100))
-                                   (range 70 131 0.5)))))
+                                   (range (* 100 (/ low-price ref-price)) (* 100 (/ high-price ref-price)) 0.5)))))
   (send order-box set-label
         (string-append "Risk: " (real->decimal-string (apply min current-vol-profit-loss))
                        " Reward: " (real->decimal-string (apply max current-vol-profit-loss))
@@ -457,6 +475,10 @@
                    (set! ibkr (new ibkr-session%
                                    [hostname (ibkr-hostname)]
                                    [port-no (ibkr-port-no)]
+                                   [handle-account-value-rsp (λ (av)
+                                                               (cond [(equal? "NetLiquidation" (account-value-rsp-key av))
+                                                                      (async-channel-put net-liquidation-channel
+                                                                                         (string->number (account-value-rsp-value av)))]))]
                                    [handle-accounts-rsp (λ (as) (set! account (first as)))]
                                    [handle-commission-report-rsp (λ (cr) (insert-commission-report cr))]
                                    [handle-contract-details-rsp (λ (cd)
@@ -624,6 +646,17 @@
        [callback (λ (b e)
                    (send ibkr send-msg (new executions-req% [timestamp (-period (now/moment) (days 7))])))]))
 
+(define update-risk-button
+  (new button%
+       [label "Update Risk"]
+       [parent button-pane]
+       [callback (λ (b e)
+                   (send ibkr send-msg (new account-data-req% [subscribe #t]))
+                   (send trade-risk-field set-value
+                         (real->decimal-string (* (async-channel-get net-liquidation-channel)
+                                                  (string->number (send trade-risk-percent-field get-value)))))
+                   (send ibkr send-msg (new account-data-req% [subscribe #f])))]))
+
 (define (set-order-data order-data)
   (send order-box set
         (map (λ (d) (order-symbol d)) order-data)
@@ -695,6 +728,8 @@
 (define account "")
 
 (define contract-channel (make-async-channel))
+
+(define net-liquidation-channel (make-async-channel))
 
 (define ibkr #f)
 

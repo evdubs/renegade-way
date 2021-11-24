@@ -21,7 +21,7 @@
                       (list 0 0))])
     (let* ([prices (get-date-ohlc symbol start-date end-date)]
            [options (get-updated-options symbol end-date (dohlc-close (last prices)))]
-           [condor-options (hash-ref (suitable-options options "DV") "Call Condor")]
+           [condor-options (hash-ref (suitable-options options "CC") "Call Condor")]
            [low-strike (option-strike (second condor-options))]
            [high-strike (option-strike (third condor-options))]
            [cost (+ (option-mid (first condor-options))
