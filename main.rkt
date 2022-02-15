@@ -4,9 +4,12 @@
 (require "cmd-line.rkt")
 
 (require "chart.rkt"
+         "logging.rkt"
          "option-strategy-frame.rkt"
          "position-order-manager.rkt"
          "analysis.rkt")
+
+(start-logging)
 
 (show-chart)
 

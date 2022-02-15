@@ -84,7 +84,8 @@
                                       end-date)
                        (refresh-option-strategy stock
                                                 end-date
-                                                (dohlc-close (first (get-date-ohlc stock end-date end-date)))
+                                                (if (hash-has-key? test-hash stock) (test-entry (hash-ref test-hash stock))
+                                                    (dohlc-close (first (get-date-ohlc stock end-date end-date))))
                                                 (second (send b get-data (first (send b get-selections)))))))]
          [style (list 'single 'column-headers 'vertical-label)]
          [columns analysis-box-columns]

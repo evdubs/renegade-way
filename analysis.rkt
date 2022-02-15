@@ -16,7 +16,7 @@
          show-analysis)
 
 (define analysis-frame
-  (new frame% [label "Analysis"] [width 900] [height 1000]))
+  (new frame% [label "Analysis"] [width 1000] [height 1000]))
 
 (define analysis-input-pane
   (new horizontal-pane%

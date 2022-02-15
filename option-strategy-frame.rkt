@@ -14,7 +14,7 @@
          refresh-option-strategy)
 
 (define strategy-frame
-  (new frame% [label "Option Strategy"] [width 1000] [height 600]))
+  (new frame% [label "Option Strategy"] [width 1050] [height 600]))
 
 (define strategy-input-pane
   (new horizontal-pane%

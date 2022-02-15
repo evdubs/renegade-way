@@ -765,6 +765,7 @@ on
                               (date->iso8601 end-date))))
 
 (define (insert-commission-report commission-report)
+  (log-info "insert-commission-report ~v" commission-report)
   (with-handlers ([exn:fail? (λ (error)
                                (displayln "Could not insert commission report into DB")
                                (displayln commission-report)
@@ -800,6 +801,7 @@ insert into ibkr.commission_report (
                     sql-null))))
 
 (define (insert-execution execution)
+  (log-info "insert-execution ~v" execution)
   (query-exec dbc "
 insert into ibkr.execution (
   order_id,
@@ -855,6 +857,7 @@ insert into ibkr.execution (
               (execution-rsp-model-code execution)))
 
 (define (insert-contract contract)
+  (log-info "insert-contract ~v" contract)
   (query-exec dbc "
 insert into ibkr.contract (
   symbol,
@@ -1027,6 +1030,7 @@ insert into renegade.price_analysis (
               stock-patterns))
 
 (define (insert-order order)
+  (log-info "insert-order ~v" order)
   (query-exec dbc "
 insert into ibkr.order (
   order_id,
@@ -1156,6 +1160,7 @@ insert into ibkr.order_condition (
             (open-order-rsp-conditions order)))
 
 (define (insert-order-note account order-id order-note)
+  (log-info "insert-order-note ~v ~v ~v" account order-id order-note)
   (query-exec dbc "
 insert into ibkr.order_note (
   account,

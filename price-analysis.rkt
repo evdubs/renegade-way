@@ -19,7 +19,8 @@
 
 (provide price-analysis-hash
          price-analysis-list
-         run-price-analysis)
+         run-price-analysis
+         test-hash)
 
 (define (vector-first v)
   (vector-ref v 0))
@@ -71,8 +72,13 @@
   (let* ([dohlc-list (get-date-ohlc symbol start-date end-date)])
     (if (< (length dohlc-list) 60) ""
         (string-join (filter (λ (p) (not (equal? "" p)))
-                             (map (λ (p) (cond [(not (empty? (history-test ((second p) dohlc-list)))) (first p)]
-                                               [else ""]))
+                             (map (λ (p)
+                                    (define tests (filter (λ (t) (<= (dohlc-date (list-ref dohlc-list (- (length dohlc-list) 2))) (dv-date t)))
+                                                          (history-test ((second p) dohlc-list))))
+                                    (cond [(not (empty? tests))
+                                           (hash-set! test-hash symbol (dv-value (last tests)))
+                                           (first p)]
+                                          [else ""]))
                                   (list (list "AT" ascending-triangle-entry)
                                         (list "BP" bull-pullback-entry)
                                         (list "BR" bear-rally-entry)
@@ -85,7 +91,9 @@
 
 (define price-analysis-list (list))
 
-(define price-analysis-hash (hash))
+(define price-analysis-hash (make-hash))
+
+(define test-hash (make-hash))
 
 (define (run-price-analysis market sector start-date end-date)
   (let ([new-price-analysis-list (get-price-analysis market sector start-date end-date)]
