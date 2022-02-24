@@ -7,13 +7,12 @@
          racket/class
          racket/gui/base
          racket/list
-         racket/set
          threading
          interactive-brokers-api/base-structs
-         interactive-brokers-api/main
          interactive-brokers-api/request-messages
          interactive-brokers-api/response-messages
          "db-queries.rkt"
+         "ibkr.rkt"
          "params.rkt"
          "plot-util.rkt"
          "pricing-risk.rkt"
@@ -437,33 +436,6 @@
        [alignment '(center center)]
        [stretchable-height #f]))
 
-(define connect-button
-  (new button%
-       [label "Connect"]
-       [parent button-pane]
-       [callback (λ (b e)
-                   (set! ibkr (new ibkr-session%
-                                   [hostname (ibkr-hostname)]
-                                   [port-no (ibkr-port-no)]
-                                   [handle-account-value-rsp (λ (av)
-                                                               (cond [(equal? "NetLiquidation" (account-value-rsp-key av))
-                                                                      (async-channel-put net-liquidation-channel
-                                                                                         (string->number (account-value-rsp-value av)))]))]
-                                   [handle-accounts-rsp (λ (as) (set! account (first as)))]
-                                   [handle-commission-report-rsp (λ (cr) (insert-commission-report cr))]
-                                   [handle-contract-details-rsp (λ (cd)
-                                                                  (async-channel-put contract-channel cd)
-                                                                  (insert-contract cd))]
-                                   [handle-execution-rsp (λ (e) (insert-execution e)
-                                                            (cond [(not (set-member? handled-contract-ids (execution-rsp-contract-id e)))
-                                                                   (set-add! handled-contract-ids (execution-rsp-contract-id e))
-                                                                   (thread (λ () (send ibkr send-msg
-                                                                                       (new contract-details-req% [contract-id (execution-rsp-contract-id e)]))))]))]
-                                   [handle-open-order-rsp (λ (oo) (insert-order oo))]
-                                   [handle-next-valid-id-rsp (λ (id) (set! next-order-id (next-valid-id-rsp-order-id id)))]
-                                   [write-messages #t]))
-                   (send ibkr connect))]))
-
 (define send-button
   (new button%
        [label "Send"]
@@ -511,10 +483,10 @@
                                0
                                (range (send order-box get-number)))
                         quantity))
-                   (insert-order-note account next-order-id (send order-box get-data 0))
+                   (insert-order-note ibkr-account ibkr-next-order-id (send order-box get-data 0))
                    (if (= 1 (length contract-ids))
                        (send ibkr send-msg (new place-order-req%
-                                                [order-id next-order-id]
+                                                [order-id ibkr-next-order-id]
                                                 [symbol (order-symbol first-item)]
                                                 [security-type 'opt]
                                                 [contract-id (first contract-ids)]
@@ -539,7 +511,7 @@
                                                                              #f))]
                                                 [use-price-management-algo #t]))
                        (send ibkr send-msg (new place-order-req%
-                                                [order-id next-order-id]
+                                                [order-id ibkr-next-order-id]
                                                 [symbol (order-symbol first-item)]
                                                 [security-type 'bag]
                                                 [order-type "LMT"]
@@ -616,7 +588,7 @@
                                                                        (equal? 'long-strangle (order-strategy first-item)))
                                                                    (list)])]
                                                 [use-price-management-algo #t])))
-                   (set! next-order-id (add1 next-order-id)))]))
+                   (ibkr-add1-next-order-id))]))
 
 (define save-trades-button
   (new button%
@@ -702,14 +674,12 @@
     (for-each (λ (i) (send order-box set-column-width i 80 80 80))
               (range order-num-cols))))
 
-(define next-order-id 0)
-
-(define account "")
-
 (define contract-channel (make-async-channel))
 
 (define net-liquidation-channel (make-async-channel))
 
-(define ibkr #f)
+(ibkr-add-handler 'account-value (λ (av) (cond [(equal? "NetLiquidation" (account-value-rsp-key av))
+                                                (async-channel-put net-liquidation-channel
+                                                                   (string->number (account-value-rsp-value av)))])))
 
-(define handled-contract-ids (mutable-set))
+(ibkr-add-handler 'contract-details (λ (cd) (async-channel-put contract-channel cd)))
