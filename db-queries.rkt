@@ -27,7 +27,7 @@
          insert-order
          insert-order-note)
 
-(define dbc (postgresql-connect #:user (db-user) #:database (db-name) #:password (db-pass)))
+(define dbc (postgresql-connect #:server (db-host) #:user (db-user) #:database (db-name) #:password (db-pass)))
 
 (define (get-date-ohlc ticker-symbol start-date end-date)
   (let ([price-query (query-rows dbc "

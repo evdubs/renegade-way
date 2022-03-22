@@ -9,6 +9,9 @@
  [("-a" "--ibkr-host") host
                        "Interactive Brokers TWS host address. Defaults to '127.0.0.1'"
                        (ibkr-hostname host)]
+ [("-b" "--db-host") host
+                     "Database host address. Defaults to '127.0.0.1'"
+                     (db-host host)]
  [("-n" "--db-name") name
                      "Database name. Defaults to 'local'"
                      (db-name name)]
