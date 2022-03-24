@@ -2,13 +2,16 @@
 
 (require gregor)
 
-(provide db-user
+(provide db-host
+         db-user
          db-name
          db-pass
          ibkr-hostname
          ibkr-port-no
          save-markets
          save-end-date)
+
+(define db-host (make-parameter "127.0.0.1"))
 
 (define db-user (make-parameter "user"))
 
