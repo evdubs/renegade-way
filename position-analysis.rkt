@@ -19,6 +19,8 @@
 
 (define position-summary #f)
 
+(define position-summary-text "")
+
 (define open-analysis-box-ref #f)
 
 (define open-position-analysis-list (list))
@@ -67,10 +69,10 @@
                       (hash-set m (position-analysis-stock p) 'roo)])))
            (hash)
            updated-position-analysis-list))
-  (send position-summary set-label
-        (string-append "Bulls: " (number->string (length (indexes-of (hash-values bull-bear-roo) 'bull)))
-                       " Roos: " (number->string (length (indexes-of (hash-values bull-bear-roo) 'roo)))
-                       " Bears: " (number->string (length (indexes-of (hash-values bull-bear-roo) 'bear)))))
+  (set! position-summary-text (string-append "Bulls: " (number->string (length (indexes-of (hash-values bull-bear-roo) 'bull)))
+                                             " Roos: " (number->string (length (indexes-of (hash-values bull-bear-roo) 'roo)))
+                                             " Bears: " (number->string (length (indexes-of (hash-values bull-bear-roo) 'bear)))))
+  (send position-summary set-label position-summary-text)
 
   (set! target-position-analysis-list
         (filter (λ (pa) (or (and (equal? 'bull (hash-ref bull-bear-roo (position-analysis-stock pa)))
@@ -114,7 +116,8 @@
                     (cond [(and (or (equal? 'last-price (market-data-rsp-type md))
                                     (equal? 'delayed-last (market-data-rsp-type md))
                                     (and (or (saturday? (today))
-                                             (sunday? (today)))
+                                             (sunday? (today))
+                                             (< 15 (->hours (current-time))))
                                          (equal? 'delayed-close (market-data-rsp-type md))))
                                 (not (= 0 (market-data-rsp-value md))))
                            (async-channel-put ref-price-channel (list (hash-ref request-id-stock (market-data-rsp-request-id md))
@@ -162,7 +165,7 @@
 (define (position-analysis-box parent-panel start-date end-date)
   (set! position-panel (new vertical-panel% [parent parent-panel] [alignment '(left top)]))
 
-  (set! position-summary (new message% [parent position-panel] [label ""]))
+  (set! position-summary (new message% [parent position-panel] [label position-summary-text]))
 
   (define (analysis-box name)
     (define box (new list-box%
