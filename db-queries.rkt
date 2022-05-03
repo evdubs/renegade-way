@@ -769,7 +769,7 @@ on
   (with-handlers ([exn:fail? (λ (error)
                                (displayln "Could not insert commission report into DB")
                                (displayln commission-report)
-                               (displayln ((error-value->string-handler) error 1000)))])
+                               (displayln error))])
     (query-exec dbc "
 insert into ibkr.commission_report (
   execution_id,

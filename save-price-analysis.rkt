@@ -39,7 +39,7 @@
             (with-handlers
               ([exn:fail? (λ (e) (displayln (string-append "Failed to process " (price-analysis-stock msis) " for date "
                                                            (date->iso8601 (save-end-date))))
-                             (displayln ((error-value->string-handler) e 1000)))])
+                             (displayln e))])
               (insert-price-analysis (date->iso8601 (save-end-date))
                                      msis
                                      (hash-ref price-analysis-hash (price-analysis-market msis))
