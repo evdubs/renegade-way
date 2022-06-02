@@ -117,7 +117,7 @@
                                     (equal? 'delayed-last (market-data-rsp-type md))
                                     (and (or (saturday? (today))
                                              (sunday? (today))
-                                             (< 15 (->hours (current-time))))
+                                             (<= 12 (->hours (current-time))))
                                          (equal? 'delayed-close (market-data-rsp-type md))))
                                 (not (= 0 (market-data-rsp-value md)))
                                 (not (hash-has-key? prices (market-data-rsp-request-id md))))
