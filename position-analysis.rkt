@@ -169,7 +169,7 @@
 
   (set! position-summary (new message% [parent position-panel] [label position-summary-text]))
 
-  (define (analysis-box name)
+  (define (analysis-box name height)
     (define box (new list-box%
                      [parent position-panel]
                      [label name]
@@ -187,16 +187,18 @@
                                                   end-date)))]
                      [style (list 'single 'column-headers 'vertical-label)]
                      [columns analysis-box-columns]
-                     [choices (list "")]))
+                     [choices (list "")]
+                     [min-height height]
+                     [stretchable-height (not height)]))
     (let ([box-width (send box get-width)]
           [num-cols (length analysis-box-columns)])
       (for-each (λ (i) (send box set-column-width i 80 80 80))
                 (range num-cols)))
     box)
 
-  (set! open-analysis-box-ref (analysis-box "Open"))
+  (set! open-analysis-box-ref (analysis-box "Open" #f))
   (update-analysis-box open-analysis-box-ref open-position-analysis-list)
-  (set! stop-analysis-box-ref (analysis-box "Stop"))
+  (set! stop-analysis-box-ref (analysis-box "Stop" 200))
   (update-analysis-box stop-analysis-box-ref stop-position-analysis-list)
-  (set! target-analysis-box-ref (analysis-box "Target"))
+  (set! target-analysis-box-ref (analysis-box "Target" 200))
   (update-analysis-box target-analysis-box-ref target-position-analysis-list))
