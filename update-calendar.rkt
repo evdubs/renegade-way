@@ -166,20 +166,22 @@ order by
                                  (hash)
                                  expiring-positions))
 
-(if (> (hash-count grouped-positions) 0)
-    (displayln "Creating calendar event(s).")
-    #f)
+(cond [(> (hash-count grouped-positions) 0) (displayln "Creating calendar event(s).")])
 
 (hash-for-each grouped-positions
                (λ (date-str positions)
+                 (define in-past? (date>? (today) (iso8601->date date-str)))
                  (post (string-append "https://www.googleapis.com/calendar/v3/calendars/"
                                       (calendar-id)
                                       "/events")
                        #:headers (hash 'Authorization (string-append "Bearer " access-token))
-                       #:json (hash 'start (hash 'dateTime (string-append date-str "T15:30:00") 'timeZone "America/New_York")
-                                    'end (hash 'dateTime (string-append date-str "T16:00:00") 'timeZone "America/New_York")
+                       #:json (hash 'start (hash 'dateTime (string-append (if in-past? (date->iso8601 (+days (today) 2) date-str) "T15:30:00")
+                                                 'timeZone "America/New_York")
+                                    'end (hash 'dateTime (string-append (if in-past? (date->iso8601 (+days (today) 2) date-str) "T16:00:00")
+                                               'timeZone "America/New_York")
                                     'summary "Close Positions"
-                                    'description (string-join (map (λ (p) (format "~a" (vector->list p))) positions) "\n")
+                                    'description (string-append (if in-past? "THE FOLLOWING TRADES WERE LEFT OPEN. CLOSE THEM!\n" "")
+                                                                (string-join (map (λ (p) (format "~a" (vector->list p))) positions) "\n"))
                                     'defaultReminders (list)
                                     'reminders (hash 'overrides (list (hash 'method "popup"
                                                                             'minutes 1))
