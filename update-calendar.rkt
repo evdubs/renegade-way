@@ -175,9 +175,9 @@ order by
                                       (calendar-id)
                                       "/events")
                        #:headers (hash 'Authorization (string-append "Bearer " access-token))
-                       #:json (hash 'start (hash 'dateTime (string-append (if in-past? (date->iso8601 (+days (today) 2) date-str) "T15:30:00")
+                       #:json (hash 'start (hash 'dateTime (string-append (if in-past? (date->iso8601 (+days (today) 2)) date-str) "T15:30:00")
                                                  'timeZone "America/New_York")
-                                    'end (hash 'dateTime (string-append (if in-past? (date->iso8601 (+days (today) 2) date-str) "T16:00:00")
+                                    'end (hash 'dateTime (string-append (if in-past? (date->iso8601 (+days (today) 2)) date-str) "T16:00:00")
                                                'timeZone "America/New_York")
                                     'summary "Close Positions"
                                     'description (string-append (if in-past? "THE FOLLOWING TRADES WERE LEFT OPEN. CLOSE THEM!\n" "")
