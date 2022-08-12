@@ -273,3 +273,43 @@ CREATE OR REPLACE VIEW ibkr."position"
     contract.strike,
     contract."right",
     execution.account;
+
+CREATE SCHEMA renegade;
+
+CREATE TABLE renegade.price_analysis (
+    "date" date NOT NULL,
+    market_act_symbol text NULL,
+    market_rating int2 NULL,
+    sector_act_symbol text NULL,
+    sector_vs_market numeric NULL,
+    sector_rating int2 NULL,
+    industry_act_symbol text NULL,
+    industry_rating int2 NULL,
+    stock_act_symbol text NOT NULL,
+    stock_vs_sector numeric NULL,
+    dividend_date date NULL,
+    earnings_date date NULL,
+    option_spread numeric NULL,
+    zacks_rank int2 NULL,
+    patterns text NULL,
+    CONSTRAINT price_analysis_pkey PRIMARY KEY (date, stock_act_symbol)
+);
+
+CREATE TABLE renegade.condor_analysis (
+    "date" date NOT NULL,
+    market_act_symbol text NULL,
+    market_rating numeric NULL,
+    market_risk_reward numeric NULL,
+    sector_act_symbol text NULL,
+    sector_rating numeric NULL,
+    sector_risk_reward numeric NULL,
+    industry_act_symbol text NULL,
+    industry_rating numeric NULL,
+    industry_risk_reward numeric NULL,
+    stock_act_symbol text NOT NULL,
+    stock_rating numeric NULL,
+    stock_risk_reward numeric NULL,
+    earnings_date date NULL,
+    option_spread numeric NULL,
+    CONSTRAINT condor_analysis_pkey PRIMARY KEY (date, stock_act_symbol)
+);
