@@ -3,11 +3,11 @@
 ; cmd-line moved up here to be loaded before other bits that need params set by cmd-line
 (require "cmd-line.rkt")
 
-(require "chart.rkt"
-         "logging.rkt"
-         "option-strategy-frame.rkt"
-         "position-order-manager.rkt"
-         "analysis.rkt")
+(require "gui/chart.rkt"
+         "gui/option-strategy-frame.rkt"
+         "gui/position-order-manager.rkt"
+         "gui/analysis.rkt"
+         "logging.rkt")
 
 (start-logging)
 

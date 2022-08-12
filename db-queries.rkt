@@ -21,6 +21,7 @@
          get-security-name
          get-vol-analysis
          insert-commission-report
+         insert-condor-analysis
          insert-contract
          insert-execution
          insert-price-analysis
@@ -855,6 +856,97 @@ insert into ibkr.execution (
               (execution-rsp-average-price execution)
               (execution-rsp-order-reference execution)
               (execution-rsp-model-code execution)))
+
+(define (insert-condor-analysis date
+                                condor-analysis
+                                market-rating
+                                market-risk-reward
+                                sector-rating
+                                sector-risk-reward
+                                industry-rating
+                                industry-risk-reward
+                                stock-rating
+                                stock-risk-reward)
+  (query-exec dbc "
+insert into renegade.condor_analysis (
+  date,
+  market_act_symbol,
+  market_rating,
+  market_risk_reward,
+  sector_act_symbol,
+  sector_rating,
+  sector_risk_reward,
+  industry_act_symbol,
+  industry_rating,
+  industry_risk_reward,
+  stock_act_symbol,
+  stock_rating,
+  stock_risk_reward,
+  earnings_date,
+  option_spread
+) values (
+  $1::text::date,
+  $2,
+  case
+    when $3::numeric = 0 then null
+    else round($3::numeric, 2)
+  end,
+  case
+    when $4::numeric = 0 then null
+    else round($4::numeric, 2)
+  end,
+  $5,
+  case
+    when $6::numeric = 0 then null
+    else round($6::numeric, 2)
+  end,
+  case
+    when $7::numeric = 0 then null
+    else round($7::numeric, 2)
+  end,
+  $8,
+  case
+    when $9::numeric = 0 then null
+    else round($9::numeric, 2)
+  end,
+  case
+    when $10::numeric = 0 then null
+    else round($10::numeric, 2)
+  end,
+  $11,
+  case
+    when $12::numeric = 0 then null
+    else round($12::numeric, 2)
+  end,
+  case
+    when $13::numeric = 0 then null
+    else round($13::numeric, 2)
+  end,
+  case
+    when $14::text = '' then null
+    else to_date($14::text, 'YY-MM-DD')
+  end,
+  case
+    when $15::text = '' then null
+    else $15::text::numeric
+  end
+) on conflict (date, stock_act_symbol) do nothing;
+"
+              date
+              (condor-analysis-market condor-analysis)
+              market-rating
+              market-risk-reward
+              (condor-analysis-sector condor-analysis)
+              sector-rating
+              sector-risk-reward
+              (condor-analysis-industry condor-analysis)
+              industry-rating
+              industry-risk-reward
+              (condor-analysis-stock condor-analysis)
+              stock-rating
+              stock-risk-reward
+              (condor-analysis-earnings-date condor-analysis)
+              (condor-analysis-option-spread condor-analysis)))
 
 (define (insert-contract contract)
   (log-info "insert-contract ~v" contract)

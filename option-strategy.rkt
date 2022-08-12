@@ -10,7 +10,7 @@
 (provide get-updated-options
          suitable-options)
 
-(define (get-updated-options symbol date ref-price)
+(define (get-updated-options symbol date ref-price #:compute-all-greeks [compute-all-greeks? #t])
   (map (λ (o)
          (define divs (map (λ (div) (vector (/ (vector-ref div 0) 365) (vector-ref div 1)))
                            (get-dividend-estimates symbol
@@ -40,34 +40,42 @@
                                       1-month-rate
                                       (option-vol o)
                                       divs)
-                 (black-scholes-gamma ref-price
-                                      (/ (option-dte o) 365)
-                                      (option-strike o)
-                                      (string->symbol (option-call-put o))
-                                      1-month-rate
-                                      (option-vol o)
-                                      divs)
-                 (black-scholes-theta ref-price
-                                      (/ (option-dte o) 365)
-                                      (option-strike o)
-                                      (string->symbol (option-call-put o))
-                                      1-month-rate
-                                      (option-vol o)
-                                      divs)
-                 (black-scholes-vega ref-price
-                                     (/ (option-dte o) 365)
-                                     (option-strike o)
-                                     (string->symbol (option-call-put o))
-                                     1-month-rate
-                                     (option-vol o)
-                                     divs)
-                 (black-scholes-rho ref-price
-                                    (/ (option-dte o) 365)
-                                    (option-strike o)
-                                    (string->symbol (option-call-put o))
-                                    1-month-rate
-                                    (option-vol o)
-                                    divs)))
+                 (if compute-all-greeks?
+                     (black-scholes-gamma ref-price
+                                          (/ (option-dte o) 365)
+                                          (option-strike o)
+                                          (string->symbol (option-call-put o))
+                                          1-month-rate
+                                          (option-vol o)
+                                          divs)
+                     #f)
+                 (if compute-all-greeks?
+                     (black-scholes-theta ref-price
+                                          (/ (option-dte o) 365)
+                                          (option-strike o)
+                                          (string->symbol (option-call-put o))
+                                          1-month-rate
+                                          (option-vol o)
+                                          divs)
+                     #f)
+                 (if compute-all-greeks?
+                     (black-scholes-vega ref-price
+                                         (/ (option-dte o) 365)
+                                         (option-strike o)
+                                         (string->symbol (option-call-put o))
+                                         1-month-rate
+                                         (option-vol o)
+                                         divs)
+                     #f)
+                 (if compute-all-greeks?
+                     (black-scholes-rho ref-price
+                                        (/ (option-dte o) 365)
+                                        (option-strike o)
+                                        (string->symbol (option-call-put o))
+                                        1-month-rate
+                                        (option-vol o)
+                                        divs)
+                     #f)))
        (get-options symbol date)))
 
 (define (suitable-options options patterns)

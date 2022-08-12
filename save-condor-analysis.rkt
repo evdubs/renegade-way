@@ -8,7 +8,7 @@
            "params.rkt")
 
   (command-line
-   #:program "racket save-price-analysis.rkt"
+   #:program "racket save-condor-analysis.rkt"
    #:once-each
    [("-d" "--end-date") end-date
                         "End date for saving. Defaults to today"
@@ -28,9 +28,10 @@
 
 (require 'cmd
          gregor
+         racket/list
          "db-queries.rkt"
          "params.rkt"
-         "price-analysis.rkt"
+         "condor-analysis.rkt"
          "structs.rkt")
 
 (cond [(and (or (= 0 (->wday (save-end-date)))
@@ -38,17 +39,21 @@
        (displayln (string-append "Requested date " (date->iso8601 (save-end-date)) " falls on a weekend. Terminating."))
        (exit)])
 
-(run-price-analysis (save-markets) "" (date->iso8601 (-months (save-end-date) 5)) (date->iso8601 (save-end-date)))
+(run-condor-analysis (save-markets) "" (date->iso8601 (-months (save-end-date) 5)) (date->iso8601 (save-end-date)))
 
 (for-each (λ (msis)
             (with-handlers
-              ([exn:fail? (λ (e) (displayln (string-append "Failed to process " (price-analysis-stock msis) " for date "
+              ([exn:fail? (λ (e) (displayln (string-append "Failed to process " (condor-analysis-stock msis) " for date "
                                                            (date->iso8601 (save-end-date))))
                              (displayln e))])
-              (insert-price-analysis (date->iso8601 (save-end-date))
+              (insert-condor-analysis (date->iso8601 (save-end-date))
                                      msis
-                                     (hash-ref price-analysis-hash (price-analysis-market msis))
-                                     (hash-ref price-analysis-hash (price-analysis-sector msis))
-                                     (hash-ref price-analysis-hash (price-analysis-industry msis))
-                                     (hash-ref price-analysis-hash (price-analysis-stock msis)))))
-          price-analysis-list)
+                                     (first (hash-ref condor-analysis-hash (condor-analysis-market msis)))
+                                     (second (hash-ref condor-analysis-hash (condor-analysis-market msis)))
+                                     (first (hash-ref condor-analysis-hash (condor-analysis-sector msis)))
+                                     (second (hash-ref condor-analysis-hash (condor-analysis-sector msis)))
+                                     (first (hash-ref condor-analysis-hash (condor-analysis-industry msis)))
+                                     (second (hash-ref condor-analysis-hash (condor-analysis-industry msis)))
+                                     (first (hash-ref condor-analysis-hash (condor-analysis-stock msis)))
+                                     (second (hash-ref condor-analysis-hash (condor-analysis-stock msis))))))
+          condor-analysis-list)

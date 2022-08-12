@@ -16,11 +16,11 @@
 
 (define (condor-score symbol start-date end-date)
   (with-handlers ([exn:fail?
-                   (λ (e) (displayln (string-append "Failed to produce a condor score for "
-                                                    symbol " " start-date " " end-date))
+                   (λ (e) ; (displayln (string-append "Failed to produce a condor score for "
+                          ;                           symbol " " start-date " " end-date))
                       (list 0 0))])
     (let* ([prices (get-date-ohlc symbol start-date end-date)]
-           [options (get-updated-options symbol end-date (dohlc-close (last prices)))]
+           [options (get-updated-options symbol end-date (dohlc-close (last prices)) #:compute-all-greeks #f)]
            [condor-options (hash-ref (suitable-options options "CC") "Call Condor")]
            [low-strike (option-strike (second condor-options))]
            [high-strike (option-strike (third condor-options))]
@@ -40,8 +40,8 @@
            [avg (mean (map (λ (price) (if (and (<= low-strike (dohlc-close price))
                                                (>= high-strike (dohlc-close price)))
                                           1 0)) prices))])
-      (list (if (void? avg) 0 avg)
-            (if (= 0 risk) 0 (/ reward risk))))))
+      (list (if (void? avg) 0 (* 100 avg))
+            (if (= 0 risk) 0 (* 100 (/ reward risk)))))))
 
 (define (run-condor-analysis market sector start-date end-date)
   (let ([new-condor-analysis-list (get-condor-analysis market end-date)]
