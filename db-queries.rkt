@@ -45,7 +45,8 @@ from
       when $2::text::date > (select max(date) from iex.chart) then (select max(date) from iex.chart)
       else $2::text::date
     end,
-    $3::text::date);
+    $3::text::date,
+    false);
 "
                                  ticker-symbol
                                  start-date

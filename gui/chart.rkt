@@ -7,9 +7,9 @@
          racket/list
          racket/gui/base
          "../db-queries.rkt"
-         "../plot-util.rkt"
          "../structs.rkt"
-         "../technical-indicators.rkt")
+         "../technical-indicators.rkt"
+         "plot-util.rkt")
 
 (provide show-chart
          refresh-chart)
