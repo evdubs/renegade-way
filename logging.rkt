@@ -2,12 +2,14 @@
 
 (require gregor)
 
-(provide start-logging)
+(provide file-log
+         start-logging)
+
+(define file-log (make-logger #f #f 'info #f))
 
 (define (start-logging)
-  (define log (make-logger #f #f 'info #f))
-  (current-logger log)
-  (define rec (make-log-receiver log 'info))
+  (current-logger file-log)
+  (define rec (make-log-receiver file-log 'info))
 
   (define out (open-output-file (string-append "/var/tmp/renegade/" (~t (today) "yyyy-MM") ".log")
                                 #:exists 'append))

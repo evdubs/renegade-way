@@ -493,6 +493,10 @@
                                                 [order-type "LMT"]
                                                 [limit-price (order-price first-item)]
                                                 [time-in-force 'gtc]
+                                                [oca-group (string-append (date->iso8601 (today)) "."
+                                                                          (cond [(equal? 'long-call (order-strategy first-item)) "bull"]
+                                                                                [(equal? 'long-put (order-strategy first-item)) "bear"]))]
+                                                [oca-type 1]
                                                 [action (if (< 0 (order-quantity first-item)) 'buy 'sell)]
                                                 [total-quantity (abs (order-quantity first-item))]
                                                 [exchange "SMART"]
@@ -522,6 +526,27 @@
                                                                  total-price
                                                                  (abs total-price))]
                                                 [time-in-force 'gtc]
+                                                [oca-group (string-append (date->iso8601 (today)) "."
+                                                                          (cond [(or (equal? 'bull-call-vertical-spread (order-strategy first-item))
+                                                                                     (equal? 'bull-put-vertical-spread (order-strategy first-item))
+                                                                                     (equal? 'call-ratio-spread (order-strategy first-item))
+                                                                                     (equal? 'call-diagonal-spread (order-strategy first-item))
+                                                                                     (equal? 'call-horizontal-spread (order-strategy first-item)))
+                                                                                 "bull"]
+                                                                                [(or (equal? 'bear-call-vertical-spread (order-strategy first-item))
+                                                                                     (equal? 'bear-put-vertical-spread (order-strategy first-item))
+                                                                                     (equal? 'put-ratio-spread (order-strategy first-item))
+                                                                                     (equal? 'put-diagonal-spread (order-strategy first-item))
+                                                                                     (equal? 'put-horizontal-spread (order-strategy first-item)))
+                                                                                 "bear"]
+                                                                                [(or (equal? 'call-condor (order-strategy first-item))
+                                                                                     (equal? 'put-condor (order-strategy first-item))
+                                                                                     (equal? 'call-butterfly (order-strategy first-item))
+                                                                                     (equal? 'put-butterfly (order-strategy first-item))
+                                                                                     (equal? 'long-straddle (order-strategy first-item))
+                                                                                     (equal? 'long-strangle (order-strategy first-item)))
+                                                                                 "roo"]))]
+                                                [oca-type 1]
                                                 [action (if (or (equal? 'bull-put-vertical-spread (order-strategy first-item))
                                                                 (equal? 'bear-call-vertical-spread (order-strategy first-item))
                                                                 (equal? 'call-ratio-spread (order-strategy first-item))

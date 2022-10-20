@@ -5,6 +5,7 @@
          racket/string
          interactive-brokers-api/base-structs
          interactive-brokers-api/response-messages
+         "logging.rkt"
          "params.rkt"
          "structs.rkt")
 
@@ -210,7 +211,6 @@ where
     else true
   end
 order by
-  ((sector_end_close.close - sector_start_close.close) / sector_start_close.close) desc,
   ((stock_end_close.close - stock_start_close.close) / stock_start_close.close) desc;
 "
                                 market
@@ -767,7 +767,7 @@ on
                               (date->iso8601 end-date))))
 
 (define (insert-commission-report commission-report)
-  (log-info "insert-commission-report ~v" commission-report)
+  (log-message file-log 'info (format "insert-commission-report ~v" commission-report))
   (with-handlers ([exn:fail? (λ (error)
                                (displayln "Could not insert commission report into DB")
                                (displayln commission-report)
@@ -803,7 +803,7 @@ insert into ibkr.commission_report (
                     sql-null))))
 
 (define (insert-execution execution)
-  (log-info "insert-execution ~v" execution)
+  (log-message file-log 'info (format "insert-execution ~v" execution))
   (query-exec dbc "
 insert into ibkr.execution (
   order_id,
@@ -950,7 +950,7 @@ insert into renegade.condor_analysis (
               (condor-analysis-option-spread condor-analysis)))
 
 (define (insert-contract contract)
-  (log-info "insert-contract ~v" contract)
+  (log-message file-log 'info (format "insert-contract ~v" contract))
   (query-exec dbc "
 insert into ibkr.contract (
   symbol,
@@ -1123,7 +1123,7 @@ insert into renegade.price_analysis (
               stock-patterns))
 
 (define (insert-order order)
-  (log-info "insert-order ~v" order)
+  (log-message file-log 'info (format "insert-order ~v" order))
   (query-exec dbc "
 insert into ibkr.order (
   order_id,
@@ -1253,7 +1253,7 @@ insert into ibkr.order_condition (
             (open-order-rsp-conditions order)))
 
 (define (insert-order-note account order-id order-note)
-  (log-info "insert-order-note ~v ~v ~v" account order-id order-note)
+  (log-message file-log 'info (format "insert-order-note ~v ~v ~v" account order-id order-note))
   (query-exec dbc "
 insert into ibkr.order_note (
   account,
