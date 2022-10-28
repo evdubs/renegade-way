@@ -15,20 +15,27 @@
 
 (define analysis-box-ref #f)
 
+(define hide-no-pattern (make-parameter #f))
+
 (define hide-large-spread (make-parameter #f))
 
 (define hide-non-weekly (make-parameter #f))
 
-(define (condor-analysis-filter #:hide-large-spread large-spread #:hide-non-weekly non-weekly)
+(define (condor-analysis-filter #:hide-no-pattern no-pattern #:hide-large-spread large-spread #:hide-non-weekly non-weekly)
+  (hide-no-pattern no-pattern)
   (hide-large-spread large-spread)
   (hide-non-weekly non-weekly)
   (update-condor-analysis-box condor-analysis-list condor-analysis-hash))
 
 (define (update-condor-analysis-box condor-analysis-list condor-analysis-hash)
-  (let* ([filter-spread (if (hide-large-spread)
+  (let* ([filter-pattern (if (hide-no-pattern)
+                             (filter (λ (m) (and (<= 65 (first (hash-ref condor-analysis-hash (condor-analysis-stock m))))
+                                                 (<= 65 (second (hash-ref condor-analysis-hash (condor-analysis-stock m)))))) condor-analysis-list)
+                             condor-analysis-list)]
+         [filter-spread (if (hide-large-spread)
                             (filter (λ (m) (and (not (equal? "" (condor-analysis-option-spread m)))
-                                                (> 30 (string->number (condor-analysis-option-spread m))))) condor-analysis-list)
-                            condor-analysis-list)]
+                                                (> 30 (string->number (condor-analysis-option-spread m))))) filter-pattern)
+                            filter-pattern)]
          [filter-weekly (if (hide-non-weekly)
                             (filter (λ (m) (condor-analysis-is-weekly m)) filter-spread)
                             filter-spread)])

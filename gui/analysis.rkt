@@ -70,13 +70,15 @@
                    (price-analysis-filter #:hide-hold (send hide-hold-check-box get-value)
                                           #:hide-no-pattern (send hide-no-pattern-check-box get-value)
                                           #:hide-large-spread (send hide-spread-check-box get-value)
-                                          #:hide-non-weekly (send hide-non-weekly-check-box get-value)))]))
+                                          #:hide-non-weekly (send hide-non-weekly-check-box get-value))
+                   (condor-analysis-filter #:hide-no-pattern (send hide-no-pattern-check-box get-value)
+                                           #:hide-large-spread (send hide-spread-check-box get-value)
+                                           #:hide-non-weekly (send hide-non-weekly-check-box get-value)))]))
 
 (define hide-spread-check-box
   (new check-box%
        [parent filter-input-pane]
        [label "Hide Large Spread"]
-       [value #t]
        [callback (λ (b e)
                    (price-analysis-filter #:hide-hold (send hide-hold-check-box get-value)
                                           #:hide-no-pattern (send hide-no-pattern-check-box get-value)
@@ -86,7 +88,8 @@
                                          #:hide-non-weekly (send hide-non-weekly-check-box get-value))
                    (vol-analysis-filter #:hide-large-spread (send hide-spread-check-box get-value)
                                         #:hide-non-weekly (send hide-non-weekly-check-box get-value))
-                   (condor-analysis-filter #:hide-large-spread (send hide-spread-check-box get-value)
+                   (condor-analysis-filter #:hide-no-pattern (send hide-no-pattern-check-box get-value)
+                                           #:hide-large-spread (send hide-spread-check-box get-value)
                                            #:hide-non-weekly (send hide-non-weekly-check-box get-value)))]))
 
 (define hide-non-weekly-check-box
@@ -102,7 +105,8 @@
                                          #:hide-non-weekly (send hide-non-weekly-check-box get-value))
                    (vol-analysis-filter #:hide-large-spread (send hide-spread-check-box get-value)
                                         #:hide-non-weekly (send hide-non-weekly-check-box get-value))
-                   (condor-analysis-filter #:hide-large-spread (send hide-spread-check-box get-value)
+                   (condor-analysis-filter #:hide-no-pattern (send hide-no-pattern-check-box get-value)
+                                           #:hide-large-spread (send hide-spread-check-box get-value)
                                            #:hide-non-weekly (send hide-non-weekly-check-box get-value)))]))
 
 (define analysis-tab-panel

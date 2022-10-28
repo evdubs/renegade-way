@@ -88,7 +88,8 @@
                                                                    ["IR" 'increasing-rank]
                                                                    ["DR" 'decreasing-rank]
                                                                    ["IV" 'increasing-vol]
-                                                                   ["DV" 'decreasing-vol]))
+                                                                   ["DV" 'decreasing-vol]
+                                                                   ["CC" 'decreasing-vol])) ; call condor
                                                  (set-order-data (map (λ (o)
                                                                         (order pattern
                                                                                (string->symbol (string-replace (string-downcase k) " " "-"))
