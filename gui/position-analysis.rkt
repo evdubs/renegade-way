@@ -118,7 +118,9 @@
                                     (and (or (saturday? (today))
                                              (sunday? (today))
                                              (<= 12 (->hours (current-time))))
-                                         (equal? 'delayed-close (market-data-rsp-type md))))
+                                         (or (equal? 'close (market-data-rsp-type md))
+                                             (equal? 'delayed-close (market-data-rsp-type md))
+                                             (equal? 'mark-price (market-data-rsp-type md)))))
                                 (not (= 0 (market-data-rsp-value md)))
                                 (not (hash-has-key? prices (market-data-rsp-request-id md))))
                            (hash-set! prices (market-data-rsp-request-id md) (market-data-rsp-value md))
@@ -137,7 +139,8 @@
                                        [security-type 'stk]
                                        [exchange "SMART"]
                                        [currency "USD"]
-                                       [primary-exchange "NYSE"]))
+                                       [primary-exchange "NYSE"]
+                                       [generic-tick-list "221"])) ; send along 'mark-price in our streaming data
               (set! req-id (add1 req-id))
               (define symbol-price (async-channel-get ref-price-channel))
               (hash-set! ref-prices (first symbol-price) (last symbol-price)))
