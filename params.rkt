@@ -2,11 +2,14 @@
 
 (require gregor)
 
-(provide bearish?
+(provide api-token
+         bearish?
          db-host
          db-user
          db-name
          db-pass
+         email-user
+         email-pass
          filename
          ibkr-hostname
          ibkr-port-no
@@ -14,6 +17,8 @@
          save-end-date
          sim-start-date
          sim-end-date)
+
+(define api-token (make-parameter ""))
 
 (define bearish? (make-parameter #f))
 
@@ -24,6 +29,10 @@
 (define db-name (make-parameter "local"))
 
 (define db-pass (make-parameter ""))
+
+(define email-user (make-parameter ""))
+
+(define email-pass (make-parameter ""))
 
 (define filename (make-parameter ""))
 

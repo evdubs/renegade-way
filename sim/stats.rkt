@@ -74,7 +74,7 @@
 (define (compute-stats-range start-date end-date)
   (compute-stats trades (λ (t) (and (date>=? (trade-open-date t) start-date)
                                     (date<? (trade-open-date t) end-date)
-                                    ; 
+                                    (>= 15 (trade-num t))
                                     ))))
 
 (displayln "PL figures shown before considering commissions and spread")
@@ -106,4 +106,5 @@
 (displayln-stats "2022 Q1" (compute-stats-range (date 2022 1 1) (date 2022 4 1)))
 (displayln-stats "2022 Q2" (compute-stats-range (date 2022 4 1) (date 2022 7 1)))
 (displayln-stats "2022 Q3" (compute-stats-range (date 2022 7 1) (date 2022 10 1)))
-(displayln-stats "2022 F3Q" (compute-stats-range (date 2022 1 1) (date 2022 10 1)))
+(displayln-stats "2022 Q4" (compute-stats-range (date 2022 10 1) (date 2023 1 1)))
+(displayln-stats "2022 Y" (compute-stats-range (date 2022 1 1) (date 2023 1 1)))
