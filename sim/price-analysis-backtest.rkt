@@ -49,11 +49,11 @@
          "../pattern/descending-triangle.rkt"
          "../pattern/high-base.rkt"
          "../pattern/low-base.rkt"
-         "../pricing-risk.rkt"
          (except-in "../structs.rkt"
                     trade
                     struct:trade
                     trade?)
+         "option-pricing.rkt"
          "trade.rkt")
 
 (define dbc (postgresql-connect #:server (db-host) #:user (db-user) #:database (db-name) #:password (db-pass)))
@@ -187,96 +187,14 @@ from
                          (cond [will-enter? (printf "~a exit-date: ~a stock price: ~a\n" symbol (first exit-date-stock-price)
                                                     (real->decimal-string (second exit-date-stock-price)))
                                             (define option (~> (get-updated-options symbol
-                                                                                       (date->iso8601 date)
-                                                                                       entry-price
-                                                                                       #:compute-all-greeks #f)
-                                                                  (suitable-options _ patterns)
-                                                                  (hash-ref _ (if (bearish?) "Long Put" "Long Call"))
-                                                                  (first _)))
-                                            (define closest-exit-vol
-                                              (query-value dbc "
-select
-  vol
-from
-  (select
-    date,
-    act_symbol,
-    expiration,
-    strike,
-    call_put,
-    vol,
-    abs(expiration - $3::text::date) as date_diff,
-    abs(strike - $4) as strike_diff
-  from
-    oic.option_chain oc 
-  where 
-    act_symbol = $1 and
-    date = (select max(date) from oic.option_chain where date <= $2::text::date) and
-    call_put = $5::text::oic.call_put
-  order by
-    abs(expiration - $3::text::date) + abs(strike - $4)) cv
-limit 
-  1;
-"
-                                                           symbol
-                                                           (first exit-date-stock-price)
-                                                           (date->iso8601 (parse-date (option-expiration option) "yy-MM-dd"))
-                                                           (option-strike option)
-                                                           (option-call-put option)))
-                                            (define interest-rate
-                                              (query-value dbc "
-select
-  \"1_month\" / 100
-from
-  ust.yield_curve
-where
-  date = (select max(date) from ust.yield_curve where date < $1::text::date)
-"
-                                                           (first exit-date-stock-price)))
-                                            (define dividends
-                                              (query-rows dbc "
-select
-  ((previous.ex_date + interval '1 year')::date - $2::text::date) / 365.25,
-  latest.amount
-from
-  yahoo.dividend latest
-join
-  yahoo.dividend previous
-on
-  previous.act_symbol = latest.act_symbol
-where
-  latest.act_symbol = $1 and
-  latest.ex_date = (select max(ex_date) from yahoo.dividend where act_symbol = $1) and 
-  previous.ex_date between $2::text::date - interval '1 year' and $3::text::date - interval '1 year';
-"
-                                                           symbol
-                                                           (first exit-date-stock-price)
-                                                           (date->iso8601 (parse-date (option-expiration option) "yy-MM-dd"))))
-                                            (printf "bs: ~s ~s ~s ~s ~s ~s ~s\n"
-                                                    (second exit-date-stock-price)
-                                                    (/ (period-ref (date-period-between (iso8601->date (first exit-date-stock-price))
-                                                                                        (parse-date (option-expiration option) "yy-MM-dd")
-                                                                                        '(days))
-                                                                   'days)
-                                                       365.25)
-                                                    (option-strike option)
-                                                    (option-call-put option)
-                                                    interest-rate
-                                                    closest-exit-vol
-                                                    dividends)
-                                            (define option-closing-price
-                                              (black-scholes (second exit-date-stock-price)
-                                                             (/ (period-ref (date-period-between (iso8601->date (first exit-date-stock-price))
-                                                                                                 (parse-date (option-expiration option) "yy-MM-dd")
-                                                                                                 '(days))
-                                                                            'days)
-                                                                365.25)
-                                                             (option-strike option)
-                                                             (string->symbol (option-call-put option))
-                                                             interest-rate
-                                                             closest-exit-vol
-                                                             dividends))
-                                            (printf "price: ~a vol: ~a option: ~a\n" option-closing-price closest-exit-vol option)
+                                                                                    (date->iso8601 date)
+                                                                                    entry-price
+                                                                                    #:compute-all-greeks #f)
+                                                               (suitable-options _ patterns)
+                                                               (hash-ref _ (if (bearish?) "Long Put" "Long Call"))
+                                                               (first _)))
+                                            (define option-closing-price (price-option dbc option (first exit-date-stock-price)
+                                                                                       (second exit-date-stock-price)))
                                             (trade symbol
                                                    (list (parse-date (option-expiration option) "yy-MM-dd"))
                                                    (list (option-strike option))

@@ -387,7 +387,7 @@
            (vector p (foldl (λ (i res)
                               (define order (send order-box get-data i))
                               (define yte (if (date=? eval-date (order-expiration order))
-                                              1/100000
+                                              1/1000000
                                               (/ (days-between eval-date (order-expiration order)) 365)))
                               (+ res (* (- (black-scholes p
                                                           yte

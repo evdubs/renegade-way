@@ -44,6 +44,7 @@
                     trade
                     struct:trade
                     trade?)
+         "option-pricing.rkt"
          "trade.rkt")
 
 (define dbc (postgresql-connect #:server (db-host) #:user (db-user) #:database (db-name) #:password (db-pass)))
@@ -125,6 +126,35 @@ where
                           (real->decimal-string ref-price)
                           (real->decimal-string condor-price)
                           (real->decimal-string condor-risk))
+                  (define future-prices (query-rows dbc "
+select
+  date::text,
+  close
+from
+  iex.split_adjusted_chart($1, $2::text::date, to_date($3, 'YY-MM-DD'), true);
+"
+                                                    symbol
+                                                    (date->iso8601 date)
+                                                    (option-expiration (first condor))))
+                  (define low-strike (min (option-strike (first condor))
+                                          (option-strike (second condor))
+                                          (option-strike (third condor))
+                                          (option-strike (fourth condor))))
+                  (define high-strike (max (option-strike (first condor))
+                                           (option-strike (second condor))
+                                           (option-strike (third condor))
+                                           (option-strike (fourth condor))))
+                  (define exit-date-price (foldl (λ (fp date-price)
+                                                   (cond [(first date-price) date-price]
+                                                         [else (cond [(or (> (vector-ref fp 1) high-strike)
+                                                                          (< (vector-ref fp 1) low-strike))
+                                                                      (list (vector-ref fp 0) (vector-ref fp 1))]
+                                                                     [else date-price])]))
+                                                 (list #f #f)
+                                                 future-prices))
+                  (printf "Exit Date ~a Price ~a\n" (first exit-date-price)
+                          (if (second exit-date-price) (real->decimal-string (second exit-date-price))
+                              (second exit-date-price)))
                   (define exp-price (query-value dbc "
 select
   close
@@ -136,7 +166,15 @@ where
                                                  symbol
                                                  (date->iso8601 date)
                                                  (option-expiration (first condor))))
-                  (define condor-value
+                  (define end-date (if (first exit-date-price) (first exit-date-price)
+                                       (date->iso8601 (parse-date (option-expiration (first condor)) "yy-MM-dd"))))
+                  (define end-price (if (second exit-date-price) (second exit-date-price)
+                                        exp-price))
+                  (define condor-value (+ (price-option dbc (first condor) end-date end-price)
+                                          (- (price-option dbc (second condor) end-date end-price))
+                                          (- (price-option dbc (third condor) end-date end-price))
+                                          (price-option dbc (fourth condor) end-date end-price)))
+                  (define condor-at-exp
                     (cond [(<= exp-price (option-strike (first condor))) 0]
                           [(<= exp-price (option-strike (second condor)))
                            (- exp-price (option-strike (first condor)))]
@@ -146,10 +184,11 @@ where
                            (- (option-strike (third condor)) exp-price
                               (- (option-strike (second condor))) (option-strike (first condor)))]
                           [else 0]))
-                  (printf "Stock Price at Exp:\t~a\tCondor Value:\t~a\tCondor Return Pct:\t~a\n"
+                  (printf "Stock Price at Exp:\t~a\tCondor Value:\t~a\tCondor Return Pct:\t~a\tCondor At Exp:\t~a\n"
                           (real->decimal-string exp-price)
                           (real->decimal-string condor-value)
-                          (real->decimal-string (* 100 (/ (- condor-value condor-risk) condor-risk))))
+                          (real->decimal-string (* 100 (/ (- condor-value condor-risk) condor-risk)))
+                          (real->decimal-string condor-at-exp))
                   (trade symbol
                          (remove-duplicates (map (λ (l) (parse-date (option-expiration l) "yy-MM-dd")) condor))
                          (remove-duplicates (map (λ (l) (option-strike l)) condor))
@@ -158,7 +197,7 @@ where
                          condor-price
                          (truncate (/ trade-risk (* 100 condor-risk)))
                          (* 65/100 4 (truncate (/ trade-risk (* 100 condor-risk))))
-                         (parse-date (option-expiration (first condor)) "yy-MM-dd")
+                         (iso8601->date end-date)
                          condor-value
                          (truncate (/ trade-risk (* 100 condor-risk)))
                          (* 65/100 (truncate (/ trade-risk (* 100 condor-risk))))

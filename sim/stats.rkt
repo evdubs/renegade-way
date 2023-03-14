@@ -1,11 +1,13 @@
 #lang racket/base
 
 (require gregor
+         gregor/period
          racket/cmdline
          racket/list
          racket/port
          racket/string
          threading
+         "list-partition.rkt"
          "trade.rkt")
 
 (define filename (make-parameter ""))
@@ -35,6 +37,22 @@
                    (port->string _)
                    (string-split _ "\n")
                    (map (λ (t) (tsv->trade t)) _)))
+
+(define first-trade-date (argmin ->jdn (map (λ (t) (trade-open-date t)) trades)))
+
+(define last-trade-date (argmax ->jdn (map (λ (t) (trade-close-date t)) trades)))
+
+(define quarters-between (~> (date-period-between (-months first-trade-date 2) (+months last-trade-date 3) '(months))
+                             (period-ref _ 'months)
+                             (range _)
+                             (map (λ (i) (+months (date (->year (-months first-trade-date 2)) (->month (-months first-trade-date 2))) i)) _)
+                             (filter (λ (d) (= 1 (modulo (->month d) 3))) _)))
+
+(define years-between (~> (date-period-between (-months first-trade-date 11) (+months last-trade-date 12) '(months))
+                          (period-ref _ 'months)
+                          (range _)
+                          (map (λ (i) (+months (date (->year (-months first-trade-date 11)) (->month (-months first-trade-date 11))) i)) _)
+                          (filter (λ (d) (= 1 (modulo (->month d) 12))) _)))
 
 (define (compute-stats trades predicate)
   (define num-profit 0)
@@ -74,7 +92,9 @@
 (define (compute-stats-range start-date end-date)
   (compute-stats trades (λ (t) (and (date>=? (trade-open-date t) start-date)
                                     (date<? (trade-open-date t) end-date)
-                                    (>= 15 (trade-num t))
+                                    ;(not (trade-earnings-date t))
+                                    ;(>= 5 (trade-num t))
+                                    ;(>= (trade-open-price t) 2)
                                     ))))
 
 (displayln "PL figures shown before considering commissions and spread")
@@ -93,18 +113,10 @@
                             (real->decimal-string (stats-total-commission stats)) "\t"
                             (real->decimal-string (stats-2pc-spread stats)))))
 
-(displayln-stats "2020 Q1" (compute-stats-range (date 2020 1 1) (date 2020 4 1)))
-(displayln-stats "2020 Q2" (compute-stats-range (date 2020 4 1) (date 2020 7 1)))
-(displayln-stats "2020 Q3" (compute-stats-range (date 2020 7 1) (date 2020 10 1)))
-(displayln-stats "2020 Q4" (compute-stats-range (date 2020 10 1) (date 2021 1 1)))
-(displayln-stats "2020 Y" (compute-stats-range (date 2020 1 1) (date 2021 1 1)))
-(displayln-stats "2021 Q1" (compute-stats-range (date 2021 1 1) (date 2021 4 1)))
-(displayln-stats "2021 Q2" (compute-stats-range (date 2021 4 1) (date 2021 7 1)))
-(displayln-stats "2021 Q3" (compute-stats-range (date 2021 7 1) (date 2021 10 1)))
-(displayln-stats "2021 Q4" (compute-stats-range (date 2021 10 1) (date 2022 1 1)))
-(displayln-stats "2021 Y" (compute-stats-range (date 2021 1 1) (date 2022 1 1)))
-(displayln-stats "2022 Q1" (compute-stats-range (date 2022 1 1) (date 2022 4 1)))
-(displayln-stats "2022 Q2" (compute-stats-range (date 2022 4 1) (date 2022 7 1)))
-(displayln-stats "2022 Q3" (compute-stats-range (date 2022 7 1) (date 2022 10 1)))
-(displayln-stats "2022 Q4" (compute-stats-range (date 2022 10 1) (date 2023 1 1)))
-(displayln-stats "2022 Y" (compute-stats-range (date 2022 1 1) (date 2023 1 1)))
+(for-each (λ (dr) (displayln-stats (string-append "Q " (date->iso8601 (first dr)))
+                                   (compute-stats-range (first dr) (second dr))))
+          (list-partition quarters-between 2 1))
+
+(for-each (λ (dr) (displayln-stats (string-append "Y " (date->iso8601 (first dr)))
+                                   (compute-stats-range (first dr) (second dr))))
+          (list-partition years-between 2 1))
