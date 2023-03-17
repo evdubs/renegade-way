@@ -40,7 +40,7 @@
   (new text-field%
        [parent input-pane]
        [label "Trade Risk Pct"]
-       [init-value "0.02"]))
+       [init-value "0.01"]))
 
 (define trade-risk-field
   (new text-field%
@@ -52,7 +52,7 @@
   (new text-field%
        [parent input-pane]
        [label "Spread Pct"]
-       [init-value "0.10"]))
+       [init-value "0.01"]))
 
 (define recalc-button
   (new button%
@@ -249,75 +249,7 @@
                    (set-order-data
                     (map (λ (i)
                            (define ord (send order-box get-data i))
-                           (cond [(equal? 'long-call (order-strategy ord))
-                                  (struct-copy order ord
-                                               [price (+ (order-price ord) (* (order-spread ord) spread-pct))])]
-                                 [(equal? 'long-put (order-strategy ord))
-                                  (struct-copy order ord
-                                               [price (+ (order-price ord) (* (order-spread ord) spread-pct))])]
-                                 [(equal? 'bull-call-vertical-spread (order-strategy ord))
-                                  (struct-copy order ord
-                                               [price (if (= i 1) (- (order-price ord) (* (order-spread ord) spread-pct))
-                                                          (+ (order-price ord) (* (order-spread ord) spread-pct)))])]
-                                 [(equal? 'bull-put-vertical-spread (order-strategy ord))
-                                  (struct-copy order ord
-                                               [price (if (= i 1) (+ (order-price ord) (* (order-spread ord) spread-pct))
-                                                          (- (order-price ord) (* (order-spread ord) spread-pct)))])]
-                                 [(equal? 'bear-put-vertical-spread (order-strategy ord))
-                                  (struct-copy order ord
-                                               [price (if (= i 1) (- (order-price ord) (* (order-spread ord) spread-pct))
-                                                          (+ (order-price ord) (* (order-spread ord) spread-pct)))])]
-                                 [(equal? 'bear-call-vertical-spread (order-strategy ord))
-                                  (struct-copy order ord
-                                               [price (if (= i 1) (+ (order-price ord) (* (order-spread ord) spread-pct))
-                                                          (- (order-price ord) (* (order-spread ord) spread-pct)))])]
-                                 [(equal? 'long-straddle (order-strategy ord))
-                                  (struct-copy order ord
-                                               [price (+ (order-price ord) (* (order-spread ord) spread-pct))])]
-                                 [(equal? 'long-strangle (order-strategy ord))
-                                  (struct-copy order ord
-                                               [price (+ (order-price ord) (* (order-spread ord) spread-pct))])]
-                                 [(equal? 'call-ratio-spread (order-strategy ord))
-                                  (struct-copy order ord
-                                               [price (if (= i 1) (+ (order-price ord) (* (order-spread ord) spread-pct))
-                                                          (- (order-price ord) (* (order-spread ord) spread-pct)))])]
-                                 [(equal? 'put-ratio-spread (order-strategy ord))
-                                  (struct-copy order ord
-                                               [price (if (= i 1) (+ (order-price ord) (* (order-spread ord) spread-pct))
-                                                          (- (order-price ord) (* (order-spread ord) spread-pct)))])]
-                                 [(equal? 'call-horizontal-spread (order-strategy ord))
-                                  (struct-copy order ord
-                                               [price (if (= i 1) (+ (order-price ord) (* (order-spread ord) spread-pct))
-                                                          (- (order-price ord) (* (order-spread ord) spread-pct)))])]
-                                 [(equal? 'put-horizontal-spread (order-strategy ord))
-                                  (struct-copy order ord
-                                               [price (if (= i 1) (+ (order-price ord) (* (order-spread ord) spread-pct))
-                                                          (- (order-price ord) (* (order-spread ord) spread-pct)))])]
-                                 [(equal? 'call-diagonal-spread (order-strategy ord))
-                                  (struct-copy order ord
-                                               [price (if (= i 1) (- (order-price ord) (* (order-spread ord) spread-pct))
-                                                          (+ (order-price ord) (* (order-spread ord) spread-pct)))])]
-                                 [(equal? 'put-diagonal-spread (order-strategy ord))
-                                  (struct-copy order ord
-                                               [price (if (= i 1) (- (order-price ord) (* (order-spread ord) spread-pct))
-                                                          (+ (order-price ord) (* (order-spread ord) spread-pct)))])]
-                                 [(equal? 'call-butterfly (order-strategy ord))
-                                  (struct-copy order ord
-                                               [price (if (or (= i 1)) (- (order-price ord) (* (order-spread ord) spread-pct))
-                                                          (+ (order-price ord) (* (order-spread ord) spread-pct)))])]
-                                 [(equal? 'put-butterfly (order-strategy ord))
-                                  (struct-copy order ord
-                                               [price (if (or (= i 1)) (- (order-price ord) (* (order-spread ord) spread-pct))
-                                                          (+ (order-price ord) (* (order-spread ord) spread-pct)))])]
-                                 [(equal? 'call-condor (order-strategy ord))
-                                  (struct-copy order ord
-                                               [price (if (or (= i 1) (= i 2)) (- (order-price ord) (* (order-spread ord) spread-pct))
-                                                          (+ (order-price ord) (* (order-spread ord) spread-pct)))])]
-                                 [(equal? 'put-condor (order-strategy ord))
-                                  (struct-copy order ord
-                                               [price (if (or (= i 1) (= i 2)) (- (order-price ord) (* (order-spread ord) spread-pct))
-                                                          (+ (order-price ord) (* (order-spread ord) spread-pct)))])]
-                                 [else ord]))
+                           (struct-copy order ord [price (* (order-price ord) (+ 1 spread-pct))]))
                          (range (send order-box get-number)))))]))
 
 (define order-box-columns (list "Symbol" "Expiry" "Strike" "CallPut" "Qty" "Price" "StkEntry" "StkStop" "StkTgt"))
