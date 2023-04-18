@@ -13,11 +13,11 @@
 (define filename (make-parameter ""))
 
 (command-line
-   #:program "racket condor-backtest.rkt"
-   #:once-each
-   [("-f" "--filename") file-name
-                        "TSV file to load trades from"
-                        (filename file-name)])
+ #:program "racket stats.rkt"
+ #:once-each
+ [("-f" "--filename") file-name
+                      "TSV file to load trades from"
+                      (filename file-name)])
 
 (struct stats
   (num-profit
@@ -92,9 +92,18 @@
 (define (compute-stats-range start-date end-date)
   (compute-stats trades (λ (t) (and (date>=? (trade-open-date t) start-date)
                                     (date<? (trade-open-date t) end-date)
+                                    ;(> 1 (trade-market-rating t))
+                                    ;(trade-earnings-date t)
                                     ;(not (trade-earnings-date t))
                                     ;(>= 5 (trade-num t))
-                                    ;(>= (trade-open-price t) 2)
+                                    ;(>= (trade-open-price t) 3)
+                                    ;(<= 28 (period-ref (period-between (trade-open-date t) (first (trade-expirations t)) '(days)) 'days))
+                                    ;(>= 21 (period-ref (period-between (trade-open-date t) (if (trade-earnings-date t)
+                                    ;                                                           (trade-earnings-date t)
+                                    ;                                                           (first (trade-expirations t))) '(days)) 'days))
+                                    ;(<= 65 (trade-stock-rating t))
+                                    ;(> 85 (trade-stock-rating t))
+                                    ;(<= 65 (trade-stock-risk-reward t))
                                     ))))
 
 (displayln "PL figures shown before considering commissions and spread")

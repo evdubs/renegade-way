@@ -499,4 +499,36 @@
                                                                    (equal? (option-call-put o) "Call")))
                                                        options))])
                  (list first-long-call first-short-call second-short-call second-long-call)))]
+        [(or (string-contains? patterns "PC"))
+         (hash "Put Condor"
+               (let* ([closest-dte (foldl (λ (o res) (if (< (abs (- 28 (option-dte o)))
+                                                            (abs (- 28 (option-dte res))))
+                                                         o
+                                                         res))
+                                          (first options)
+                                          options)]
+                      [closest-strike (foldl (λ (o res) (if (< (abs (- -5/10 (option-delta o)))
+                                                               (abs (- -5/10 (option-delta res))))
+                                                            o
+                                                            res))
+                                             (first options)
+                                             (filter (λ (o) (= (option-dte o) (option-dte closest-dte))) options))]
+                      [first-short-put (first (filter (λ (o) (and (= (option-dte o) (option-dte closest-dte))
+                                                                  (> (option-strike o) (+ (option-strike closest-strike) (option-mid closest-strike)))
+                                                                  (equal? (option-call-put o) "Put")))
+                                                      options))]
+                      [second-short-put (last (filter (λ (o) (and (= (option-dte o) (option-dte closest-dte))
+                                                                  (< (option-strike o) (- (option-strike closest-strike) (option-mid closest-strike)))
+                                                                  (equal? (option-call-put o) "Put")))
+                                                      options))]
+                      [long-short-distance (* 1/2 (- (option-strike first-short-put) (option-strike second-short-put)))]
+                      [first-long-put (first (filter (λ (o) (and (= (option-dte o) (option-dte closest-dte))
+                                                                 (>= (option-strike o) (+ (option-strike first-short-put) long-short-distance))
+                                                                 (equal? (option-call-put o) "Put")))
+                                                     options))]
+                      [second-long-put (last (filter (λ (o) (and (= (option-dte o) (option-dte closest-dte))
+                                                                 (<= (option-strike o) (- (option-strike second-short-put) long-short-distance))
+                                                                 (equal? (option-call-put o) "Put")))
+                                                     options))])
+                 (list first-long-put first-short-put second-short-put second-long-put)))]
         [else (hash)]))

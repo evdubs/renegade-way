@@ -78,8 +78,8 @@ from
   renegade.condor_analysis
 where
   date = $1::text::date and
-  stock_rating >= 65 and
-  stock_risk_reward >= 65 and
+  stock_rating >= 50 and
+  stock_risk_reward >= 50 and
   option_spread <= 30
 order by
   coalesce(stock_rating, 0) * least(coalesce(stock_risk_reward, 0), 85.0) desc;
@@ -101,21 +101,29 @@ where
 "
                                                  (date->iso8601 date)
                                                  symbol))
-                  (define condor (~> (get-updated-options symbol
-                                                          (date->iso8601 date)
-                                                          ref-price
-                                                          #:compute-all-greeks #f)
-                                     (suitable-options _ "DV")
-                                     (hash-ref _ "Call Condor")))
+                  (define decreasing-vol-strategies (~> (get-updated-options symbol
+                                                                             (date->iso8601 date)
+                                                                             ref-price
+                                                                             #:compute-all-greeks #f)
+                                                        (suitable-options _ "DV")))
+                  (define call-condor (hash-ref decreasing-vol-strategies "Call Condor"))
+                  (define put-condor (hash-ref decreasing-vol-strategies "Put Condor"))
+                  (define call-condor-price (- (+ (option-mid (first call-condor))
+                                                  (option-mid (fourth call-condor)))
+                                               (option-mid (second call-condor))
+                                               (option-mid (third call-condor))))
+                  (define put-condor-price (- (+ (option-mid (first put-condor))
+                                                 (option-mid (fourth put-condor)))
+                                              (option-mid (second put-condor))
+                                              (option-mid (third put-condor))))
+                  (define-values (condor condor-price) (if (>= call-condor-price put-condor-price)
+                                                           (values call-condor call-condor-price)
+                                                           (values put-condor put-condor-price)))
                   (printf "Strikes: ~a ~a ~a ~a\n"
                           (real->decimal-string (option-strike (first condor)))
                           (real->decimal-string (option-strike (second condor)))
                           (real->decimal-string (option-strike (third condor)))
                           (real->decimal-string (option-strike (fourth condor))))
-                  (define condor-price (- (+ (option-mid (first condor))
-                                            (option-mid (fourth condor)))
-                                         (option-mid (second condor))
-                                         (option-mid (third condor))))
                   (define condor-risk (max condor-price
                                            (- (+ condor-price
                                                  (option-strike (first condor))
@@ -174,21 +182,10 @@ where
                                           (- (price-option dbc (second condor) end-date end-price))
                                           (- (price-option dbc (third condor) end-date end-price))
                                           (price-option dbc (fourth condor) end-date end-price)))
-                  (define condor-at-exp
-                    (cond [(<= exp-price (option-strike (first condor))) 0]
-                          [(<= exp-price (option-strike (second condor)))
-                           (- exp-price (option-strike (first condor)))]
-                          [(<= exp-price (option-strike (third condor)))
-                           (- (option-strike (second condor)) (option-strike (first condor)))]
-                          [(<= exp-price (option-strike (fourth condor)))
-                           (- (option-strike (third condor)) exp-price
-                              (- (option-strike (second condor))) (option-strike (first condor)))]
-                          [else 0]))
-                  (printf "Stock Price at Exp:\t~a\tCondor Value:\t~a\tCondor Return Pct:\t~a\tCondor At Exp:\t~a\n"
+                  (printf "Stock Price at Exp:\t~a\tCondor Value:\t~a\tCondor Return Pct:\t~a\n"
                           (real->decimal-string exp-price)
                           (real->decimal-string condor-value)
-                          (real->decimal-string (* 100 (/ (- condor-value condor-risk) condor-risk)))
-                          (real->decimal-string condor-at-exp))
+                          (real->decimal-string (* 100 (/ (- condor-value condor-risk) condor-risk))))
                   (trade symbol
                          (remove-duplicates (map (λ (l) (parse-date (option-expiration l) "yy-MM-dd")) condor))
                          (remove-duplicates (map (λ (l) (option-strike l)) condor))

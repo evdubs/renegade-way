@@ -46,15 +46,15 @@
 
 (define (get-prices symbols)
   (with-handlers ([exn:fail?
-                       (λ (error)
-                         (displayln (string-append "Encountered error for " (first symbols) "-" (last symbols)))
-                         (displayln error))])
-        (~> (string-append "https://cloud.iexapis.com/stable/tops/last?symbols=" (string-join symbols ",")
-                           "&token=" (api-token))
-            (get _)
-            (response-body _)
-            (bytes->string/utf-8 _)
-            (string->jsexpr _))))
+                   (λ (error)
+                     (displayln (string-append "Encountered error for " (first symbols) "-" (last symbols)))
+                     (displayln error))])
+    (~> (string-append "https://cloud.iexapis.com/stable/tops/last?symbols=" (string-join symbols ",")
+                       "&token=" (api-token))
+        (get _)
+        (response-body _)
+        (bytes->string/utf-8 _)
+        (string->jsexpr _))))
 
 (define (bull-bear-roo strategy)
   (cond [(or (equal? "LONG CALL" strategy)
@@ -94,13 +94,22 @@
                                           (position-analysis-stock position))
                                   (hash-ref sp 'price))) symbols-prices)))
 
+(define (get-strikes-for-symbol symbol)
+  (map (λ (p) (position-analysis-strike p))
+       (filter (λ (p) (equal? symbol (position-analysis-stock p))) positions)))
+
 (define-values (stop-positions go-positions)
   (partition (λ (p) (match (bull-bear-roo (position-analysis-strategy p))
                       ['bull (>= (position-analysis-stock-stop p)
                                  (get-price-from-position p))]
                       ['bear (<= (position-analysis-stock-stop p)
                                  (get-price-from-position p))]
-                      ['roo #f]))
+                      ['roo (and (or (string-contains? (position-analysis-strategy p) "BUTTERFLY")
+                                     (string-contains? (position-analysis-strategy p) "CONDOR"))
+                                 (or (> (apply min (get-strikes-for-symbol (position-analysis-stock p)))
+                                        (get-price-from-position p))
+                                     (< (apply max (get-strikes-for-symbol (position-analysis-stock p)))
+                                        (get-price-from-position p))))]))
              live-positions))
 
 (define-values (target-positions off-target-positions)
