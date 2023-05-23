@@ -294,6 +294,8 @@
 
 (define (update-profit-loss-chart)
   (define ref-price (order-stock-entry (send order-box get-data 0)))
+  (define stop-price (order-stock-stop (send order-box get-data 0)))
+  (define target-price (order-stock-target (send order-box get-data 0)))
   (define low-price (min (* 80/100 ref-price)
                          (apply min (map (λ (i) (order-strike (send order-box get-data i)))
                                          (range (send order-box get-number))))))
@@ -302,6 +304,8 @@
                                           (range (send order-box get-number))))))
   (define prices (map (λ (i) (/ (* i ref-price) 100))
                       (range (* 100 (/ low-price ref-price)) (* 100 (/ high-price ref-price)) 0.5)))
+  (define price-nearest-target (foldl (λ (p res) (if (> (abs (- res p)) (abs (- target-price p))) p res))
+                                         (first prices) prices))
   (define earnings-date (get-next-earnings-date (order-symbol (send order-box get-data 0))
                                                 (today)
                                                 (order-end-date (send order-box get-data 0)))) 
@@ -333,18 +337,23 @@
                             0
                             (range (send order-box get-number)))))
          prices))
-  (define current-vol-profit-loss
-    (map (λ (pl) (vector-ref pl 1))
-         (price-profit-loss 1 (map (λ (i) (/ (* i ref-price) 100))
-                                   (range (* 100 (/ low-price ref-price)) (* 100 (/ high-price ref-price)) 0.5)))))
+  (define current-vol-profit-loss (price-profit-loss 1 prices))
+  (define current-vol-profit-loss-values (map (λ (pl) (vector-ref pl 1)) current-vol-profit-loss))
+  (define value-near-target (vector-ref (first (filter (λ (pl) (= price-nearest-target (vector-ref pl 0)))
+                                                       current-vol-profit-loss)) 1))
   (send order-box set-label
-        (string-append "Risk: " (real->decimal-string (apply min current-vol-profit-loss))
-                       " Reward: " (real->decimal-string (apply max current-vol-profit-loss))
-                       " Ratio: " (real->decimal-string (abs (/ (apply max current-vol-profit-loss)
-                                                                (apply min current-vol-profit-loss))))
-                       " Requirement: " (hash-ref ratio-requirement (order-strategy (send order-box get-data 0)))))
+        (string-append "Risk: " (real->decimal-string (apply min current-vol-profit-loss-values))
+                       " Reward (by Tgt): " (real->decimal-string (apply max current-vol-profit-loss-values))
+                       " (" (real->decimal-string value-near-target) ") "
+                       " Ratio (by Tgt): " (real->decimal-string (abs (/ (apply max current-vol-profit-loss-values)
+                                                                              (apply min current-vol-profit-loss-values))))
+                       " (" (real->decimal-string (abs (/ value-near-target
+                                                          (apply min current-vol-profit-loss-values)))) ") "
+                       " Reqmnt: " (hash-ref ratio-requirement (order-strategy (send order-box get-data 0)))))
   (send profit-loss-canvas set-snip
         (plot-snip (list (tick-grid)
+                         (inverse (λ (y) stop-price) #:color 4 #:label "Stop")
+                         (inverse (λ (y) target-price) #:color 5 #:label "Target")
                          (lines (price-profit-loss 1.5 prices)
                                 #:color 1
                                 #:style 'long-dash

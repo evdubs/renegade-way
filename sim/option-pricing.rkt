@@ -52,7 +52,7 @@ where
   (define dividends
     (query-rows dbc "
 select
-  ((previous.ex_date + interval '1 year')::date - $2::text::date) / 365.25,
+  ((previous.ex_date + interval '1 year')::date - $2::text::date) / 365,
   latest.amount
 from
   yahoo.dividend latest
@@ -74,7 +74,7 @@ where
                                                       (parse-date (option-expiration option) "yy-MM-dd")
                                                       '(days))
                                  'days)
-                     365.25)))
+                     365)))
   ;; (printf "bs: ~s ~s ~s ~s ~s ~s ~s\n"
   ;;         stock-price
   ;;         yte
