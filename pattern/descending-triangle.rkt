@@ -60,7 +60,7 @@
                 (< dc-25-prev-low (* dc-25-low 101/100))
                 (< (+ dc-25-high (* (- dc-25-high dc-25-low) 1/2)) dc-25-prev-high))
            (let ([new-test (test 20
-                                 (- dc-25-low 5/100)
+                                 (* dc-25-low 999/1000)
                                  (+ dc-25-low (* satr 2))
                                  (- dc-25-low (* satr 4)))])
              (descending-triangle (history (append (history-test h)

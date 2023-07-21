@@ -64,7 +64,7 @@
                 (> high sma-20 low)
                 (> (- sma-50 sma-20) (- sma-20 dc-20-low)))
            (let ([new-test (test 20
-                                 (- low 5/100)
+                                 (* low 999/1000)
                                  (+ low (* satr 2))
                                  (- low (* satr 4)))])
              (bear-rally (history (append (history-test h)

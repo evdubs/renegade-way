@@ -64,7 +64,7 @@
                 (> high sma-20 low)
                 (> (- sma-20 sma-50) (- dc-20-high sma-20)))
            (let ([new-test (test 20
-                                 (+ high 5/100)
+                                 (* high 1001/1000)
                                  (- high (* satr 2))
                                  (+ high (* satr 4)))])
              (bull-pullback (history (append (history-test h)

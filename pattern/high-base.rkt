@@ -70,7 +70,7 @@
                 (< (- dc-10-high dc-10-low) (* satr 4/2))
                 (< dc-50-high (+ dc-10-high (/ satr 5))))
            (let ([new-test (test 20
-                                 (+ dc-10-high 5/100)
+                                 (* dc-10-high 1001/1000)
                                  (- dc-10-high (* satr 2))
                                  (+ dc-10-high (* satr 4)))])
              (high-base (history (append (history-test h)
