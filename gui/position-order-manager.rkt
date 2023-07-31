@@ -46,7 +46,7 @@
   (new text-field%
        [parent input-pane]
        [label "Trade Risk"]
-       [init-value "2000.00"]))
+       [init-value "200.00"]))
 
 (define spread-percent-field
   (new text-field%
