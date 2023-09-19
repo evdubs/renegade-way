@@ -40,7 +40,7 @@
 
 (define ibkr-port-no (make-parameter 7497))
 
-(define save-markets (make-parameter "SPY,MDY,SLY"))
+(define save-markets (make-parameter "SPY,MDY,SLY,SPSM"))
 
 (define save-end-date (make-parameter (today)))
 

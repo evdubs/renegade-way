@@ -17,7 +17,7 @@
                         "File name to save trades as a TSV"
                         (filename file-name)]
    [("-m" "--markets") markets
-                       "Markets to save. Defaults to SPY,MDY,SLY"
+                       "Markets to save. Defaults to SPY,MDY,SLY,SPSM"
                        (save-markets markets)]
    [("-n" "--db-name") name
                        "Database name. Defaults to 'local'"
