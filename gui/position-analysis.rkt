@@ -5,6 +5,7 @@
          racket/class
          racket/gui/base
          racket/list
+         racket/string
          interactive-brokers-api/request-messages
          interactive-brokers-api/response-messages
          "../db-queries.rkt"
@@ -33,6 +34,10 @@
 
 (define target-position-analysis-list (list))
 
+(define expired-analysis-box-ref #f)
+
+(define expired-position-analysis-list (list))
+
 (define (run-position-analysis market sector start-date end-date)
   (define position-analysis-list (get-position-analysis end-date))
 
@@ -42,6 +47,8 @@
     (map (λ (pa)
            (struct-copy position-analysis pa [stock-close (hash-ref ref-prices (position-analysis-stock pa))]))
          position-analysis-list))
+
+  (define min-max-strikes (get-min-max-strikes position-analysis-list))
 
   (define bull-bear-roo
     (foldl (λ (p m)
@@ -89,15 +96,28 @@
                                     (position-analysis-stock-stop pa)))
                             (and (equal? 'bear (hash-ref bull-bear-roo (position-analysis-stock pa)))
                                  (> (hash-ref ref-prices (position-analysis-stock pa))
-                                    (position-analysis-stock-stop pa)))))
+                                    (position-analysis-stock-stop pa)))
+                            (and (string-contains? (position-analysis-strategy pa) "CONDOR")
+                                 (or (< (hash-ref ref-prices (position-analysis-stock pa))
+                                        (first (hash-ref min-max-strikes (position-analysis-stock pa))))
+                                     (> (hash-ref ref-prices (position-analysis-stock pa))
+                                        (second (hash-ref min-max-strikes (position-analysis-stock pa))))))))
                 updated-position-analysis-list))
 
-  (set! open-position-analysis-list (remove* target-position-analysis-list
-                                             (remove* stop-position-analysis-list updated-position-analysis-list)))
+  (define remaining-position-analysis-list
+    (remove* target-position-analysis-list
+             (remove* stop-position-analysis-list updated-position-analysis-list)))
+
+  (set! expired-position-analysis-list (filter (λ (pa) (date>=? (today)
+                                                                (parse-date (position-analysis-end-date pa) "yy-MM-dd")))
+                                               remaining-position-analysis-list))
+
+  (set! open-position-analysis-list (remove* expired-position-analysis-list remaining-position-analysis-list))
 
   (update-analysis-box open-analysis-box-ref open-position-analysis-list)
   (update-analysis-box stop-analysis-box-ref stop-position-analysis-list)
-  (update-analysis-box target-analysis-box-ref target-position-analysis-list))
+  (update-analysis-box target-analysis-box-ref target-position-analysis-list)
+  (update-analysis-box expired-analysis-box-ref expired-position-analysis-list))
 
 (struct market (bid ask) #:transparent)
 
@@ -146,6 +166,18 @@
               (hash-set! ref-prices (first symbol-price) (last symbol-price)))
             stocks)
   ref-prices)
+
+(define (get-min-max-strikes position-analysis-list)
+  (foldl (λ (pa h)
+           (if (hash-has-key? h (position-analysis-stock pa))
+               (let [(hash-val (hash-ref h (position-analysis-stock pa)))]
+                 (hash-set h (position-analysis-stock pa)
+                           (list (min (first hash-val) (position-analysis-strike pa))
+                                 (max (second hash-val) (position-analysis-strike pa)))))
+               (hash-set h (position-analysis-stock pa)
+                         (list (position-analysis-strike pa) (position-analysis-strike pa)))))
+         (hash)
+         position-analysis-list))
 
 (define (update-analysis-box box-ref position-analysis-list)
   (send box-ref set
@@ -201,7 +233,9 @@
 
   (set! open-analysis-box-ref (analysis-box "Open" #f))
   (update-analysis-box open-analysis-box-ref open-position-analysis-list)
-  (set! stop-analysis-box-ref (analysis-box "Stop" 200))
+  (set! stop-analysis-box-ref (analysis-box "Stop" 150))
   (update-analysis-box stop-analysis-box-ref stop-position-analysis-list)
-  (set! target-analysis-box-ref (analysis-box "Target" 200))
-  (update-analysis-box target-analysis-box-ref target-position-analysis-list))
+  (set! target-analysis-box-ref (analysis-box "Target" 150))
+  (update-analysis-box target-analysis-box-ref target-position-analysis-list)
+  (set! expired-analysis-box-ref (analysis-box "Expired" 150))
+  (update-analysis-box expired-analysis-box-ref expired-position-analysis-list))
