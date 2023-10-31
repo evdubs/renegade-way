@@ -68,15 +68,26 @@ insert into ibkr.execution (
   model_code
 ) values (
   0,
-  (select
-     contract_id
-   from
-     ibkr.contract
-   where
-     symbol = $1 and
-     expiry = $2::text::date and
-     strike = $3::text::numeric and
-     \"right\" = $4::text::ibkr.\"right\"),
+  case
+    when $1 = '' then
+      (select
+         contract_id
+       from
+         ibkr.contract
+       where
+         symbol = $14 and
+         security_type = 'STK')
+    else
+      (select
+         contract_id
+       from
+         ibkr.contract
+       where
+         symbol = $1 and
+         expiry = $2::text::date and
+         strike = $3::text::numeric and
+         \"right\" = $4::text::ibkr.\"right\")
+  end,
   $5,
   ($6 || ' ' || $7 || '+0')::timestamptz,
   $8,
@@ -84,7 +95,10 @@ insert into ibkr.execution (
   $10,
   $11::text::numeric,
   $12::text::numeric,
-  $13::text::integer,
+  case
+    when $13 = '' then null
+    else $13::text::integer
+  end,
   0,
   0,
   $11::text::numeric,
@@ -93,18 +107,19 @@ insert into ibkr.execution (
   ''
 ) on conflict (execution_id) do nothing;
 "
-                       (list-ref line 40)
-                       (list-ref line 2)
-                       (list-ref line 3)
-                       (string-upcase (list-ref line 4))
-                       (list-ref line 20)
-                       (list-ref line 13)
-                       (list-ref line 12)
+                       (list-ref line 40) ; Trading Class
+                       (list-ref line 2) ; Last Trading Day
+                       (list-ref line 3) ; Strike
+                       (string-upcase (list-ref line 4)) ; Put/Call
+                       (list-ref line 20) ; ID
+                       (list-ref line 13) ; Date
+                       (list-ref line 12) ; Time
                        (account)
-                       (list-ref line 14)
-                       (list-ref line 6)
-                       (list-ref line 8)
-                       (list-ref line 11)
-                       (list-ref line 30)
+                       (list-ref line 14) ; Exch
+                       (list-ref line 6) ; Action
+                       (list-ref line 8) ; Quantity
+                       (list-ref line 11) ; Price
+                       (list-ref line 30) ; Vol Link
+                       (list-ref line 10) ; Fin Instrument
                        )))
      lines)))
