@@ -108,6 +108,13 @@ CREATE TYPE ibkr.time_in_force AS ENUM
      'GTX',
      'DTC');
 
+CREATE TABLE ibkr.closing_trade_association
+(
+    opening_order_id int4 NOT NULL,
+    execution_id text NOT NULL,
+    CONSTRAINT closing_trade_association_execution_id_key UNIQUE (execution_id)
+);
+
 CREATE TABLE ibkr.contract
 (
     symbol text,
