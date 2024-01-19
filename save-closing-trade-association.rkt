@@ -113,5 +113,3 @@ insert into ibkr.closing_trade_association (
      (filter (λ (p) (moment>? (position-expiry p) ref-moment)) updated-positions))
    (list)
    executions))
-
-(displayln positions)
