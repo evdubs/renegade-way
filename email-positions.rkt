@@ -87,7 +87,8 @@
 (define symbols-prices (get-prices symbols))
 
 (define-values (expired-positions live-positions)
-  (partition (λ (p) (date>=? (today) (parse-date (position-analysis-end-date p) "yy-MM-dd"))) positions))
+  (partition (λ (p) (and (not (equal? "" (position-analysis-end-date p)))
+                         (date>=? (today) (parse-date (position-analysis-end-date p) "yy-MM-dd")))) positions))
 
 (define (get-price-from-position position)
   (first (filter-map (λ (sp) (and (equal? (hash-ref sp 'symbol)
@@ -109,7 +110,8 @@
                                  (or (> (apply min (get-strikes-for-symbol (position-analysis-stock p)))
                                         (get-price-from-position p))
                                      (< (apply max (get-strikes-for-symbol (position-analysis-stock p)))
-                                        (get-price-from-position p))))]))
+                                        (get-price-from-position p))))]
+                      [_ #f]))
              live-positions))
 
 (define-values (target-positions off-target-positions)
@@ -118,7 +120,8 @@
                                  (position-analysis-stock-target p))]
                       ['bear (<= (get-price-from-position p)
                                  (position-analysis-stock-target p))]
-                      ['roo #f]))
+                      ['roo #f]
+                      [_ #f]))
              go-positions))
 
 (define (position->html-str position price)

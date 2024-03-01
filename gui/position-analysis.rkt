@@ -73,7 +73,8 @@
                           (equal? "PUT BUTTERFLY" s)
                           (equal? "CALL CONDOR" s)
                           (equal? "PUT CONDOR" s))
-                      (hash-set m (position-analysis-stock p) 'roo)])))
+                      (hash-set m (position-analysis-stock p) 'roo)]
+                     [else (hash-set m (position-analysis-stock p) 'unknown)])))
            (hash)
            updated-position-analysis-list))
   (set! position-summary-text (string-append "Bulls: " (number->string (length (indexes-of (hash-values bull-bear-roo) 'bull)))
@@ -108,8 +109,9 @@
     (remove* target-position-analysis-list
              (remove* stop-position-analysis-list updated-position-analysis-list)))
 
-  (set! expired-position-analysis-list (filter (λ (pa) (date>=? (today)
-                                                                (parse-date (position-analysis-end-date pa) "yy-MM-dd")))
+  (set! expired-position-analysis-list (filter (λ (pa) (and (not (equal? "" (position-analysis-end-date pa)))
+                                                            (date>=? (today)
+                                                                     (parse-date (position-analysis-end-date pa) "yy-MM-dd"))))
                                                remaining-position-analysis-list))
 
   (set! open-position-analysis-list (remove* expired-position-analysis-list remaining-position-analysis-list))
