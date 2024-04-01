@@ -575,7 +575,7 @@ with earnings_end_date as (
     o.order_id
 )
 select
-  spdr.to_sector_etf(eh.sector) as etf_symbol,
+  coalesce(spdr.to_sector_etf(eh.sector), '') as etf_symbol,
   c.symbol,
   to_char(c.expiry, 'YY-MM-DD') as expiry,
   c.strike,
@@ -616,7 +616,7 @@ left outer join
 on
   e.account = n.account and
   e.order_id = n.order_id
-join
+left outer join
   (select distinct
     component_symbol,
     sector
