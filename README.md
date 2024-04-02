@@ -5,7 +5,9 @@ This Racket application does the following:
 * Displays charts showing the stock and its market, sector, and industry
 * Provides option strategies to use for entering positions on the stock
 * Sends option strategy orders to Interactive Brokers for execution
- 
+
+### Price Analysis
+
 Here is a sample image of price analysis:
 ![Price Analysis](image/price-analysis.png)
 
@@ -23,6 +25,8 @@ We see:
 
 By selecting one of these entries, we will see the corresponding chart loaded as well as the option strategy updated when a pattern is available.
 
+### Rank Analysis
+
 Here is a sample image of rank analysis:
 ![Rank Analysis](image/rank-analysis.png)
 
@@ -30,21 +34,29 @@ We can see the current analyst rank of the stock, ranging from 1 (Strong Buy) to
 be aware of recent, significant upgrades. Ranks 1 and 2 will send an increasing rank (IR) and ranks 4 and 5 will send a decreasing rank (DR) pattern
 to Option Strategy.
 
+### Volatility Analysis
+
 Here is a sample image of volatility analysis:
 ![Vol Analysis](image/vol-analysis.png)
 
 We can see implied volatilities as well as implied volatility rank based on the 52-week high and low of vol. Entries with upcoming earnings dates
 will send an increasing vol (IV) pattern to Option Strategy; entries without upcoming earnings dates default to decreasing vol (DV).
 
+### Chart
+
 Here is a sample image of a chart:
 ![Chart](image/msis-chart.png)
 
 Moving your mouse over the chart will display the open, high, low, and close values for a particular candle.
 
+### Option Strategy
+
 Here is a sample image of an option strategy:
 ![Option Strategy](image/option-strategy.png)
 
 In addition to being linked to the selection made in Analysis, you can also input a pattern here if you think the analysis missed something.
+
+### Order Manager
 
 Here is a sample image of an order manager:
 ![Order Manager](image/order-manager.png)
@@ -54,6 +66,8 @@ You can do the following here:
 * Connect to the locally running IBKR TWS instance
 * Send the prepared order
 * Save all trades from the past week
+
+### Launching Renegade Way
 
 The intended way to launch this application is by doing the following:
 
