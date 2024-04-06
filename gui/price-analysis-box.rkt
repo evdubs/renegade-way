@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require racket/class
+(require math/statistics
+         racket/class
          racket/list
          racket/gui/base
          "../db-queries.rkt"
@@ -13,6 +14,12 @@
          price-analysis-filter
          update-price-analysis-box)
 
+(define analysis-panel #f)
+
+(define analysis-summary #f)
+
+(define analysis-summary-text "")
+
 (define analysis-box-ref #f)
 
 (define hide-hold (make-parameter #f))
@@ -23,7 +30,10 @@
 
 (define hide-non-weekly (make-parameter #f))
 
-(define (price-analysis-filter #:hide-hold hold #:hide-no-pattern no-pattern #:hide-large-spread large-spread #:hide-non-weekly non-weekly)
+(define (price-analysis-filter #:hide-hold hold
+                               #:hide-no-pattern no-pattern
+                               #:hide-large-spread large-spread
+                               #:hide-non-weekly non-weekly)
   (hide-hold hold)
   (hide-no-pattern no-pattern)
   (hide-large-spread large-spread)
@@ -61,15 +71,39 @@
           (map (λ (m) (hash-ref price-analysis-hash (price-analysis-stock m))) filter-weekly))
     ; We set data here so that we can retrieve it later with `get-data`
     (map (λ (m i) (send analysis-box-ref set-data i (list m (hash-ref price-analysis-hash (price-analysis-stock m)))))
-         filter-weekly (range (length filter-weekly)))))
+         filter-weekly (range (length filter-weekly)))
+
+    (define market-average (if (hash-empty? price-analysis-hash)
+                               #f
+                               (mean (filter number? (list (hash-ref price-analysis-hash "DIA" #f)
+                                                           (hash-ref price-analysis-hash "SPY" #f)
+                                                           (hash-ref price-analysis-hash "MDY" #f)
+                                                           (hash-ref price-analysis-hash "SLY" #f)
+                                                           (hash-ref price-analysis-hash "SPSM" #f))))))
+    
+    (set! analysis-summary-text (cond [(equal? market-average #f) ""]
+                                      [(>= market-average 2.5) "Target Allocation - Bulls: 5 Roos: 3 Bears: 2"]
+                                      [(>= 2.5 market-average 1.5) "Target Allocation - Bulls: 4 Roos: 3 Bears: 2"]
+                                      [(>= 1.5 market-average 0.5) "Target Allocation - Bulls: 3 Roos: 4 Bears: 2"]
+                                      [(>= 0.5 market-average -0.5) "Target Allocation - Bulls: 3 Roos: 4 Bears: 3"]
+                                      [(>= -0.5 market-average -1.5) "Target Allocation - Bulls: 2 Roos: 4 Bears: 3"]
+                                      [(>= -1.5 market-average -2.5) "Target Allocation - Bulls: 2 Roos: 3 Bears: 4"]
+                                      [(>= -2.5 market-average) "Target Allocation - Bulls: 2 Roos: 3 Bears: 5"]
+                                      [else ""]))
+    
+    (send analysis-summary set-label analysis-summary-text)))
 
 (define analysis-box-columns (list "Market" "MktRtg" "Sector" "Sct/Mkt" "SctRtg" "Industry" "IndRtg"
                                    "Stock" "Stk/Sct" "DivDt" "ErnDt" "OptSprd" "ZckRnk" "Patterns"))
 
 (define (price-analysis-box parent-panel start-date end-date)
+  (set! analysis-panel (new vertical-panel% [parent parent-panel] [alignment '(left top)]))
+
+  (set! analysis-summary (new message% [parent analysis-panel] [label analysis-summary-text]))
+  
   (define analysis-box
     (new list-box%
-         [parent parent-panel]
+         [parent analysis-panel]
          [label #f]
          [callback (λ (b e)
                      (let ([market (price-analysis-market (first (send b get-data (first (send b get-selections)))))]

@@ -256,8 +256,8 @@ CREATE TABLE ibkr.order_note
 );
 
 CREATE OR REPLACE VIEW ibkr."position"
- AS
- SELECT execution.contract_id,
+AS SELECT execution.order_id,
+    execution.contract_id,
     contract.symbol,
     contract.security_type,
     contract.expiry,
@@ -273,7 +273,10 @@ CREATE OR REPLACE VIEW ibkr."position"
     min(execution."timestamp") AS entry_timestamp
    FROM ibkr.execution
      JOIN ibkr.contract ON execution.contract_id = contract.contract_id
-  GROUP BY execution.contract_id,
+  WHERE execution.order_id > 0
+  GROUP BY
+    execution.order_id,
+    execution.contract_id,
     contract.symbol,
     contract.security_type,
     contract.expiry,

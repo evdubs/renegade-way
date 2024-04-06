@@ -16,6 +16,7 @@
          get-earnings-dates
          get-next-earnings-date
          get-options
+         get-position-history
          get-position-analysis
          get-price-analysis
          get-rank-analysis
@@ -652,6 +653,57 @@ order by
   \"right\";
 "
                    date)))
+
+(define (get-position-history date)
+  (query-value dbc "
+select
+  'Bulls: ' ||
+  sum(
+    case n.order_strategy
+      when 'LONG CALL' then 1
+      when 'BULL CALL VERTICAL SPREAD' then 1
+      when 'BULL PUT VERTICAL SPREAD' then 1
+      when 'CALL RATIO SPREAD' then 1
+      when 'CALL HORIZONTAL SPREAD' then 1
+      when 'CALL DIAGONAL SPREAD' then 1
+    else 0
+    end
+  ) || ' Roos: ' ||
+  sum(
+    case n.order_strategy
+      when 'LONG STRADDLE' then 1
+      when 'LONG STRANGLE' then 1
+      when 'CALL BUTTERFLY' then 1
+      when 'PUT BUTTERFLY' then 1
+      when 'CALL CONDOR' then 1
+      when 'PUT CONDOR' then 1
+    else 0
+    end
+  ) || ' Bears: ' ||
+  sum(
+    case n.order_strategy
+      when 'LONG PUT' then 1
+      when 'BEAR CALL VERTICAL SPREAD' then 1
+      when 'BEAR PUT VERTICAL SPREAD' then 1
+      when 'PUT RATIO SPREAD' then 1
+      when 'PUT HORIZONTAL SPREAD' then 1
+      when 'PUT DIAGONAL SPREAD' then 1
+    else 0
+    end
+  ) as summary
+from
+  (select distinct
+    order_id
+  from
+    ibkr.\"position\" p
+  where
+    p.entry_timestamp >= $1::text::date - '1 month'::interval) oids
+join
+  ibkr.order_note n
+on
+  n.order_id = oids.order_id;
+"
+               date))
 
 (define (get-security-name act-symbol)
   (query-value dbc "

@@ -22,6 +22,10 @@
 
 (define position-summary-text "")
 
+(define position-history #f)
+
+(define position-history-text "")
+
 (define open-analysis-box-ref #f)
 
 (define open-position-analysis-list (list))
@@ -77,10 +81,13 @@
                      [else (hash-set m (position-analysis-stock p) 'unknown)])))
            (hash)
            updated-position-analysis-list))
-  (set! position-summary-text (string-append "Bulls: " (number->string (length (indexes-of (hash-values bull-bear-roo) 'bull)))
+  (set! position-summary-text (string-append "Live - Bulls: " (number->string (length (indexes-of (hash-values bull-bear-roo) 'bull)))
                                              " Roos: " (number->string (length (indexes-of (hash-values bull-bear-roo) 'roo)))
                                              " Bears: " (number->string (length (indexes-of (hash-values bull-bear-roo) 'bear)))))
   (send position-summary set-label position-summary-text)
+
+  (set! position-history-text (string-append "History - " (get-position-history end-date)))
+  (send position-history set-label position-history-text)
 
   (set! target-position-analysis-list
         (filter (λ (pa) (or (and (equal? 'bull (hash-ref bull-bear-roo (position-analysis-stock pa)))
@@ -205,6 +212,8 @@
   (set! position-panel (new vertical-panel% [parent parent-panel] [alignment '(left top)]))
 
   (set! position-summary (new message% [parent position-panel] [label position-summary-text]))
+
+  (set! position-history (new message% [parent position-panel] [label position-history-text]))
 
   (define (analysis-box name height)
     (define box (new list-box%

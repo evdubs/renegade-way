@@ -155,8 +155,9 @@ order by
   \"right\";
 "))
 
-(define expiring-positions (filter (λ (p) (date>=? (+days (today) 7)
-                                                   (iso8601->date (vector-ref p 6))))
+(define expiring-positions (filter (λ (p) (and (not (equal? "" (vector-ref p 6)))
+                                               (date>=? (+days (today) 7)
+                                                   (iso8601->date (vector-ref p 6)))))
                                    current-positions))
 
 (define grouped-positions (foldl (λ (p acc)
