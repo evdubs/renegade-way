@@ -80,7 +80,7 @@
                                                            (hash-ref price-analysis-hash "MDY" #f)
                                                            (hash-ref price-analysis-hash "SLY" #f)
                                                            (hash-ref price-analysis-hash "SPSM" #f))))))
-    
+
     (set! analysis-summary-text (cond [(equal? market-average #f) ""]
                                       [(>= market-average 2.5) "Target Allocation - Bulls: 5 Roos: 3 Bears: 2"]
                                       [(>= 2.5 market-average 1.5) "Target Allocation - Bulls: 4 Roos: 3 Bears: 2"]
@@ -90,7 +90,7 @@
                                       [(>= -1.5 market-average -2.5) "Target Allocation - Bulls: 2 Roos: 3 Bears: 4"]
                                       [(>= -2.5 market-average) "Target Allocation - Bulls: 2 Roos: 3 Bears: 5"]
                                       [else ""]))
-    
+
     (send analysis-summary set-label analysis-summary-text)))
 
 (define analysis-box-columns (list "Market" "MktRtg" "Sector" "Sct/Mkt" "SctRtg" "Industry" "IndRtg"
@@ -100,7 +100,7 @@
   (set! analysis-panel (new vertical-panel% [parent parent-panel] [alignment '(left top)]))
 
   (set! analysis-summary (new message% [parent analysis-panel] [label analysis-summary-text]))
-  
+
   (define analysis-box
     (new list-box%
          [parent analysis-panel]
