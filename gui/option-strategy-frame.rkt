@@ -6,6 +6,7 @@
          racket/list
          racket/match
          racket/string
+         "../db-queries.rkt"
          "../option-strategy.rkt"
          "../structs.rkt"
          "position-order-manager.rkt")
@@ -90,22 +91,36 @@
                                                                    ["IV" 'increasing-vol]
                                                                    ["DV" 'decreasing-vol]
                                                                    ["CC" 'decreasing-vol])) ; call condor
-                                                 (set-order-data (map (λ (o)
-                                                                        (order pattern
-                                                                               (string->symbol (string-replace (string-downcase k) " " "-"))
-                                                                               (option-symbol o)
-                                                                               (parse-date (option-expiration o) "yy-MM-dd")
-                                                                               (option-strike o)
-                                                                               (string->symbol (string-downcase (option-call-put o)))
-                                                                               #f
-                                                                               (option-mid o)
-                                                                               (option-vol o)
-                                                                               (- (option-ask o) (option-bid o))
-                                                                               (string->number (send ref-price-field get-value))
-                                                                               #f
-                                                                               #f
-                                                                               (+months (iso8601->date (send date-field get-value)) 1)))
-                                                                      v)))])])
+                                                 (define order-data
+                                                   (map (λ (o)
+                                                          (order pattern
+                                                                 (string->symbol (string-replace (string-downcase k) " " "-"))
+                                                                 (option-symbol o)
+                                                                 (parse-date (option-expiration o) "yy-MM-dd")
+                                                                 (option-strike o)
+                                                                 (string->symbol (string-downcase (option-call-put o)))
+                                                                 #f
+                                                                 (option-mid o)
+                                                                 (option-vol o)
+                                                                 (- (option-ask o) (option-bid o))
+                                                                 (string->number (send ref-price-field get-value))
+                                                                 #f
+                                                                 #f
+                                                                 (+months (iso8601->date (send date-field get-value)) 1)))
+                                                        v))
+                                                 (define earnings-date (get-next-earnings-date (order-symbol (first order-data))
+                                                                                               (today)
+                                                                                               (order-end-date (first order-data))))
+                                                 (define first-expiry (foldl (λ (o res) (if (date<? (order-expiration o) res)
+                                                                                            (order-expiration o)
+                                                                                            res))
+                                                                             earnings-date
+                                                                             order-data))
+                                                 (define eval-date (if (date<? (order-end-date (first order-data)) first-expiry)
+                                                                       (order-end-date (first order-data))
+                                                                       first-expiry))
+
+                                                 (set-order-data order-data eval-date))])])
                      (send table set
                            (map (λ (o) (option-symbol o)) v)
                            (map (λ (o) (option-expiration o)) v)

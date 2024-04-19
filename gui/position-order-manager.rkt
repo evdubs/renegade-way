@@ -31,32 +31,44 @@
 (define manager-pane
   (new vertical-pane% [parent manager-frame]))
 
-(define input-pane
+(define field-input-pane
   (new horizontal-pane%
        [parent manager-pane]
        [stretchable-height #f]))
 
 (define trade-risk-percent-field
   (new text-field%
-       [parent input-pane]
+       [parent field-input-pane]
        [label "Trade Risk Pct"]
        [init-value "0.01"]))
 
 (define trade-risk-field
   (new text-field%
-       [parent input-pane]
+       [parent field-input-pane]
        [label "Trade Risk"]
        [init-value "200.00"]))
 
 (define spread-percent-field
   (new text-field%
-       [parent input-pane]
+       [parent field-input-pane]
        [label "Spread Pct"]
        [init-value "0.01"]))
 
+(define eval-date-field
+  (new text-field%
+       [parent field-input-pane]
+       [label "Eval Date"]
+       [init-value ""]))
+
+(define button-input-pane
+  (new horizontal-pane%
+       [parent manager-pane]
+       [alignment '(center center)]
+       [stretchable-height #f]))
+
 (define recalc-button
   (new button%
-       [parent input-pane]
+       [parent button-input-pane]
        [label "Recalc"]
        [callback (λ (b e)
                    (set-order-data
@@ -237,12 +249,13 @@
                                                [stock-stop (order-strike (send order-box get-data 0))]
                                                [stock-target (order-stock-entry ord)])]
                                  [else ord]))
-                         (range (send order-box get-number))))
+                         (range (send order-box get-number)))
+                    (iso8601->date (send eval-date-field get-value)))
                    (update-profit-loss-chart))]))
 
 (define add-spread-button
   (new button%
-       [parent input-pane]
+       [parent button-input-pane]
        [label "Add Spread"]
        [callback (λ (b e)
                    (define spread-pct (string->number (send spread-percent-field get-value)))
@@ -250,7 +263,8 @@
                     (map (λ (i)
                            (define ord (send order-box get-data i))
                            (struct-copy order ord [price (* (order-price ord) (+ 1 spread-pct))]))
-                         (range (send order-box get-number)))))]))
+                         (range (send order-box get-number)))
+                    (iso8601->date (send eval-date-field get-value))))]))
 
 (define order-box-columns (list "Symbol" "Expiry" "Strike" "CallPut" "Qty" "Price" "StkEntry" "StkStop" "StkTgt"))
 
@@ -306,17 +320,7 @@
                       (range (* 100 (/ low-price ref-price)) (* 100 (/ high-price ref-price)) 0.5)))
   (define price-nearest-target (foldl (λ (p res) (if (> (abs (- res p)) (abs (- target-price p))) p res))
                                          (first prices) prices))
-  (define earnings-date (get-next-earnings-date (order-symbol (send order-box get-data 0))
-                                                (today)
-                                                (order-end-date (send order-box get-data 0)))) 
-  (define first-expiry (foldl (λ (i res) (if (date<? (order-expiration (send order-box get-data i)) res)
-                                             (order-expiration (send order-box get-data i))
-                                             res))
-                              earnings-date
-                              (range (send order-box get-number))))
-  (define eval-date (if (date<? (order-end-date (send order-box get-data 0)) first-expiry)
-                        (order-end-date (send order-box get-data 0))
-                        first-expiry))
+  (define eval-date (iso8601->date (send eval-date-field get-value)))
   (define 1-month-rate (get-1-month-rate (date->iso8601 (today))))
   (define (price-profit-loss vol-multiplier prices)
     (map (λ (p)
@@ -573,7 +577,7 @@
                                                   (string->number (send trade-risk-percent-field get-value)))))
                    (send ibkr send-msg (new account-data-req% [subscribe #f])))]))
 
-(define (set-order-data order-data)
+(define (set-order-data order-data eval-date)
   (send order-box set
         (map (λ (d) (order-symbol d)) order-data)
         (map (λ (d) (~t (order-expiration d) "yy-MM-dd")) order-data)
@@ -586,7 +590,9 @@
         (map (λ (d) (if (order-stock-stop d) (real->decimal-string (order-stock-target d)) "")) order-data))
   (for-each (λ (d i)
               (send order-box set-data i d))
-            order-data (range (length order-data))))
+            order-data (range (length order-data)))
+
+  (send eval-date-field set-value (date->iso8601 eval-date)))
 
 ; (define order-box-columns (list "Symbol" "Expiry" "Strike" "CallPut" "Qty" "Price" "StkEntry" "StkStop" "StkTgt"))
 
@@ -629,7 +635,8 @@
                                   (string->number (send (list-ref editor-fields 12) get-value))
                                   (parse-date (send (list-ref editor-fields 13) get-value) "yy-MM-dd")))
                      (set-order-data (map (λ (i) (send order-box get-data i))
-                                          (range (send order-box get-number)))))]))
+                                          (range (send order-box get-number)))
+                                     (iso8601->date (send eval-date-field get-value))))]))
   (send editor-frame show #t))
 
 (define (show-position-order-manager)

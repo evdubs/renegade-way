@@ -12,6 +12,7 @@
 (provide get-1-month-rate
          get-condor-analysis
          get-date-ohlc
+         get-date-vol-history
          get-dividend-estimates
          get-earnings-dates
          get-next-earnings-date
@@ -56,6 +57,25 @@ from
     (map (λ (row) (dohlc (->posix (iso8601->date (vector-ref row 0)))
                          (vector-ref row 1) (vector-ref row 2) (vector-ref row 3) (vector-ref row 4)))
          price-query)))
+
+(define (get-date-vol-history ticker-symbol start-date end-date)
+  (let ([vol-history-query (query-rows dbc "
+select
+  date::text,
+  iv_current
+from
+  oic.volatility_history
+where
+  act_symbol = $1 and
+  date >= $2::text::date and
+  date <= $3::text::date and
+  iv_current is not null;
+"
+                                 ticker-symbol
+                                 start-date
+                                 end-date)])
+    (map (λ (row) (dv (->posix (iso8601->date (vector-ref row 0))) (vector-ref row 1)))
+         vol-history-query)))
 
 (define (get-earnings-dates ticker-symbol start-date end-date)
   (map (λ (el) (->posix (iso8601->date el)))
