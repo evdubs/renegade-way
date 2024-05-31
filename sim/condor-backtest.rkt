@@ -59,30 +59,36 @@
       (cond [(monday? date)
              (define rows (query-rows dbc "
 select
-  date,
-  market_act_symbol,
-  market_rating,
-  market_risk_reward,
-  sector_act_symbol,
-  sector_rating,
-  sector_risk_reward,
-  industry_act_symbol,
-  industry_rating,
-  industry_risk_reward,
-  stock_act_symbol,
-  stock_rating,
-  stock_risk_reward,
-  earnings_date::text,
-  option_spread
+  ca.date,
+  ca.market_act_symbol,
+  ca.market_rating,
+  ca.market_risk_reward,
+  ca.sector_act_symbol,
+  ca.sector_rating,
+  ca.sector_risk_reward,
+  ca.industry_act_symbol,
+  ca.industry_rating,
+  ca.industry_risk_reward,
+  ca.stock_act_symbol,
+  ca.stock_rating,
+  ca.stock_risk_reward,
+  ca.earnings_date::text,
+  ca.option_spread,
+  pa.market_rating 
 from
-  renegade.condor_analysis
+  renegade.condor_analysis ca
+left outer join
+  renegade.price_analysis pa 
+on
+  ca.date = pa.date and
+  ca.stock_act_symbol = pa.stock_act_symbol
 where
-  date = $1::text::date and
-  stock_rating >= 50 and
-  stock_risk_reward >= 50 and
-  option_spread <= 30
+  ca.date = $1::text::date and
+  ca.stock_rating >= 50 and
+  ca.stock_risk_reward >= 50 and
+  ca.option_spread <= 30
 order by
-  coalesce(stock_rating, 0) * least(coalesce(stock_risk_reward, 0), 85.0) desc;
+  coalesce(ca.stock_rating, 0) * least(coalesce(ca.stock_risk_reward, 0), 85.0) desc;
 "
                                       (date->iso8601 date)))
              (filter-map
@@ -199,8 +205,8 @@ where
                          (truncate (/ trade-risk (* 100 condor-risk)))
                          (* 65/100 (truncate (/ trade-risk (* 100 condor-risk))))
                          (* 100 (- condor-value condor-price) (truncate (/ trade-risk (* 100 condor-risk))))
-                         #f
-                         #f
+                         (if (sql-null? (vector-ref r 15)) #f (truncate (vector-ref r 15)))
+                         (if (sql-null? (vector-ref r 5)) #f (truncate (vector-ref r 5)))
                          #f
                          (vector-ref r 11)
                          (vector-ref r 12)

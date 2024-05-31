@@ -162,11 +162,7 @@ CREATE TABLE ibkr.execution
     average_price numeric,
     order_reference text,
     model_code text,
-    CONSTRAINT execution_execution_id_key UNIQUE (execution_id),
-    CONSTRAINT execution_act_symbol_fkey FOREIGN KEY (act_symbol)
-        REFERENCES nasdaq.symbol (act_symbol) MATCH SIMPLE
-        ON UPDATE NO ACTION
-        ON DELETE NO ACTION
+    CONSTRAINT execution_execution_id_key UNIQUE (execution_id)
 );
 
 CREATE INDEX ON ibkr.execution ("timestamp");
@@ -216,7 +212,7 @@ CREATE TABLE ibkr.order_condition
     value text,
     exchange text,
     trigger_method ibkr.condition_trigger_method,
-    CONSTRAINT order_condition_pkey PRIMARY KEY (account, order_id, type),
+    CONSTRAINT order_condition_pkey PRIMARY KEY (account, order_id, type, comparator),
     CONSTRAINT order_condition_order_id_fkey FOREIGN KEY (account, order_id)
         REFERENCES ibkr."order" (account, order_id) MATCH SIMPLE
         ON UPDATE NO ACTION
