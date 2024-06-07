@@ -501,7 +501,7 @@ order by
        (query-rows dbc "
 select 
   market.etf_symbol as market,
-  spdr.to_sector_etf(market.sector) as sector,
+  coalesce(spdr.to_sector_etf(market.sector), '') as sector,
   coalesce(industry.etf_symbol, '') as industry,
   market.component_symbol as stock,
   coalesce(to_char(ec.date, 'YY-MM-DD'), '') as earnings_date,
