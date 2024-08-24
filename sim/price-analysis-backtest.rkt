@@ -132,7 +132,7 @@ select
   low,
   close
 from
-  iex.split_adjusted_chart($1, $2::text::date, $3::text::date, true);
+  polygon.split_adjusted_ohlc($1, $2::text::date, $3::text::date, true);
 "
                                                            symbol
                                                            (date->iso8601 date)
@@ -147,7 +147,7 @@ select
   low,
   close
 from
-  iex.split_adjusted_chart($1, $2::text::date, $3::text::date, true);
+  polygon.split_adjusted_ohlc($1, $2::text::date, $3::text::date, true);
 "
                                                               symbol
                                                               (date->iso8601 (-months date 5))

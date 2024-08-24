@@ -42,10 +42,10 @@ select
   low,
   close
 from
-  iex.split_adjusted_chart(
+  polygon.split_adjusted_ohlc(
     $1,
     case
-      when $2::text::date > (select max(date) from iex.chart) then (select max(date) from iex.chart)
+      when $2::text::date > (select max(date) from polygon.ohlc) then (select max(date) from polygon.ohlc)
       else $2::text::date
     end,
     $3::text::date,
@@ -103,13 +103,13 @@ with start_close as (
     c.act_symbol,
     c.close / coalesce(split_ratio, 1) as close
   from
-    iex.chart c
+    polygon.ohlc c
   left join
     (select
       act_symbol,
       mul(to_factor / for_factor) as split_ratio
     from
-      iex.split
+      polygon.split
     where
       ex_date >= $3::text::date and
       ex_date <= $4::text::date
@@ -118,15 +118,15 @@ with start_close as (
   on
     c.act_symbol = s.act_symbol
   where
-    c.date = (select min(date) from iex.chart where date >= $3::text::date)
+    c.date = (select min(date) from polygon.ohlc where date >= $3::text::date)
 ), end_close as (
   select
     act_symbol,
     close
   from
-    iex.chart
+    polygon.ohlc
   where
-    date = (select max(date) from iex.chart where date <= $4::text::date )
+    date = (select max(date) from polygon.ohlc where date <= $4::text::date )
 )
 select
   market.market_symbol as market,
@@ -653,10 +653,10 @@ left outer join
 on
   c.symbol = ed.act_symbol
 left outer join
-  iex.chart ch
+  polygon.ohlc ch
 on
   c.symbol = ch.act_symbol and
-  ch.date = (select max(date) from iex.chart where date <= $1::text::date)
+  ch.date = (select max(date) from polygon.ohlc where date <= $1::text::date)
 left outer join
   expiry_end_date eed
 on

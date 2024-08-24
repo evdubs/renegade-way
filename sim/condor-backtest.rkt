@@ -100,9 +100,9 @@ order by
 select
   close
 from
-  iex.chart
+  polygon.ohlc
 where
-  date = (select max(date) from iex.chart where date < $1::text::date) and
+  date = (select max(date) from polygon.ohlc where date < $1::text::date) and
   act_symbol = $2;
 "
                                                  (date->iso8601 date)
@@ -145,7 +145,7 @@ select
   date::text,
   close
 from
-  iex.split_adjusted_chart($1, $2::text::date, to_date($3, 'YY-MM-DD'), true);
+  polygon.split_adjusted_ohlc($1, $2::text::date, to_date($3, 'YY-MM-DD'), true);
 "
                                                     symbol
                                                     (date->iso8601 date)
@@ -173,7 +173,7 @@ from
 select
   close
 from
-  iex.split_adjusted_chart($1, $2::text::date, to_date($3, 'YY-MM-DD'), true)
+  polygon.split_adjusted_ohlc($1, $2::text::date, to_date($3, 'YY-MM-DD'), true)
 where
   date = to_date($3, 'YY-MM-DD');
 "
