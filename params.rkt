@@ -11,6 +11,8 @@
          email-user
          email-pass
          filename
+         finviz-user
+         finviz-pass
          ibkr-hostname
          ibkr-port-no
          save-markets
@@ -35,6 +37,10 @@
 (define email-pass (make-parameter ""))
 
 (define filename (make-parameter ""))
+
+(define finviz-user (make-parameter ""))
+
+(define finviz-pass (make-parameter ""))
 
 (define ibkr-hostname (make-parameter "127.0.0.1"))
 
