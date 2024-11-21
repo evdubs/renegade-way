@@ -45,10 +45,11 @@
     (for-each
      (λ (line)
        (writeln line)
-       (if (or (equal? "Drill Down" (first line))
-               (equal? "BAG" (second line)))
-           (displayln "Skipping header and BAG lines")
-           (query-exec dbc "
+       (cond [(or (equal? "Drill Down" (first line))
+                  (equal? "BAG" (second line)))
+              (displayln "Skipping header and BAG lines")]
+             [else
+              (query-exec dbc "
 insert into ibkr.execution (
   order_id,
   contract_id,
@@ -107,19 +108,33 @@ insert into ibkr.execution (
   ''
 ) on conflict (execution_id) do nothing;
 "
-                       (list-ref line 40) ; Trading Class
-                       (list-ref line 2) ; Last Trading Day
-                       (list-ref line 3) ; Strike
-                       (string-upcase (list-ref line 4)) ; Put/Call
-                       (list-ref line 20) ; ID
-                       (list-ref line 13) ; Date
-                       (list-ref line 12) ; Time
-                       (account)
-                       (list-ref line 14) ; Exch
-                       (list-ref line 6) ; Action
-                       (list-ref line 8) ; Quantity
-                       (list-ref line 11) ; Price
-                       (list-ref line 30) ; Vol Link
-                       (list-ref line 10) ; Fin Instrument
-                       )))
+                          (list-ref line 40) ; Trading Class
+                          (list-ref line 2) ; Last Trading Day
+                          (list-ref line 3) ; Strike
+                          (string-upcase (list-ref line 4)) ; Put/Call
+                          (list-ref line 20) ; ID
+                          (list-ref line 13) ; Date
+                          (list-ref line 12) ; Time
+                          (account)
+                          (list-ref line 14) ; Exch
+                          (list-ref line 6) ; Action
+                          (list-ref line 8) ; Quantity
+                          (list-ref line 11) ; Price
+                          (list-ref line 30) ; Vol Link
+                          (list-ref line 10) ; Fin Instrument
+                          )
+              (query-exec dbc "
+insert into ibkr.commission_report (
+  execution_id,
+  commission,
+  currency
+) values (
+  $1,
+  $2::text::numeric,
+  'USD'
+) on conflict (execution_id) do nothing;
+"
+                          (list-ref line 20) ; ID
+                          (list-ref line 26) ; Commission
+                          )]))
      lines)))
