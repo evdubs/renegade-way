@@ -677,7 +677,7 @@ order by
 (define (get-position-history date)
   (query-value dbc "
 select
-  'Bulls: ' ||
+  coalesce('Bulls: ' ||
   sum(
     case n.order_strategy
       when 'LONG CALL' then 1
@@ -710,7 +710,7 @@ select
       when 'PUT DIAGONAL SPREAD' then 1
     else 0
     end
-  ) as summary
+  ), 'No history for past month') as summary
 from
   (select distinct
     order_id
