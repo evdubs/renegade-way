@@ -38,7 +38,16 @@
          (send chart-industry-canvas set-snip
                (chart-vol-history-plot chart-industry-field chart-industry-canvas))
          (send chart-stock-canvas set-snip
-               (chart-vol-history-plot chart-stock-field chart-stock-canvas))]))
+               (chart-vol-history-plot chart-stock-field chart-stock-canvas))]
+        [(equal? "Vol Surface" (send chart-type-choice get-string-selection))
+         (send chart-market-canvas set-snip
+               (chart-vol-surface-plot chart-market-field chart-market-canvas))
+         (send chart-sector-canvas set-snip
+               (chart-vol-surface-plot chart-sector-field chart-sector-canvas))
+         (send chart-industry-canvas set-snip
+               (chart-vol-surface-plot chart-industry-field chart-industry-canvas))
+         (send chart-stock-canvas set-snip
+               (chart-vol-surface-plot chart-stock-field chart-stock-canvas))]))
 
 (plot-y-tick-labels? #f)
 (plot-y-far-tick-labels? #t)
@@ -82,7 +91,7 @@
 (define chart-type-choice (new choice%
                                [parent chart-input-pane]
                                [label "Type "]
-                               [choices (list "Price" "Vol History")]))
+                               [choices (list "Price" "Vol History" "Vol Surface")]))
 
 (define chart-refresh-button (new button%
                                   [parent chart-input-pane]
@@ -105,12 +114,46 @@
                                                      (send chart-industry-canvas set-snip
                                                            (chart-vol-history-plot chart-industry-field chart-industry-canvas))
                                                      (send chart-stock-canvas set-snip
-                                                           (chart-vol-history-plot chart-stock-field chart-stock-canvas))]))]))
+                                                           (chart-vol-history-plot chart-stock-field chart-stock-canvas))]
+                                                    [(equal? "Vol Surface" (send chart-type-choice get-string-selection))
+                                                     (send chart-market-canvas set-snip
+                                                           (chart-vol-surface-plot chart-market-field chart-market-canvas))
+                                                     (send chart-sector-canvas set-snip
+                                                           (chart-vol-surface-plot chart-sector-field chart-sector-canvas))
+                                                     (send chart-industry-canvas set-snip
+                                                           (chart-vol-surface-plot chart-industry-field chart-industry-canvas))
+                                                     (send chart-stock-canvas set-snip
+                                                           (chart-vol-surface-plot chart-stock-field chart-stock-canvas))]))]))
 
 (define chart-plot-pane (new vertical-pane%
                              [parent chart-frame]))
 
 (define prev-time-stamp (current-milliseconds))
+
+(define (chart-vol-surface-plot symbol-field canvas)
+  (if (equal? (send symbol-field get-value) "")
+      (plot-snip (lines (list #(0 0) #(1 0)))
+                 #:title ""
+                 #:x-label "Strike"
+                 #:y-label "Vol"
+                 #:width (- (send canvas get-width) 12)
+                 #:height (- (send canvas get-height) 12))
+      (let* ([kvs (get-vol-surface (send symbol-field get-value)
+                                   (send chart-end-date-field get-value))]
+             [grouped-kvs (group-by (λ (kv) (list (vector-ref kv 0) (vector-ref kv 1)))
+                                    kvs)])
+        (parameterize ([plot-width (- (send canvas get-width) 12)]
+                       [plot-height (- (send canvas get-height) 12)])
+          (plot-snip (append (list (tick-grid))
+                             (map (λ (kvs i) (lines (map (λ (kv) (vector (vector-ref kv 2) (vector-ref kv 3))) kvs)
+                                                    #:label (string-append (vector-ref (first kvs) 0) " " (vector-ref (first kvs) 1))
+                                                    #:color (+ 1 i)))
+                                  grouped-kvs
+                                  (range 0 (length grouped-kvs))))
+                     #:title (string-append (get-security-name (send symbol-field get-value)) " ("
+                                            (send symbol-field get-value) ")")
+                     #:x-label "Strike"
+                     #:y-label "Vol")))))
 
 (define (chart-vol-history-plot symbol-field canvas)
   (if (equal? (send symbol-field get-value) "")

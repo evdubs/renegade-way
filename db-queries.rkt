@@ -23,6 +23,7 @@
          get-rank-analysis
          get-security-name
          get-vol-analysis
+         get-vol-surface
          insert-commission-report
          insert-condor-analysis
          insert-contract
@@ -76,6 +77,26 @@ where
                                  end-date)])
     (map (λ (row) (dv (->posix (iso8601->date (vector-ref row 0))) (vector-ref row 1)))
          vol-history-query)))
+
+(define (get-vol-surface ticker-symbol date)
+  (query-rows dbc "
+select
+  expiration::text,
+  call_put::text,
+  strike,
+  vol
+from
+  oic.option_chain
+where
+  act_symbol = $1 and
+  date = (select max(date) from oic.option_chain where date <= $2::text::date)
+order by
+  expiration,
+  call_put,
+  strike;
+"
+              ticker-symbol
+              date))
 
 (define (get-earnings-dates ticker-symbol start-date end-date)
   (map (λ (el) (->posix (iso8601->date el)))
