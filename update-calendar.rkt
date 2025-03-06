@@ -112,7 +112,8 @@ select
     else case when eed.expiry is not null and eed.expiry < n.end_date
       then eed.expiry else n.end_date end
   end, 'YYYY-MM-DD'), '') as end_date,
-  coalesce('Earnings ' || ed.end_date::text, '') as earnings_date
+  case when ed.end_date is null then ''
+    else 'Earnings ' || e.end_date::text end as earnings_date
 from
   (select
     max(order_id) as order_id,
