@@ -246,7 +246,7 @@ left outer join
   oic.weekly w
 on
   market.component_symbol = w.act_symbol and
-  w.last_seen = (select max(last_seen) from oic.weekly where last_seen <= $4::text::date)
+  w.last_seen >= (select max(last_seen) from oic.weekly where last_seen <= $4::text::date)
 where
   case
     when $2::text != '' then market.sector_symbol = $2::text
@@ -373,7 +373,7 @@ left outer join
   oic.weekly w
 on
   market.component_symbol = w.act_symbol and
-  w.last_seen = (select max(last_seen) from oic.weekly where last_seen <= $2::text::date)
+  w.last_seen >= (select max(last_seen) from oic.weekly where last_seen <= $2::text::date)
 where
   market.etf_symbol = any(string_to_array($1, ',')) and
   market.date = (select max(date) from spdr.etf_holding where date <= $2::text::date) and
@@ -506,7 +506,7 @@ left outer join
   oic.weekly w
 on
   market.component_symbol = w.act_symbol and
-  w.last_seen = (select max(last_seen) from oic.weekly where last_seen <= $2::text::date)
+  w.last_seen >= (select max(last_seen) from oic.weekly where last_seen <= $2::text::date)
 where
   market.etf_symbol = any(string_to_array($1, ',')) and
   market.date = (select max(date) from spdr.etf_holding where date <= $2::text::date)
@@ -567,7 +567,7 @@ left outer join
   oic.weekly w
 on
   market.component_symbol = w.act_symbol and
-  w.last_seen = (select max(last_seen) from oic.weekly where last_seen <= $2::text::date)
+  w.last_seen >= (select max(last_seen) from oic.weekly where last_seen <= $2::text::date)
 where 
   market.etf_symbol = any(string_to_array($1, ',')) and
   market.date = (select max(date) from spdr.etf_holding where date <= $2::text::date);
