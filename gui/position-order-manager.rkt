@@ -371,10 +371,10 @@
                                 #:color 3
                                 #:style 'long-dash
                                 #:label "Vol * 0.5")
-                         (lines (price-profit-loss #f (* 0.5 low-vol) prices)
+                         (lines (price-profit-loss #f (* 2/3 low-vol) prices)
                                 #:color 4
                                 #:style 'long-dash
-                                #:label (string-append "Vol = " (real->decimal-string (* 0.5 low-vol) 2))))
+                                #:label (string-append "Vol = " (real->decimal-string (* 2/3 low-vol) 2))))
                    #:title (string-append "Order Profit/Loss at " (date->iso8601 eval-date))
                    #:x-label "Stock Price"
                    #:y-label "Profit/Loss"
