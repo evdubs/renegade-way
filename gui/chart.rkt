@@ -1,6 +1,7 @@
 #lang racket/base
 
 (require gregor
+         math/matrix
          pict
          plot
          racket/class
@@ -130,6 +131,15 @@
 
 (define prev-time-stamp (current-milliseconds))
 
+; taken from alex-hhh/data-frame ... least-squares-fit.rkt
+(define (polynomial-fit-coefficients xs ys nitems degree)
+  (define y-matrix (list->matrix nitems 1 ys))
+  (define x-matrix (vandermonde-matrix xs (add1 degree)))
+  (define x-matrix-transposed (matrix-transpose x-matrix))
+  (define x (matrix* x-matrix-transposed x-matrix))
+  (define y (matrix* x-matrix-transposed y-matrix))
+  (matrix->list (matrix-solve x y)))
+
 (define (chart-vol-surface-plot symbol-field canvas)
   (if (equal? (send symbol-field get-value) "")
       (plot-snip (lines (list #(0 0) #(1 0)))
@@ -141,7 +151,14 @@
       (let* ([kvs (get-vol-surface (send symbol-field get-value)
                                    (send chart-end-date-field get-value))]
              [grouped-kvs (group-by (λ (kv) (list (vector-ref kv 0) (vector-ref kv 1)))
-                                    kvs)])
+                                    kvs)]
+             [fit-kvs (map (λ (kvs) (list (string-append (vector-ref (first kvs) 0) " Fit")
+                                          (polynomial-fit-coefficients (map (λ (kv) (vector-ref kv 2)) kvs)
+                                                                       (map (λ (kv) (vector-ref kv 3)) kvs)
+                                                                       (length kvs)
+                                                                       3)))
+                           (group-by (λ (kv) (list (vector-ref kv 0)))
+                                     kvs))])
         (parameterize ([plot-width (- (send canvas get-width) 12)]
                        [plot-height (- (send canvas get-height) 12)])
           (plot-snip (append (list (tick-grid))
@@ -149,7 +166,13 @@
                                                     #:label (string-append (vector-ref (first kvs) 0) " " (vector-ref (first kvs) 1))
                                                     #:color (+ 1 i)))
                                   grouped-kvs
-                                  (range 0 (length grouped-kvs))))
+                                  (range 0 (length grouped-kvs)))
+                             (map (λ (fits i) (function (λ (x) (+ (first (second fits)) (* x (second (second fits)))
+                                                                  (* x x (third (second fits))) (* x x x (fourth (second fits)))))
+                                                        #:label (first fits)
+                                                        #:color (+ 1 i)))
+                                  fit-kvs
+                                  (range (length grouped-kvs) (+ (length grouped-kvs) (length fit-kvs)))))
                      #:title (string-append (get-security-name (send symbol-field get-value)) " ("
                                             (send symbol-field get-value) ")")
                      #:x-label "Strike"

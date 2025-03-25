@@ -316,13 +316,15 @@
   (define high-price (max (* 121/100 ref-price)
                           (apply max (map (λ (i) (order-strike (send order-box get-data i)))
                                           (range (send order-box get-number))))))
+  (define low-vol (apply min (map (λ (i) (order-vol (send order-box get-data i)))
+                                  (range (send order-box get-number)))))
   (define prices (map (λ (i) (/ (* i ref-price) 100))
                       (range (* 100 (/ low-price ref-price)) (* 100 (/ high-price ref-price)) 0.5)))
   (define price-nearest-target (foldl (λ (p res) (if (> (abs (- res p)) (abs (- target-price p))) p res))
                                          (first prices) prices))
   (define eval-date (iso8601->date (send eval-date-field get-value)))
   (define 1-month-rate (get-1-month-rate (date->iso8601 (today))))
-  (define (price-profit-loss vol-multiplier prices)
+  (define (price-profit-loss vol-multiplier vol prices)
     (map (λ (p)
            (vector p (foldl (λ (i res)
                               (define order (send order-box get-data i))
@@ -334,14 +336,14 @@
                                                           (order-strike order)
                                                           (order-call-put order)
                                                           1-month-rate
-                                                          (* (order-vol order) vol-multiplier)
+                                                          (if vol vol (* (order-vol order) vol-multiplier))
                                                           (list))
                                            (order-price order))
                                         (order-quantity order) 100)))
                             0
                             (range (send order-box get-number)))))
          prices))
-  (define current-vol-profit-loss (price-profit-loss 1 prices))
+  (define current-vol-profit-loss (price-profit-loss 1 #f prices))
   (define current-vol-profit-loss-values (map (λ (pl) (vector-ref pl 1)) current-vol-profit-loss))
   (define value-near-target (vector-ref (first (filter (λ (pl) (= price-nearest-target (vector-ref pl 0)))
                                                        current-vol-profit-loss)) 1))
@@ -358,17 +360,21 @@
         (plot-snip (list (tick-grid)
                          (inverse (λ (y) stop-price) #:color 4 #:label "Stop")
                          (inverse (λ (y) target-price) #:color 5 #:label "Target")
-                         (lines (price-profit-loss 1.5 prices)
+                         (lines (price-profit-loss 1.5 #f prices)
                                 #:color 1
                                 #:style 'long-dash
                                 #:label "Vol * 1.5")
-                         (lines (price-profit-loss 1 prices)
+                         (lines (price-profit-loss 1 #f prices)
                                 #:color 2
                                 #:label "Vol")
-                         (lines (price-profit-loss 0.5 prices)
+                         (lines (price-profit-loss 0.5 #f prices)
                                 #:color 3
                                 #:style 'long-dash
-                                #:label "Vol * 0.5"))
+                                #:label "Vol * 0.5")
+                         (lines (price-profit-loss #f (* 0.5 low-vol) prices)
+                                #:color 4
+                                #:style 'long-dash
+                                #:label (string-append "Vol = " (real->decimal-string (* 0.5 low-vol) 2))))
                    #:title (string-append "Order Profit/Loss at " (date->iso8601 eval-date))
                    #:x-label "Stock Price"
                    #:y-label "Profit/Loss"

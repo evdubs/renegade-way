@@ -78,7 +78,7 @@
                                       end-date)
                        (refresh-option-strategy stock
                                                 end-date
-                                                (dohlc-close (first (get-date-ohlc stock end-date end-date)))
+                                                (dohlc-close (last (get-date-ohlc stock start-date end-date)))
                                                 (if (equal? "" earnings-date) "DV" "IV"))))]
          [style (list 'single 'column-headers 'vertical-label)]
          [columns analysis-box-columns]
