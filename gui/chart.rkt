@@ -164,6 +164,7 @@
           (plot-snip (append (list (tick-grid))
                              (map (λ (kvs i) (lines (map (λ (kv) (vector (vector-ref kv 2) (vector-ref kv 3))) kvs)
                                                     #:label (string-append (vector-ref (first kvs) 0) " " (vector-ref (first kvs) 1))
+                                                    #:style 'long-dash
                                                     #:color (+ 1 i)))
                                   grouped-kvs
                                   (range 0 (length grouped-kvs)))
