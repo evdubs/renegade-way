@@ -46,10 +46,11 @@
        [label "Patterns"]
        [init-value ""]))
 
-(define fit-vols-box
+(define fit-vols-check-box
   (new check-box%
        [parent strategy-input-pane]
-       [label "Fit Vols"]))
+       [label "Fit Vols"]
+       [value #t]))
 
 (define refresh-button
   (new button%
@@ -74,7 +75,7 @@
   (send date-field set-value date)
   (send ref-price-field set-value (real->decimal-string ref-price))
   (send patterns-field set-value patterns)
-  (hash-for-each (suitable-options (get-updated-options symbol date ref-price #:fit-vols (send fit-vols-box get-value)) patterns)
+  (hash-for-each (suitable-options (get-updated-options symbol date ref-price #:fit-vols (send fit-vols-check-box get-value)) patterns)
                  (λ (k v)
                    (let ([table (new list-box% [parent strategy-table-pane]
                                      [label k]

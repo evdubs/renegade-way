@@ -79,6 +79,7 @@
   (new check-box%
        [parent filter-input-pane]
        [label "Hide Large Spread"]
+       [value #t]
        [callback (λ (b e)
                    (price-analysis-filter #:hide-hold (send hide-hold-check-box get-value)
                                           #:hide-no-pattern (send hide-no-pattern-check-box get-value)
@@ -108,6 +109,12 @@
                    (condor-analysis-filter #:hide-no-pattern (send hide-no-pattern-check-box get-value)
                                            #:hide-large-spread (send hide-spread-check-box get-value)
                                            #:hide-non-weekly (send hide-non-weekly-check-box get-value)))]))
+
+(define fit-vols-check-box
+  (new check-box%
+       [parent filter-input-pane]
+       [value #t]
+       [label "Fit Vols"]))
 
 (define analysis-tab-panel
   (new tab-panel%
@@ -143,7 +150,8 @@
                                               (send start-date-field get-value) (send end-date-field get-value))]
                      ["Condor" (refresh-tab-panel)
                                (run-condor-analysis (send market-field get-value) (send sector-field get-value)
-                                                    (send start-date-field get-value) (send end-date-field get-value))
+                                                    (send start-date-field get-value) (send end-date-field get-value)
+                                                    #:fit-vols (send fit-vols-check-box get-value))
                                (update-condor-analysis-box condor-analysis-list condor-analysis-hash)]
                      ["Position" (refresh-tab-panel)
                                  (run-position-analysis (send market-field get-value) (send sector-field get-value)
