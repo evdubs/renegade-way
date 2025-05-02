@@ -79,7 +79,6 @@
   (new check-box%
        [parent filter-input-pane]
        [label "Hide Large Spread"]
-       [value #t]
        [callback (λ (b e)
                    (price-analysis-filter #:hide-hold (send hide-hold-check-box get-value)
                                           #:hide-no-pattern (send hide-no-pattern-check-box get-value)
