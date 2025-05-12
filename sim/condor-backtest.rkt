@@ -110,7 +110,8 @@ where
                   (define decreasing-vol-strategies (~> (get-updated-options symbol
                                                                              (date->iso8601 date)
                                                                              ref-price
-                                                                             #:compute-all-greeks #f)
+                                                                             #:compute-all-greeks #f
+                                                                             #:fit-vols #t)
                                                         (suitable-options _ "DV")))
                   (define call-condor (hash-ref decreasing-vol-strategies "Call Condor"))
                   (define put-condor (hash-ref decreasing-vol-strategies "Put Condor"))

@@ -141,16 +141,17 @@
   (matrix->list (matrix-solve x y)))
 
 (define (chart-vol-surface-plot symbol-field canvas)
-  (if (equal? (send symbol-field get-value) "")
+  (define kvs (get-vol-surface (send symbol-field get-value)
+                               (send chart-end-date-field get-value)))
+  (if (or (equal? (send symbol-field get-value) "")
+          (= 0 (length kvs)))
       (plot-snip (lines (list #(0 0) #(1 0)))
                  #:title ""
                  #:x-label "Strike"
                  #:y-label "Vol"
                  #:width (- (send canvas get-width) 12)
                  #:height (- (send canvas get-height) 12))
-      (let* ([kvs (get-vol-surface (send symbol-field get-value)
-                                   (send chart-end-date-field get-value))]
-             [grouped-kvs (group-by (λ (kv) (list (vector-ref kv 0) (vector-ref kv 1)))
+      (let* ([grouped-kvs (group-by (λ (kv) (list (vector-ref kv 0) (vector-ref kv 1)))
                                     kvs)]
              [fit-kvs (map (λ (kvs) (list (string-append (vector-ref (first kvs) 0) " Fit")
                                           (polynomial-fit-coefficients (map (λ (kv) (vector-ref kv 2)) kvs)
@@ -180,17 +181,18 @@
                      #:y-label "Vol")))))
 
 (define (chart-vol-history-plot symbol-field canvas)
-  (if (equal? (send symbol-field get-value) "")
+  (define dvs (get-date-vol-history (send symbol-field get-value)
+                                    (send chart-start-date-field get-value)
+                                    (send chart-end-date-field get-value)))
+  (if (or (equal? (send symbol-field get-value) "")
+          (= 0 (length dvs)))
       (plot-snip (lines (list #(0 0) #(1 0)))
                  #:title ""
                  #:x-label "Date"
                  #:y-label "Vol"
                  #:width (- (send canvas get-width) 12)
                  #:height (- (send canvas get-height) 12))
-      (let* ([dvs (get-date-vol-history (send symbol-field get-value)
-                                        (send chart-start-date-field get-value)
-                                        (send chart-end-date-field get-value))]
-             [min-value (apply min (map (λ (el) (dv-value el)) dvs))]
+      (let* ([min-value (apply min (map (λ (el) (dv-value el)) dvs))]
              [earnings-dates-points (map (λ (d) (point-label (vector d min-value) "E" #:anchor 'bottom))
                                          (get-earnings-dates (send symbol-field get-value)
                                                              (send chart-start-date-field get-value)
