@@ -6,10 +6,8 @@
          racket/gui/base
          racket/list
          racket/string
-         interactive-brokers-api/request-messages
-         interactive-brokers-api/response-messages
          "../db-queries.rkt"
-         "../ibkr.rkt"
+         "../finviz-prices.rkt"
          "../structs.rkt"
          "chart.rkt")
 
@@ -45,7 +43,8 @@
 (define (run-position-analysis market sector start-date end-date)
   (define position-analysis-list (get-position-analysis end-date))
 
-  (define ref-prices (get-ref-prices position-analysis-list))
+  (define ref-prices (get-prices (remove-duplicates (map (λ (pa) (position-analysis-stock pa))
+                                                         position-analysis-list))))
 
   (define updated-position-analysis-list
     (map (λ (pa)
@@ -127,54 +126,6 @@
   (update-analysis-box stop-analysis-box-ref stop-position-analysis-list)
   (update-analysis-box target-analysis-box-ref target-position-analysis-list)
   (update-analysis-box expired-analysis-box-ref expired-position-analysis-list))
-
-(struct market (bid ask) #:transparent)
-
-(define prices (make-hash))
-
-(define request-id-stock (make-hash))
-
-(define req-id 1)
-
-(define ref-price-channel (make-async-channel))
-
-(send ibkr send-msg (new market-data-type-req% [market-data-type 'delayed-frozen]))
-
-(ibkr-add-handler 'market-data
-                  (λ (md)
-                    (cond [(and (or (equal? 'last-price (market-data-rsp-type md))
-                                    (equal? 'delayed-last (market-data-rsp-type md))
-                                    (and (or (saturday? (today))
-                                             (sunday? (today))
-                                             (<= 12 (->hours (current-time))))
-                                         (or (equal? 'close (market-data-rsp-type md))
-                                             (equal? 'delayed-close (market-data-rsp-type md))
-                                             (equal? 'mark-price (market-data-rsp-type md)))))
-                                (not (= 0 (market-data-rsp-value md)))
-                                (not (hash-has-key? prices (market-data-rsp-request-id md))))
-                           (hash-set! prices (market-data-rsp-request-id md) (market-data-rsp-value md))
-                           (async-channel-put ref-price-channel (list (hash-ref request-id-stock (market-data-rsp-request-id md))
-                                                                      (market-data-rsp-value md)))
-                           (send ibkr send-msg (new cancel-market-data-req% [request-id (market-data-rsp-request-id md)]))])))
-
-(define (get-ref-prices position-analysis-list)
-  (define stocks (remove-duplicates (map (λ (pa) (position-analysis-stock pa))
-                                         position-analysis-list)))
-  (define ref-prices (make-hash))
-  (for-each (λ (s)
-              (hash-set! request-id-stock req-id s)
-              (send ibkr send-msg (new market-data-req% [request-id req-id]
-                                       [symbol s]
-                                       [security-type 'stk]
-                                       [exchange "SMART"]
-                                       [currency "USD"]
-                                       [primary-exchange "NYSE"]
-                                       [generic-tick-list "221"])) ; send along 'mark-price in our streaming data
-              (set! req-id (add1 req-id))
-              (define symbol-price (async-channel-get ref-price-channel))
-              (hash-set! ref-prices (first symbol-price) (last symbol-price)))
-            stocks)
-  ref-prices)
 
 (define (get-min-max-strikes position-analysis-list)
   (foldl (λ (pa h)

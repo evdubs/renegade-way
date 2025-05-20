@@ -7,6 +7,8 @@
            racket/cmdline
            "../params.rkt")
 
+  (filename "/var/tmp/renegade/price.tsv")
+
   (command-line
    #:program "racket price-analysis-backtest.rkt"
    #:once-each

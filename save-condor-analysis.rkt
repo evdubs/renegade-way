@@ -39,7 +39,7 @@
        (displayln (string-append "Requested date " (date->iso8601 (save-end-date)) " falls on a weekend. Terminating."))
        (exit)])
 
-(run-condor-analysis (save-markets) "" (date->iso8601 (-months (save-end-date) 5)) (date->iso8601 (save-end-date)))
+(run-condor-analysis (save-markets) "" (date->iso8601 (-months (save-end-date) 5)) (date->iso8601 (save-end-date)) #:fit-vols #t)
 
 (for-each (λ (msis)
             (with-handlers
