@@ -119,7 +119,7 @@
 
 (define (position->html-str position price)
   (format "
-<tr>
+<tr style=\"background-color:~a\">
   <td style=\"padding-right: 20px\">~a</td>
   <td style=\"padding-right: 20px\">~a</td>
   <td style=\"padding-right: 20px\">~a</td>
@@ -133,6 +133,18 @@
   <td style=\"padding-right: 20px\">~a</td>
   <td style=\"padding-right: 20px\">~a</td>
 </tr>"
+          (cond [(and (equal? "CALL" (position-analysis-call-put position))
+                      (<= (position-analysis-strike position) price))
+                 "#eeffee"]
+                [(and (equal? "CALL" (position-analysis-call-put position))
+                      (> (position-analysis-strike position) price))
+                 "#ffffee"]
+                [(and (equal? "PUT" (position-analysis-call-put position))
+                      (>= (position-analysis-strike position) price))
+                 "#eeffee"]
+                [(and (equal? "PUT" (position-analysis-call-put position))
+                      (< (position-analysis-strike position) price))
+                 "#ffffee"])
           (position-analysis-sector position)
           (position-analysis-stock position)
           (position-analysis-expiration position)
