@@ -82,12 +82,12 @@
 (define chart-start-date-field (new text-field%
                                     [parent chart-input-pane]
                                     [label "Start Date"]
-                                    [init-value "2018-10-01"]))
+                                    [init-value (date->iso8601 (-months (today) 5))]))
 
 (define chart-end-date-field (new text-field%
                                   [parent chart-input-pane]
                                   [label "End Date"]
-                                  [init-value "2019-02-28"]))
+                                  [init-value (date->iso8601 (today))]))
 
 (define chart-type-choice (new choice%
                                [parent chart-input-pane]
@@ -181,18 +181,23 @@
                      #:y-label "Vol")))))
 
 (define (chart-vol-history-plot symbol-field canvas)
-  (define dvs (get-date-vol-history (send symbol-field get-value)
-                                    (send chart-start-date-field get-value)
-                                    (send chart-end-date-field get-value)))
+  (define vol-dvs (get-date-vol-history (send symbol-field get-value)
+                                        (send chart-start-date-field get-value)
+                                        (send chart-end-date-field get-value)))
+  (define variance-dvs (get-date-variance-history (send symbol-field get-value)
+                                                  (send chart-start-date-field get-value)
+                                                  (send chart-end-date-field get-value)))
   (if (or (equal? (send symbol-field get-value) "")
-          (= 0 (length dvs)))
+          (and (= 0 (length vol-dvs))
+               (= 0 (length variance-dvs))))
       (plot-snip (lines (list #(0 0) #(1 0)))
                  #:title ""
                  #:x-label "Date"
-                 #:y-label "Vol"
+                 #:y-label "Vol/Variance"
                  #:width (- (send canvas get-width) 12)
                  #:height (- (send canvas get-height) 12))
-      (let* ([min-value (apply min (map (λ (el) (dv-value el)) dvs))]
+      (let* ([min-value (min (apply min (map (λ (dv) (dv-value dv)) vol-dvs))
+                             (apply min (map (λ (dv) (dv-value dv)) variance-dvs)))]
              [earnings-dates-points (map (λ (d) (point-label (vector d min-value) "E" #:anchor 'bottom))
                                          (get-earnings-dates (send symbol-field get-value)
                                                              (send chart-start-date-field get-value)
@@ -201,30 +206,34 @@
                                   [plot-width (- (send canvas get-width) 12)]
                                   [plot-height (- (send canvas get-height) 12)])
                      (plot-snip (append (list (tick-grid)
-                                              (lines dvs))
+                                              (lines vol-dvs #:label "Vol" #:color 1)
+                                              (lines variance-dvs #:label "Variance" #:color 2))
                                         earnings-dates-points)
                                 #:title (string-append (get-security-name (send symbol-field get-value)) " ("
                                                        (send symbol-field get-value) ")")
                                 #:x-label "Date"
-                                #:y-label "Vol"))])
+                                #:y-label "Vol/Variance"))])
         (define item-font (send the-font-list find-or-create-font 12 'default 'normal 'normal))
         (define background (make-object color% #xff #xf8 #xdc 0.8))
-        (define (make-tag dv)
-          (define p (if (empty? dv) (text "" item-font)
+        (define (make-tag vol-dv variance-dv)
+          (define p (if (and (empty? vol-dv) (empty? variance-dv)) (text "" item-font)
                         (vl-append
                          (hc-append
                           (text "Date: " item-font)
-                          (text (~t (posix->datetime (dv-date (first dv))) "yyyy-MM-dd") item-font))
+                          (text (~t (posix->datetime (dv-date (if (empty? vol-dv) (first variance-dv) (first vol-dv)))) "yyyy-MM-dd") item-font))
                          (hc-append
                           (text "Vol: " item-font)
-                          (text (real->decimal-string (dv-value (first dv))) item-font)))))
+                          (if (empty? vol-dv) "" (text (real->decimal-string (dv-value (first vol-dv))) item-font)))
+                         (hc-append
+                          (text "Variance: " item-font)
+                          (if (empty? variance-dv) "" (text (real->decimal-string (dv-value (first variance-dv))) item-font))))))
           (define r (filled-rectangle
                      (+ (pict-width p) 10) (+ (pict-height p) 10)
                      #:draw-border? #f #:color background))
           (cc-superimpose r p))
         (define (get-v dv d)
           (filter (λ (e) (date=? (->date (posix->datetime d)) (->date (posix->datetime (dv-date e))))) dv))
-        (define ((make-current-value-renderer dv) snip event x y)
+        (define ((make-current-value-renderer vol-dvs variance-dvs) snip event x y)
           (define delta (- (current-milliseconds) prev-time-stamp))
           (cond [(< 40 delta)
                  (define overlays
@@ -232,11 +241,11 @@
                         (let ([shift (if (< 43200 (modulo (round x) 86400)) 86400 0)])
                           (list (vrule (+ (- x (modulo (round x) 86400)) shift) #:style 'long-dash)
                                 (point-pict (vector (+ (- x (modulo (round x) 86400)) shift) y)
-                                            (make-tag (get-v dv (+ x 43200)))
+                                            (make-tag (get-v vol-dvs (+ x 43200)) (get-v variance-dvs (+ x 43200)))
                                             #:anchor 'auto)))))
                  (send snip set-overlay-renderers overlays)
                  (set! prev-time-stamp (current-milliseconds))]))
-        (send snip set-mouse-event-callback (make-current-value-renderer dvs))
+        (send snip set-mouse-event-callback (make-current-value-renderer vol-dvs variance-dvs))
         snip)))
 
 (define (chart-price-plot symbol-field canvas)
