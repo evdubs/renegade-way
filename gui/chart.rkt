@@ -1,6 +1,7 @@
 #lang racket/base
 
 (require gregor
+         gregor/period
          math/matrix
          pict
          plot
@@ -264,6 +265,10 @@
                                          (get-earnings-dates (send symbol-field get-value)
                                                              (send chart-start-date-field get-value)
                                                              (send chart-end-date-field get-value)))]
+             [dividend-dates-points (map (λ (d) (point-label (vector d min-low) "D" #:anchor 'bottom))
+                                         (get-dividend-dates (send symbol-field get-value)
+                                                             (send chart-start-date-field get-value)
+                                                             (send chart-end-date-field get-value)))]
              [snip (parameterize ([plot-x-ticks (date-ticks)]
                                   [plot-y-ticks (currency-ticks #:kind 'USD)]
                                   [plot-width (- (send canvas get-width) 12)]
@@ -272,7 +277,8 @@
                                               (candlesticks dohlcs #:width 86400)
                                               (lines (simple-moving-average (list->vector dohlcs) 20) #:color 3 #:label "20-day SMA")
                                               (lines (simple-moving-average (list->vector dohlcs) 50) #:color 4 #:label "50-day SMA"))
-                                        earnings-dates-points)
+                                        earnings-dates-points
+                                        dividend-dates-points)
                                 #:title (string-append (get-security-name (send symbol-field get-value)) " ("
                                                        (send symbol-field get-value) ")")
                                 #:x-label "Date"

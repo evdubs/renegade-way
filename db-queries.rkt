@@ -14,8 +14,10 @@
          get-date-ohlc
          get-date-variance-history
          get-date-vol-history
+         get-dividend-dates
          get-dividend-estimates
          get-earnings-dates
+         get-earnings-vibes-analysis
          get-next-earnings-date
          get-options
          get-position-history
@@ -117,6 +119,24 @@ order by
 "
               ticker-symbol
               date))
+
+(define (get-dividend-dates ticker-symbol start-date end-date)
+  (map (λ (el) (->posix (iso8601->date el)))
+       (query-list dbc "
+select
+  ex_date::text
+from
+  zacks.dividend_calendar
+where
+  act_symbol = $1 and
+  ex_date >= $2::text::date and
+  ex_date <= $3::text::date
+order by
+  ex_date;
+"
+                   ticker-symbol
+                   start-date
+                   end-date)))
 
 (define (get-earnings-dates ticker-symbol start-date end-date)
   (map (λ (el) (->posix (iso8601->date el)))
@@ -246,7 +266,7 @@ left outer join
   from
     oic.option_chain
   where
-    date = (select max(date) from oic.option_chain where date <= $4::text::date ) and
+    date = (select max(date) from oic.option_chain where date <= $4::text::date) and
     expiration > $4::text::date and
     expiration <= $4::text::date + interval '3 months' and
     bid > 0.0 and
@@ -595,6 +615,176 @@ where
                    market
                    date)))
 
+(define (get-earnings-vibes-analysis date)
+  (map (λ (row) (earnings-vibes-analysis (vector-ref row 0) (vector-ref row 1) (vector-ref row 2)
+                                         (vector-ref row 3) (vector-ref row 4) (vector-ref row 5)))
+       (query-rows dbc "
+with options_on_date as (
+select
+  act_symbol,
+  expiration,
+  strike,
+  avg(vol) as avg_vol,
+  sum(vega) as cps_vega, -- call put sum vega
+  avg((ask - bid) / ask) as avg_sprd,
+  avg(abs(delta)) as avg_abs_delta
+from
+  oic.option_chain
+where
+  date = (select max(date) from oic.option_chain where date <= $1::text::date) and
+  expiration > date and -- vols are way off at expiration close
+  bid > 0.0 and
+  ask > 0.0
+group by
+  act_symbol,
+  expiration,
+  strike
+order by
+  act_symbol,
+  expiration,
+  strike),
+earnings_near_date as (
+select
+  act_symbol,
+  date,
+  \"when\"
+from
+  zacks.earnings_calendar ec
+where
+  (ec.date = $1::text::date and ec.\"when\" = 'After market close'::zacks.\"when\") or
+  (ec.date = $1::text::date + interval '1 day' and ec.\"when\" = 'Before market open'::zacks.\"when\")
+order by
+  act_symbol,
+  date
+),
+iv_hv as (
+select
+  act_symbol,
+  avg(iv_current) as avg_iv,
+  avg(hv_current) as avg_hv
+from
+  oic.volatility_history
+where
+  date >= $1::text::date - interval '1 year' and
+  date <= $1::text::date
+group by
+  act_symbol
+order by
+  act_symbol
+),
+vlm as (
+select
+  act_symbol,
+  trunc(log10(greatest(avg(close * volume), 1)), 1) as avg_vlm
+from
+  polygon.ohlc o
+where
+  date >= $1::text::date - interval '30 days' and
+  date <= $1::text::date
+group by
+  act_symbol
+)
+select
+  syms.act_symbol,
+  coalesce(trunc(100 * (back_vol.avg_vol - front_vol.avg_vol) / nullif(exprs.max_expiration - exprs.min_expiration, 0), 2), 0) as vol_slope,
+  coalesce(trunc(100 * avg_iv / nullif(avg_hv, 0), 2), 0) as iv_hv,
+  coalesce(to_char(en.date, 'YY-MM-DD'), '') || coalesce(substring(en.\"when\"::text for 1), '') as earnings_date,
+  trunc(spreads.spread, 2) as opt_spread,
+  vlm.avg_vlm
+from
+  (select distinct
+    act_symbol
+  from
+    options_on_date) syms
+join
+  (select
+    act_symbol,
+    min(expiration) as min_expiration,
+    max(expiration) as max_expiration
+  from
+    options_on_date
+  group by
+    act_symbol) exprs
+on
+  syms.act_symbol = exprs.act_symbol
+join
+  (with vegas as
+    (select
+      act_symbol,
+      strike,
+      sum(cps_vega) as sum_cps_vega
+    from
+      options_on_date
+    group by
+      act_symbol,
+      strike
+    order by
+      act_symbol,
+      strike)
+  select
+    vegas.act_symbol,
+    vegas.strike
+  from
+    vegas
+  join
+    (select
+      act_symbol,
+      max(sum_cps_vega) as max_sum_cps_vega
+    from
+      vegas
+    group by
+      act_symbol
+    order by
+      act_symbol) max_vegas
+  on
+    vegas.act_symbol = max_vegas.act_symbol and
+    vegas.sum_cps_vega = max_vegas.max_sum_cps_vega) strikes
+on
+  syms.act_symbol = strikes.act_symbol
+join
+  options_on_date front_vol
+on
+  syms.act_symbol = front_vol.act_symbol and
+  exprs.min_expiration = front_vol.expiration and
+  strikes.strike = front_vol.strike
+join
+  options_on_date back_vol
+on
+  syms.act_symbol = back_vol.act_symbol and
+  exprs.max_expiration = back_vol.expiration and
+  strikes.strike = back_vol.strike
+join
+  (select
+    act_symbol,
+    avg(avg_sprd) as spread
+  from
+    options_on_date
+  where
+    avg_abs_delta >= 0.20 and
+    avg_abs_delta <= 0.80
+  group by
+    act_symbol
+  order by
+    act_symbol) spreads
+on
+  syms.act_symbol = spreads.act_symbol
+join
+  earnings_near_date en
+on
+  syms.act_symbol = en.act_symbol
+join
+  iv_hv
+on
+  syms.act_symbol = iv_hv.act_symbol
+join
+  vlm
+on
+  syms.act_symbol = vlm.act_symbol
+order by
+  coalesce((back_vol.avg_vol - front_vol.avg_vol) / nullif(exprs.max_expiration - exprs.min_expiration, 0), 0) asc;
+"
+                   date)))
+
 (define (get-position-analysis date)
   (map (λ (row) (position-analysis (vector-ref row 0) (vector-ref row 1) (vector-ref row 2) (vector-ref row 3)
                                    (vector-ref row 4) (vector-ref row 5) (vector-ref row 6) (vector-ref row 7)
@@ -843,18 +1033,14 @@ where
 (define (get-dividend-estimates symbol start-date end-date)
   (query-rows dbc "
 select
-  (previous.ex_date + interval '1 year')::date - $2::text::date,
-  latest.amount
+  ex_date - $2::text::date - 1,
+  amount
 from
-  yahoo.dividend latest
-join
-  yahoo.dividend previous
-on
-  previous.act_symbol = latest.act_symbol
+  zacks.dividend_calendar
 where
-  latest.act_symbol = $1 and
-  latest.ex_date = (select max(ex_date) from yahoo.dividend where act_symbol = $1) and 
-  previous.ex_date between $2::text::date - interval '1 year' and $3::text::date - interval '1 year';
+  act_symbol = $1 and
+  ex_date > $2::text::date and
+  ex_date <= $3::text::date;
 "
               symbol
               (date->iso8601 start-date)

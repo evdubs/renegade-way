@@ -33,7 +33,9 @@
                                        options-by-expiration))
                      #f))
   (map (λ (o)
-         (define divs (map (λ (div) (vector (/ (vector-ref div 0) 365) (vector-ref div 1)))
+         (define days-in-this-year (days-in-year (->year (iso8601->date date))))
+         (define divs (map (λ (div) (vector (/ (vector-ref div 0) days-in-this-year)
+                                            (vector-ref div 1)))
                            (get-dividend-estimates symbol
                                                    (iso8601->date date)
                                                    (parse-date (option-expiration o) "yy-MM-dd"))))
@@ -52,7 +54,7 @@
                  (option-date o)
                  (option-bid o)
                  (black-scholes ref-price
-                                (/ (option-dte o) 365)
+                                (/ (option-dte o) days-in-this-year)
                                 (option-strike o)
                                 (string->symbol (option-call-put o))
                                 1-month-rate
@@ -61,7 +63,7 @@
                  (option-ask o)
                  vol
                  (black-scholes-delta ref-price
-                                      (/ (option-dte o) 365)
+                                      (/ (option-dte o) days-in-this-year)
                                       (option-strike o)
                                       (string->symbol (option-call-put o))
                                       1-month-rate
@@ -69,7 +71,7 @@
                                       divs)
                  (if compute-all-greeks?
                      (black-scholes-gamma ref-price
-                                          (/ (option-dte o) 365)
+                                          (/ (option-dte o) days-in-this-year)
                                           (option-strike o)
                                           (string->symbol (option-call-put o))
                                           1-month-rate
@@ -78,7 +80,7 @@
                      #f)
                  (if compute-all-greeks?
                      (black-scholes-theta ref-price
-                                          (/ (option-dte o) 365)
+                                          (/ (option-dte o) days-in-this-year)
                                           (option-strike o)
                                           (string->symbol (option-call-put o))
                                           1-month-rate
@@ -87,7 +89,7 @@
                      #f)
                  (if compute-all-greeks?
                      (black-scholes-vega ref-price
-                                         (/ (option-dte o) 365)
+                                         (/ (option-dte o) days-in-this-year)
                                          (option-strike o)
                                          (string->symbol (option-call-put o))
                                          1-month-rate
@@ -96,7 +98,7 @@
                      #f)
                  (if compute-all-greeks?
                      (black-scholes-rho ref-price
-                                        (/ (option-dte o) 365)
+                                        (/ (option-dte o) days-in-this-year)
                                         (option-strike o)
                                         (string->symbol (option-call-put o))
                                         1-month-rate
@@ -160,11 +162,12 @@
                                                                res))
                                                 (first options)
                                                 options)]
-                      [closest-back-dte (foldl (λ (o res) (if (< (abs (- 56 (option-dte o)))
-                                                                 (abs (- 56 (option-dte res))))
+                      [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- 28 (option-dte o)))
+                                                                      (abs (- 28 (option-dte res))))
+                                                                   (not (= (option-dte o) (option-dte closest-front-dte))))
                                                               o
                                                               res))
-                                               (first options)
+                                               (last options)
                                                options)]
                       [short-call (foldl (λ (o res) (if (and (= (option-dte o) (option-dte closest-front-dte))
                                                              (<= (abs (- 5/10 (option-delta o)))
@@ -198,7 +201,7 @@
                                                                  (abs (- 56 (option-dte res))))
                                                               o
                                                               res))
-                                               (first options)
+                                               (last options)
                                                options)]
                       [long-call (last (filter (λ (o) (and (= (option-dte o) (option-dte closest-back-dte))
                                                            (> (option-delta o) 55/100)
@@ -263,11 +266,12 @@
                                                                res))
                                                 (first options)
                                                 options)]
-                      [closest-back-dte (foldl (λ (o res) (if (< (abs (- 56 (option-dte o)))
-                                                                 (abs (- 56 (option-dte res))))
+                      [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- 28 (option-dte o)))
+                                                                      (abs (- 28 (option-dte res))))
+                                                                   (not (= (option-dte o) (option-dte closest-front-dte))))
                                                               o
                                                               res))
-                                               (first options)
+                                               (last options)
                                                options)]
                       [short-put (foldl (λ (o res) (if (and (= (option-dte o) (option-dte closest-front-dte))
                                                             (<= (abs (- -5/10 (option-delta o)))
@@ -301,7 +305,7 @@
                                                                  (abs (- 56 (option-dte res))))
                                                               o
                                                               res))
-                                               (first options)
+                                               (last options)
                                                options)]
                       [long-put (first (filter (λ (o) (and (= (option-dte o) (option-dte closest-back-dte))
                                                            (< (option-delta o) -55/100)
@@ -566,4 +570,75 @@
                                                                  (equal? (option-call-put o) "Put")))
                                                      options))])
                  (list first-long-put first-short-put second-short-put second-long-put)))]
+        [(or (string-contains? patterns "EC"))
+         (hash "Call Horizontal Spread"
+               (let* ([closest-front-dte (foldl (λ (o res) (if (< (abs (- 14 (option-dte o)))
+                                                                  (abs (- 14 (option-dte res))))
+                                                               o
+                                                               res))
+                                                (first options)
+                                                options)]
+                      [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- 28 (option-dte o)))
+                                                                      (abs (- 28 (option-dte res))))
+                                                                   (not (= (option-dte o) (option-dte closest-front-dte))))
+                                                              o
+                                                              res))
+                                               (last options)
+                                               options)]
+                      [short-call (foldl (λ (o res) (if (and (= (option-dte o) (option-dte closest-front-dte))
+                                                             (<= (abs (- 5/10 (option-delta o)))
+                                                                 (abs (- 5/10 (option-delta res))))
+                                                             (equal? (option-call-put o) "Call"))
+                                                        o
+                                                        res))
+                                         (first options)
+                                         options)]
+                      [long-call (foldl (λ (o res) (cond [(and (= (option-dte res) (option-dte closest-back-dte))
+                                                               (= (option-strike res) (option-strike short-call))
+                                                               (equal? (option-call-put o) "Call"))
+                                                          res]
+                                                         [(and (= (option-dte o) (option-dte closest-back-dte))
+                                                               (<= (abs (- 5/10 (option-delta o)))
+                                                                   (abs (- 5/10 (option-delta res))))
+                                                               (equal? (option-call-put o) "Call"))
+                                                          o]
+                                                         [else res]))
+                                        (first options)
+                                        options)])
+                 (list short-call long-call))
+               "Put Horizontal Spread"
+               (let* ([closest-front-dte (foldl (λ (o res) (if (< (abs (- 14 (option-dte o)))
+                                                                  (abs (- 14 (option-dte res))))
+                                                               o
+                                                               res))
+                                                (first options)
+                                                options)]
+                      [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- 28 (option-dte o)))
+                                                                      (abs (- 28 (option-dte res))))
+                                                                   (not (= (option-dte o) (option-dte closest-front-dte))))
+                                                              o
+                                                              res))
+                                               (last options)
+                                               options)]
+                      [short-put (foldl (λ (o res) (if (and (= (option-dte o) (option-dte closest-front-dte))
+                                                            (<= (abs (- -5/10 (option-delta o)))
+                                                                (abs (- -5/10 (option-delta res))))
+                                                            (equal? (option-call-put o) "Put"))
+                                                       o
+                                                       res))
+                                        (first options)
+                                        options)]
+                      [long-put (foldl (λ (o res) (cond [(and (= (option-dte res) (option-dte closest-back-dte))
+                                                              (= (option-strike res) (option-strike short-put))
+                                                              (equal? (option-call-put o) "Put"))
+                                                         res]
+                                                        [(and (= (option-dte o) (option-dte closest-back-dte))
+                                                              (<= (abs (- -5/10 (option-delta o)))
+                                                                  (abs (- -5/10 (option-delta res))))
+                                                              (equal? (option-call-put o) "Put"))
+                                                         o]
+                                                        [else res]))
+                                       (first options)
+                                       options)])
+                 (list short-put long-put)))]
         [else (hash)]))

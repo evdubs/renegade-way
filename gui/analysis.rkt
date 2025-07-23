@@ -10,6 +10,7 @@
          "price-analysis-box.rkt"
          "rank-analysis.rkt"
          "vol-analysis.rkt"
+         "earnings-vibes-analysis.rkt"
          "position-analysis.rkt")
 
 (provide analysis-tab-panel
@@ -117,7 +118,7 @@
 
 (define analysis-tab-panel
   (new tab-panel%
-       [choices (list "Price" "Rank" "Vol" "Condor" "Position")]
+       [choices (list "Price" "Rank" "Vol" "Condor" "ErnVibe" "Position")]
        [parent analysis-frame]
        [callback (λ (p e) (refresh-tab-panel))]))
 
@@ -128,6 +129,7 @@
     ["Rank" (rank-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))]
     ["Vol" (vol-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))]
     ["Condor" (condor-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))]
+    ["ErnVibe" (earnings-vibes-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))]
     ["Position" (position-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))]))
 
 (define analyze-button
@@ -152,6 +154,9 @@
                                                     (send start-date-field get-value) (send end-date-field get-value)
                                                     #:fit-vols (send fit-vols-check-box get-value))
                                (update-condor-analysis-box condor-analysis-list condor-analysis-hash)]
+                     ["ErnVibe" (refresh-tab-panel)
+                                (run-earnings-vibes-analysis (send market-field get-value) (send sector-field get-value)
+                                                             (send start-date-field get-value) (send end-date-field get-value))]
                      ["Position" (refresh-tab-panel)
                                  (run-position-analysis (send market-field get-value) (send sector-field get-value)
                                                         (send start-date-field get-value) (send end-date-field get-value))])
@@ -163,6 +168,7 @@
   (rank-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))
   (vol-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))
   (condor-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))
+  (earnings-vibes-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))
   (position-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))
 
   (refresh-tab-panel)

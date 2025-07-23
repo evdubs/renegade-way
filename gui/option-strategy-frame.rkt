@@ -96,7 +96,8 @@
                                                                    ["DR" 'decreasing-rank]
                                                                    ["IV" 'increasing-vol]
                                                                    ["DV" 'decreasing-vol]
-                                                                   ["CC" 'decreasing-vol])) ; call condor
+                                                                   ["CC" 'decreasing-vol] ; call condor
+                                                                   ["EC" 'decreasing-vol]))
                                                  (define order-data
                                                    (map (λ (o)
                                                           (order pattern

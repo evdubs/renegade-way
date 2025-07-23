@@ -158,8 +158,9 @@
                                  [(equal? 'call-horizontal-spread (order-strategy ord))
                                   ; ideally, the strikes would be the same, but sometimes we do not get the same strikes across expirations
                                   ; as a result, we need to take the difference between the strikes
-                                  (define risk (- (- (order-price (send order-box get-data 1)) (order-price (send order-box get-data 0)))
-                                                  (min 0 (- (order-strike (send order-box get-data 0)) (order-strike (send order-box get-data 1))))))
+                                  (define risk (max 0.01
+                                                    (- (- (order-price (send order-box get-data 1)) (order-price (send order-box get-data 0)))
+                                                       (min 0 (- (order-strike (send order-box get-data 0)) (order-strike (send order-box get-data 1)))))))
                                   (struct-copy order ord
                                                [quantity (truncate (/ (string->number (send trade-risk-field get-value))
                                                                       (* 100 risk (if (= i 0) -1 1))))]
@@ -167,8 +168,9 @@
                                                [stock-target (order-strike (send order-box get-data 0))])]
                                  [(equal? 'put-horizontal-spread (order-strategy ord))
                                   ; see call-horizontal-spread note
-                                  (define risk (- (- (order-price (send order-box get-data 1)) (order-price (send order-box get-data 0)))
-                                                  (min 0 (- (order-strike (send order-box get-data 1)) (order-strike (send order-box get-data 0))))))
+                                  (define risk (max 0.01
+                                                    (- (- (order-price (send order-box get-data 1)) (order-price (send order-box get-data 0)))
+                                                       (min 0 (- (order-strike (send order-box get-data 1)) (order-strike (send order-box get-data 0)))))))
                                   (struct-copy order ord
                                                [quantity (truncate (/ (string->number (send trade-risk-field get-value))
                                                                       (* 100 risk (if (= i 0) -1 1))))]
@@ -473,7 +475,9 @@
                                                 [limit-price (if (or (equal? 'bull-put-vertical-spread (order-strategy first-item))
                                                                      (equal? 'bear-call-vertical-spread (order-strategy first-item))
                                                                      (equal? 'call-ratio-spread (order-strategy first-item))
-                                                                     (equal? 'put-ratio-spread (order-strategy first-item)))
+                                                                     (equal? 'put-ratio-spread (order-strategy first-item))
+                                                                     (equal? 'call-horizontal-spread (order-strategy first-item))
+                                                                     (equal? 'put-horizontal-spread (order-strategy first-item)))
                                                                  total-price
                                                                  (abs total-price))]
                                                 [time-in-force 'gtc]
@@ -500,7 +504,9 @@
                                                 [action (if (or (equal? 'bull-put-vertical-spread (order-strategy first-item))
                                                                 (equal? 'bear-call-vertical-spread (order-strategy first-item))
                                                                 (equal? 'call-ratio-spread (order-strategy first-item))
-                                                                (equal? 'put-ratio-spread (order-strategy first-item)))
+                                                                (equal? 'put-ratio-spread (order-strategy first-item))
+                                                                (equal? 'call-horizontal-spread (order-strategy first-item))
+                                                                (equal? 'put-horizontal-spread (order-strategy first-item)))
                                                             'buy
                                                             (if (< 0 total-price) 'buy 'sell))]
                                                 [total-quantity quantity]
