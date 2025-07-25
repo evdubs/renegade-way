@@ -169,26 +169,29 @@
                                                               res))
                                                (last options)
                                                options)]
-                      [short-call (foldl (λ (o res) (if (and (= (option-dte o) (option-dte closest-front-dte))
-                                                             (<= (abs (- 5/10 (option-delta o)))
-                                                                 (abs (- 5/10 (option-delta res))))
-                                                             (equal? (option-call-put o) "Call"))
-                                                        o
-                                                        res))
-                                         (first options)
-                                         options)]
-                      [long-call (foldl (λ (o res) (cond [(and (= (option-dte res) (option-dte closest-back-dte))
-                                                               (= (option-strike res) (option-strike short-call))
-                                                               (equal? (option-call-put o) "Call"))
-                                                          res]
-                                                         [(and (= (option-dte o) (option-dte closest-back-dte))
-                                                               (<= (abs (- 5/10 (option-delta o)))
-                                                                   (abs (- 5/10 (option-delta res))))
-                                                               (equal? (option-call-put o) "Call"))
-                                                          o]
-                                                         [else res]))
+                      [eligible-strikes (let* ([options-at-dtes (filter (λ (o) (or (= (option-dte closest-front-dte) (option-dte o))
+                                                                                   (= (option-dte closest-back-dte) (option-dte o))))
+                                                                        options)]
+                                               [options-by-strike (group-by (λ (o) (option-strike o)) options-at-dtes)]
+                                               [options-at-both-dtes (filter (λ (l) (<= 4 (length l))) options-by-strike)])
+                                          (remove-duplicates (flatten (map (λ (l) (map (λ (o) (option-strike o)) l))
+                                                                           options-at-both-dtes))))]
+                      [long-call (foldl (λ (o res) (if (and (= (option-dte o) (option-dte closest-back-dte))
+                                                            (index-of eligible-strikes (option-strike o))
+                                                            (<= (abs (- 5/10 (option-delta o)))
+                                                                (abs (- 5/10 (option-delta res))))
+                                                            (equal? (option-call-put o) "Call"))
+                                                       o
+                                                       res))
                                         (first options)
-                                        options)])
+                                        options)]
+                      [short-call (foldl (λ (o res) (cond [(and (= (option-dte o) (option-dte closest-front-dte))
+                                                                (= (option-strike o) (option-strike long-call))
+                                                                (equal? (option-call-put o) "Call"))
+                                                           o]
+                                                          [else res]))
+                                         (first options)
+                                         options)])
                  (list short-call long-call))
                "Call Diagonal Spread"
                (let* ([closest-front-dte (foldl (λ (o res) (if (< (abs (- 28 (option-dte o)))
@@ -273,26 +276,29 @@
                                                               res))
                                                (last options)
                                                options)]
-                      [short-put (foldl (λ (o res) (if (and (= (option-dte o) (option-dte closest-front-dte))
-                                                            (<= (abs (- -5/10 (option-delta o)))
-                                                                (abs (- -5/10 (option-delta res))))
-                                                            (equal? (option-call-put o) "Put"))
-                                                       o
-                                                       res))
-                                        (first options)
-                                        options)]
-                      [long-put (foldl (λ (o res) (cond [(and (= (option-dte res) (option-dte closest-back-dte))
-                                                              (= (option-strike res) (option-strike short-put))
-                                                              (equal? (option-call-put o) "Put"))
-                                                         res]
-                                                        [(and (= (option-dte o) (option-dte closest-back-dte))
-                                                              (<= (abs (- -5/10 (option-delta o)))
-                                                                  (abs (- -5/10 (option-delta res))))
-                                                              (equal? (option-call-put o) "Put"))
-                                                         o]
-                                                        [else res]))
+                      [eligible-strikes (let* ([options-at-dtes (filter (λ (o) (or (= (option-dte closest-front-dte) (option-dte o))
+                                                                                   (= (option-dte closest-back-dte) (option-dte o))))
+                                                                        options)]
+                                               [options-by-strike (group-by (λ (o) (option-strike o)) options-at-dtes)]
+                                               [options-at-both-dtes (filter (λ (l) (<= 4 (length l))) options-by-strike)])
+                                          (remove-duplicates (flatten (map (λ (l) (map (λ (o) (option-strike o)) l))
+                                                                           options-at-both-dtes))))]
+                      [long-put (foldl (λ (o res) (if (and (= (option-dte o) (option-dte closest-back-dte))
+                                                           (index-of eligible-strikes (option-strike o))
+                                                           (<= (abs (- -5/10 (option-delta o)))
+                                                               (abs (- -5/10 (option-delta res))))
+                                                           (equal? (option-call-put o) "Put"))
+                                                      o
+                                                      res))
                                        (first options)
-                                       options)])
+                                       options)]
+                      [short-put (foldl (λ (o res) (cond [(and (= (option-dte o) (option-dte closest-front-dte))
+                                                               (= (option-strike o) (option-strike long-put))
+                                                               (equal? (option-call-put o) "Put"))
+                                                          o]
+                                                         [else res]))
+                                        (first options)
+                                        options)])
                  (list short-put long-put))
                "Put Diagonal Spread"
                (let* ([closest-front-dte (foldl (λ (o res) (if (< (abs (- 28 (option-dte o)))
@@ -585,26 +591,29 @@
                                                               res))
                                                (last options)
                                                options)]
-                      [short-call (foldl (λ (o res) (if (and (= (option-dte o) (option-dte closest-front-dte))
-                                                             (<= (abs (- 5/10 (option-delta o)))
-                                                                 (abs (- 5/10 (option-delta res))))
-                                                             (equal? (option-call-put o) "Call"))
-                                                        o
-                                                        res))
-                                         (first options)
-                                         options)]
-                      [long-call (foldl (λ (o res) (cond [(and (= (option-dte res) (option-dte closest-back-dte))
-                                                               (= (option-strike res) (option-strike short-call))
-                                                               (equal? (option-call-put o) "Call"))
-                                                          res]
-                                                         [(and (= (option-dte o) (option-dte closest-back-dte))
-                                                               (<= (abs (- 5/10 (option-delta o)))
-                                                                   (abs (- 5/10 (option-delta res))))
-                                                               (equal? (option-call-put o) "Call"))
-                                                          o]
-                                                         [else res]))
+                      [eligible-strikes (let* ([options-at-dtes (filter (λ (o) (or (= (option-dte closest-front-dte) (option-dte o))
+                                                                                   (= (option-dte closest-back-dte) (option-dte o))))
+                                                                        options)]
+                                               [options-by-strike (group-by (λ (o) (option-strike o)) options-at-dtes)]
+                                               [options-at-both-dtes (filter (λ (l) (<= 4 (length l))) options-by-strike)])
+                                          (remove-duplicates (flatten (map (λ (l) (map (λ (o) (option-strike o)) l))
+                                                                           options-at-both-dtes))))]
+                      [long-call (foldl (λ (o res) (if (and (= (option-dte o) (option-dte closest-back-dte))
+                                                            (index-of eligible-strikes (option-strike o))
+                                                            (<= (abs (- 5/10 (option-delta o)))
+                                                                (abs (- 5/10 (option-delta res))))
+                                                            (equal? (option-call-put o) "Call"))
+                                                       o
+                                                       res))
                                         (first options)
-                                        options)])
+                                        options)]
+                      [short-call (foldl (λ (o res) (cond [(and (= (option-dte o) (option-dte closest-front-dte))
+                                                                (= (option-strike o) (option-strike long-call))
+                                                                (equal? (option-call-put o) "Call"))
+                                                           o]
+                                                          [else res]))
+                                         (first options)
+                                         options)])
                  (list short-call long-call))
                "Put Horizontal Spread"
                (let* ([closest-front-dte (foldl (λ (o res) (if (< (abs (- 14 (option-dte o)))
@@ -620,25 +629,28 @@
                                                               res))
                                                (last options)
                                                options)]
-                      [short-put (foldl (λ (o res) (if (and (= (option-dte o) (option-dte closest-front-dte))
-                                                            (<= (abs (- -5/10 (option-delta o)))
-                                                                (abs (- -5/10 (option-delta res))))
-                                                            (equal? (option-call-put o) "Put"))
-                                                       o
-                                                       res))
-                                        (first options)
-                                        options)]
-                      [long-put (foldl (λ (o res) (cond [(and (= (option-dte res) (option-dte closest-back-dte))
-                                                              (= (option-strike res) (option-strike short-put))
-                                                              (equal? (option-call-put o) "Put"))
-                                                         res]
-                                                        [(and (= (option-dte o) (option-dte closest-back-dte))
-                                                              (<= (abs (- -5/10 (option-delta o)))
-                                                                  (abs (- -5/10 (option-delta res))))
-                                                              (equal? (option-call-put o) "Put"))
-                                                         o]
-                                                        [else res]))
+                      [eligible-strikes (let* ([options-at-dtes (filter (λ (o) (or (= (option-dte closest-front-dte) (option-dte o))
+                                                                                   (= (option-dte closest-back-dte) (option-dte o))))
+                                                                        options)]
+                                               [options-by-strike (group-by (λ (o) (option-strike o)) options-at-dtes)]
+                                               [options-at-both-dtes (filter (λ (l) (<= 4 (length l))) options-by-strike)])
+                                          (remove-duplicates (flatten (map (λ (l) (map (λ (o) (option-strike o)) l))
+                                                                           options-at-both-dtes))))]
+                      [long-put (foldl (λ (o res) (if (and (= (option-dte o) (option-dte closest-back-dte))
+                                                           (index-of eligible-strikes (option-strike o))
+                                                           (<= (abs (- -5/10 (option-delta o)))
+                                                               (abs (- -5/10 (option-delta res))))
+                                                           (equal? (option-call-put o) "Put"))
+                                                      o
+                                                      res))
                                        (first options)
-                                       options)])
+                                       options)]
+                      [short-put (foldl (λ (o res) (cond [(and (= (option-dte o) (option-dte closest-front-dte))
+                                                               (= (option-strike o) (option-strike long-put))
+                                                               (equal? (option-call-put o) "Put"))
+                                                          o]
+                                                         [else res]))
+                                        (first options)
+                                        options)])
                  (list short-put long-put)))]
         [else (hash)]))
