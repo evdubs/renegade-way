@@ -484,21 +484,21 @@
                                                 [oca-group (cond [(or (equal? 'bull-call-vertical-spread (order-strategy first-item))
                                                                       (equal? 'bull-put-vertical-spread (order-strategy first-item))
                                                                       (equal? 'call-ratio-spread (order-strategy first-item))
-                                                                      (equal? 'call-diagonal-spread (order-strategy first-item))
-                                                                      (equal? 'call-horizontal-spread (order-strategy first-item)))
+                                                                      (equal? 'call-diagonal-spread (order-strategy first-item)))
                                                                   (string-append (date->iso8601 (today)) ".bull")]
                                                                  [(or (equal? 'bear-call-vertical-spread (order-strategy first-item))
                                                                       (equal? 'bear-put-vertical-spread (order-strategy first-item))
                                                                       (equal? 'put-ratio-spread (order-strategy first-item))
-                                                                      (equal? 'put-diagonal-spread (order-strategy first-item))
-                                                                      (equal? 'put-horizontal-spread (order-strategy first-item)))
+                                                                      (equal? 'put-diagonal-spread (order-strategy first-item)))
                                                                   (string-append (date->iso8601 (today)) ".bear")]
                                                                  [(or (equal? 'call-condor (order-strategy first-item))
                                                                       (equal? 'put-condor (order-strategy first-item))
                                                                       (equal? 'call-butterfly (order-strategy first-item))
                                                                       (equal? 'put-butterfly (order-strategy first-item))
                                                                       (equal? 'long-straddle (order-strategy first-item))
-                                                                      (equal? 'long-strangle (order-strategy first-item)))
+                                                                      (equal? 'long-strangle (order-strategy first-item))
+                                                                      (equal? 'call-horizontal-spread (order-strategy first-item))
+                                                                      (equal? 'put-horizontal-spread (order-strategy first-item)))
                                                                   ""])] ; no oca-group for roos
                                                 [oca-type 1]
                                                 [action (if (or (equal? 'bull-put-vertical-spread (order-strategy first-item))
@@ -527,15 +527,13 @@
                                                 [conditions (cond [(or (equal? 'bull-call-vertical-spread (order-strategy first-item))
                                                                        (equal? 'bull-put-vertical-spread (order-strategy first-item))
                                                                        (equal? 'call-ratio-spread (order-strategy first-item))
-                                                                       (equal? 'call-diagonal-spread (order-strategy first-item))
-                                                                       (equal? 'call-horizontal-spread (order-strategy first-item)))
+                                                                       (equal? 'call-diagonal-spread (order-strategy first-item)))
                                                                    (list (condition 'price 'and 'greater-than (order-stock-entry first-item)
                                                                                     underlying-contract-id "SMART" 'default #f #f))]
                                                                   [(or (equal? 'bear-call-vertical-spread (order-strategy first-item))
                                                                        (equal? 'bear-put-vertical-spread (order-strategy first-item))
                                                                        (equal? 'put-ratio-spread (order-strategy first-item))
-                                                                       (equal? 'put-diagonal-spread (order-strategy first-item))
-                                                                       (equal? 'put-horizontal-spread (order-strategy first-item)))
+                                                                       (equal? 'put-diagonal-spread (order-strategy first-item)))
                                                                    (list (condition 'price 'and 'less-than (order-stock-entry first-item)
                                                                                     underlying-contract-id "SMART" 'default #f #f))]
                                                                   [(equal? 'call-condor (order-strategy first-item))
@@ -566,7 +564,9 @@
                                                                            (condition 'price 'and 'less-than (- high-short-strike (* 1/4 difference))
                                                                                       underlying-contract-id "SMART" 'default #f #f)))]
                                                                   [(or (equal? 'long-straddle (order-strategy first-item))
-                                                                       (equal? 'long-strangle (order-strategy first-item)))
+                                                                       (equal? 'long-strangle (order-strategy first-item))
+                                                                       (equal? 'call-horizontal-spread (order-strategy first-item))
+                                                                       (equal? 'put-horizontal-spread (order-strategy first-item)))
                                                                    (list)])]
                                                 [use-price-management-algo #t])))
                    (ibkr-add1-next-order-id))]))

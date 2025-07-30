@@ -60,14 +60,12 @@
                           (equal? "BULL CALL VERTICAL SPREAD" s)
                           (equal? "BULL PUT VERTICAL SPREAD" s)
                           (equal? "CALL RATIO SPREAD" s)
-                          (equal? "CALL HORIZONTAL SPREAD" s)
                           (equal? "CALL DIAGONAL SPREAD" s))
                       (hash-set m (position-analysis-stock p) 'bull)]
                      [(or (equal? "LONG PUT" s)
                           (equal? "BEAR CALL VERTICAL SPREAD" s)
                           (equal? "BEAR PUT VERTICAL SPREAD" s)
                           (equal? "PUT RATIO SPREAD" s)
-                          (equal? "PUT HORIZONTAL SPREAD" s)
                           (equal? "PUT DIAGONAL SPREAD" s))
                       (hash-set m (position-analysis-stock p) 'bear)]
                      [(or (equal? "LONG STRADDLE" s)
@@ -75,7 +73,9 @@
                           (equal? "CALL BUTTERFLY" s)
                           (equal? "PUT BUTTERFLY" s)
                           (equal? "CALL CONDOR" s)
-                          (equal? "PUT CONDOR" s))
+                          (equal? "PUT CONDOR" s)
+                          (equal? "CALL HORIZONTAL SPREAD" s)
+                          (equal? "PUT HORIZONTAL SPREAD" s))
                       (hash-set m (position-analysis-stock p) 'roo)]
                      [else (hash-set m (position-analysis-stock p) 'unknown)])))
            (hash)

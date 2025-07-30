@@ -118,7 +118,7 @@
 
 (define analysis-tab-panel
   (new tab-panel%
-       [choices (list "Price" "Rank" "Vol" "Condor" "ErnVibe" "Position")]
+       [choices (list "Price" "Rank" "Vol" "Condor" "Earnings Vibes" "Position")]
        [parent analysis-frame]
        [callback (λ (p e) (refresh-tab-panel))]))
 
@@ -129,7 +129,7 @@
     ["Rank" (rank-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))]
     ["Vol" (vol-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))]
     ["Condor" (condor-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))]
-    ["ErnVibe" (earnings-vibes-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))]
+    ["Earnings Vibes" (earnings-vibes-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))]
     ["Position" (position-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))]))
 
 (define analyze-button
@@ -154,7 +154,7 @@
                                                     (send start-date-field get-value) (send end-date-field get-value)
                                                     #:fit-vols (send fit-vols-check-box get-value))
                                (update-condor-analysis-box condor-analysis-list condor-analysis-hash)]
-                     ["ErnVibe" (refresh-tab-panel)
+                     ["Earnings Vibes" (refresh-tab-panel)
                                 (run-earnings-vibes-analysis (send market-field get-value) (send sector-field get-value)
                                                              (send start-date-field get-value) (send end-date-field get-value))]
                      ["Position" (refresh-tab-panel)
