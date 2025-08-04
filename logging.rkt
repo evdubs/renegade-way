@@ -11,7 +11,7 @@
   (current-logger file-log)
   (define rec (make-log-receiver file-log 'info))
 
-  (define out (open-output-file (string-append "/var/tmp/renegade/" (~t (today) "yyyy-MM") ".log")
+  (define out (open-output-file (string-append "/var/local/renegade/" (~t (today) "yyyy-MM") ".log")
                                 #:exists 'append))
   (file-stream-buffer-mode out 'line)
 

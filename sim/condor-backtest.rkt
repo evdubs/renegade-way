@@ -7,7 +7,7 @@
            racket/cmdline
            "../params.rkt")
 
-  (filename "/var/tmp/renegade/condor.tsv")
+  (filename "/var/local/renegade/condor.tsv")
 
   (command-line
    #:program "racket condor-backtest.rkt"
