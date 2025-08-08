@@ -26,7 +26,7 @@
   (vector-ref v (- (vector-length v) 1)))
 
 (define manager-frame
-  (new frame% [label "Position/Order Manager"] [width 650] [height 600]))
+  (new frame% [label "Position/Order Manager"] [width 700] [height 600]))
 
 (define manager-pane
   (new vertical-pane% [parent manager-frame]))
@@ -59,6 +59,12 @@
        [parent field-input-pane]
        [label "Eval Date"]
        [init-value ""]))
+
+(define vol-factor-field
+  (new text-field%
+       [parent field-input-pane]
+       [label "Vol Factor"]
+       [init-value "2/3"]))
 
 (define button-input-pane
   (new horizontal-pane%
@@ -373,10 +379,12 @@
                                 #:color 3
                                 #:style 'long-dash
                                 #:label "Vol * 0.5")
-                         (lines (price-profit-loss #f (* 2/3 low-vol) prices)
+                         (lines (price-profit-loss #f (* (string->number (send vol-factor-field get-value))
+                                                         low-vol) prices)
                                 #:color 4
                                 #:style 'long-dash
-                                #:label (string-append "Vol = " (real->decimal-string (* 2/3 low-vol) 2))))
+                                #:label (string-append "Vol = " (real->decimal-string (* (string->number (send vol-factor-field get-value))
+                                                                                         low-vol) 2))))
                    #:title (string-append "Order Profit/Loss at " (date->iso8601 eval-date))
                    #:x-label "Stock Price"
                    #:y-label "Profit/Loss"
