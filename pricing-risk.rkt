@@ -24,12 +24,14 @@
                        years-left)))]
          [d-2 (- d-1 (* vol (sqrt years-left)))]
          [pv (* strike (exp (* -1 rate years-left)))])
+    ; use (flnormal-cdf) instead of (cdf (normal-dist)) for performance.
+    ; condor analysis takes 2 minutes instead of 3 with this optimization.
     (cond [(or (equal? call-put 'Call) (equal? call-put 'call))
-           (- (* (cdf (normal-dist) d-1) discounted-price)
-              (* (cdf (normal-dist) d-2) pv))]
+           (- (* (flnormal-cdf 0.0 1.0 d-1 #f #f) discounted-price)
+              (* (flnormal-cdf 0.0 1.0 d-2 #f #f) pv))]
           [(or (equal? call-put 'Put) (equal? call-put 'put))
-           (- (* (cdf (normal-dist) (* d-2 -1)) pv)
-              (* (cdf (normal-dist) (* d-1 -1)) discounted-price))])))
+           (- (* (flnormal-cdf 0.0 1.0 (* d-2 -1) #f #f) pv)
+              (* (flnormal-cdf 0.0 1.0 (* d-1 -1) #f #f) discounted-price))])))
 
 (define (black-scholes-delta price years-left strike call-put rate vol divs)
   (* (- (black-scholes (+ price 1/100) years-left strike call-put rate vol divs)
