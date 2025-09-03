@@ -6,7 +6,9 @@
          racket/list
          racket/match
          racket/string
+         interactive-brokers-api/response-messages
          "../db-queries.rkt"
+         "../ibkr-market-data.rkt"
          "../option-strategy.rkt"
          "../structs.rkt"
          "position-order-manager.rkt")
@@ -46,6 +48,12 @@
        [label "Patterns"]
        [init-value ""]))
 
+(define live-data-check-box
+  (new check-box%
+       [parent strategy-input-pane]
+       [label "Live Data"]
+       [value #f]))
+
 (define fit-vols-check-box
   (new check-box%
        [parent strategy-input-pane]
@@ -75,7 +83,24 @@
   (send date-field set-value date)
   (send ref-price-field set-value (real->decimal-string ref-price))
   (send patterns-field set-value patterns)
-  (hash-for-each (suitable-options (get-updated-options symbol date ref-price #:fit-vols (send fit-vols-check-box get-value)) patterns)
+  (define pattern-options
+    (hash-map (suitable-options (get-updated-options symbol date ref-price #:fit-vols (send fit-vols-check-box get-value)) patterns)
+              (λ (k options)
+                (cond [(send live-data-check-box get-value)
+                       (define updated-options
+                         (map (λ (o) (define omd (get-option-market-data
+                                                  (option-symbol o)
+                                                  (date->iso8601 (parse-date (option-expiration o) "yy-MM-dd"))
+                                                  (option-strike o)
+                                                  (string->symbol (string-downcase (option-call-put o)))))
+                                (struct-copy option o
+                                             [mid (option-market-data-rsp-price omd)]
+                                             [vol (option-market-data-rsp-implied-volatility omd)]))
+                              options))
+                       (cons k updated-options)]
+                      [else (cons k options)])
+                )))
+  (hash-for-each (make-hash pattern-options)
                  (λ (k v)
                    (let ([table (new list-box% [parent strategy-table-pane]
                                      [label k]

@@ -110,6 +110,11 @@
                                            #:hide-large-spread (send hide-spread-check-box get-value)
                                            #:hide-non-weekly (send hide-non-weekly-check-box get-value)))]))
 
+(define use-live-data-check-box
+  (new check-box%
+       [parent filter-input-pane]
+       [label "Use Live Data"]))
+
 (define fit-vols-check-box
   (new check-box%
        [parent filter-input-pane]
@@ -156,7 +161,8 @@
                                (update-condor-analysis-box condor-analysis-list condor-analysis-hash)]
                      ["Earnings Vibes" (refresh-tab-panel)
                                 (run-earnings-vibes-analysis (send market-field get-value) (send sector-field get-value)
-                                                             (send start-date-field get-value) (send end-date-field get-value))]
+                                                             (send start-date-field get-value) (send end-date-field get-value)
+                                                             #:use-live-data (send use-live-data-check-box get-value))]
                      ["Position" (refresh-tab-panel)
                                  (run-position-analysis (send market-field get-value) (send sector-field get-value)
                                                         (send start-date-field get-value) (send end-date-field get-value))])

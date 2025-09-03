@@ -617,7 +617,8 @@ where
 
 (define (get-earnings-vibes-analysis date)
   (map (λ (row) (earnings-vibes-analysis (vector-ref row 0) (vector-ref row 1) (vector-ref row 2)
-                                         (vector-ref row 3) (vector-ref row 4) (vector-ref row 5)))
+                                         (vector-ref row 3) (vector-ref row 4) (vector-ref row 5)
+                                         (vector-ref row 6) (vector-ref row 7) (vector-ref row 8)))
        (query-rows dbc "
 with options_on_date as (
 select
@@ -686,6 +687,9 @@ group by
 )
 select
   syms.act_symbol,
+  exprs.min_expiration::text,
+  exprs.max_expiration::text,
+  strikes.strike,
   coalesce(trunc(100 * (back_vol.avg_vol - front_vol.avg_vol) / nullif(exprs.max_expiration - exprs.min_expiration, 0), 2), 0) as vol_slope,
   coalesce(trunc(100 * avg_iv / nullif(avg_hv, 0), 2), 0) as iv_hv,
   coalesce(to_char(en.date, 'YY-MM-DD'), '') || coalesce(substring(en.\"when\"::text for 1), '') as earnings_date,

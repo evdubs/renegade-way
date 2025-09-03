@@ -1,9 +1,16 @@
 #lang racket/base
 
-(require racket/class
+(require gregor
+         gregor/period
+         racket/async-channel
+         racket/class
          racket/gui/base
          racket/list
+         racket/string
+         interactive-brokers-api/response-messages
          "../db-queries.rkt"
+         "../ibkr.rkt"
+         "../ibkr-market-data.rkt"
          "../structs.rkt"
          "chart.rkt"
          "option-strategy-frame.rkt")
@@ -25,8 +32,29 @@
   (hide-non-weekly non-weekly)
   (update-analysis-box earnings-vibes-analysis-list))
 
-(define (run-earnings-vibes-analysis market sector start-date end-date)
+(define (run-earnings-vibes-analysis market sector start-date end-date #:use-live-data live-data)
   (set! earnings-vibes-analysis-list (get-earnings-vibes-analysis end-date))
+
+  (cond [live-data
+         (set! earnings-vibes-analysis-list
+               (map (λ (eva) (define max-omd (get-option-market-data (earnings-vibes-analysis-stock eva)
+                                                                     (earnings-vibes-analysis-max-expiration eva)
+                                                                     (earnings-vibes-analysis-strike eva)
+                                                                     'call))
+                      (define min-omd (get-option-market-data (earnings-vibes-analysis-stock eva)
+                                                                     (earnings-vibes-analysis-min-expiration eva)
+                                                                     (earnings-vibes-analysis-strike eva)
+                                                                     'call))
+                      (struct-copy
+                              earnings-vibes-analysis eva
+                              [vol-slope (/ (* 100 (- (option-market-data-rsp-implied-volatility max-omd)
+                                                      (option-market-data-rsp-implied-volatility min-omd)))
+                                            (period-ref (period-between (iso8601->date (earnings-vibes-analysis-min-expiration eva))
+                                                                        (iso8601->date (earnings-vibes-analysis-max-expiration eva))
+                                                                        '(days))
+                                                        'days))]))
+                    earnings-vibes-analysis-list))])
+
   (update-analysis-box earnings-vibes-analysis-list))
 
 (define (update-analysis-box earnings-vibes-analysis-list)

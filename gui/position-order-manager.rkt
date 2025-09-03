@@ -64,7 +64,7 @@
   (new text-field%
        [parent field-input-pane]
        [label "Vol Factor"]
-       [init-value "2/3"]))
+       [init-value "0.67"]))
 
 (define button-input-pane
   (new horizontal-pane%

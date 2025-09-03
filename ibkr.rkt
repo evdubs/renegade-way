@@ -36,6 +36,7 @@
                    (cons 'market-data (list))
                    (cons 'next-valid-id (list (λ (nvi) (set! ibkr-next-order-id (next-valid-id-rsp-order-id nvi)))))
                    (cons 'open-order (list (λ (oo) (insert-order oo))))
+                   (cons 'option-market-data (list))
                    (cons 'order-status (list))
                    (cons 'portfolio-value (list))
                    (cons 'server-time (list)))))
@@ -53,6 +54,7 @@
                   [handle-market-data-rsp (λ (md) (for-each (λ (mdh) (mdh md)) (hash-ref ibkr-handlers 'market-data)))]
                   [handle-next-valid-id-rsp (λ (nvi) (for-each (λ (nvih) (nvih nvi)) (hash-ref ibkr-handlers 'next-valid-id)))]
                   [handle-open-order-rsp (λ (oo) (for-each (λ (ooh) (ooh oo)) (hash-ref ibkr-handlers 'open-order)))]
+                  [handle-option-market-data-rsp (λ (omd) (for-each (λ (omdh) (omdh omd)) (hash-ref ibkr-handlers 'option-market-data)))]
                   [handle-order-status-rsp (λ (os) (for-each (λ (osh) (osh os)) (hash-ref ibkr-handlers 'order-status)))]
                   [handle-portfolio-value-rsp (λ (pv) (for-each (λ (pvh) (pvh pv)) (hash-ref ibkr-handlers 'portfolio-value)))]
                   [handle-server-time-rsp (λ (st) (for-each (λ (sth) (sth st)) (hash-ref ibkr-handlers 'server-time)))]
