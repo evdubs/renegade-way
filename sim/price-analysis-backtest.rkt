@@ -222,7 +222,9 @@ from
                                                    (vector-ref r 13)
                                                    entry-price
                                                    stop-price
-                                                   target-price)]
+                                                   target-price
+                                                   #f
+                                                   #f)]
                                [else #f])]
                         [else #f])))
               rows (range (length rows)))]

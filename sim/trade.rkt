@@ -32,7 +32,9 @@
    patterns
    entry-price
    stop-price
-   target-price)
+   target-price
+   vol-slope
+   iv-hv)
   #:transparent)
 
 (define (trade->tsv t)
@@ -60,7 +62,9 @@
                  (if (trade-patterns t) (trade-patterns t) "") "\t"
                  (if (trade-entry-price t) (real->decimal-string (trade-entry-price t)) "") "\t"
                  (if (trade-stop-price t) (real->decimal-string (trade-stop-price t)) "") "\t"
-                 (if (trade-target-price t) (real->decimal-string (trade-target-price t)) "") "\t"))
+                 (if (trade-target-price t) (real->decimal-string (trade-target-price t)) "") "\t"
+                 (if (trade-vol-slope t) (real->decimal-string (trade-vol-slope t)) "") "\t"
+                 (if (trade-iv-hv t) (real->decimal-string (trade-iv-hv t)) "") "\t"))
 
 (define (tsv->trade t)
   (define s (string-split t "\t"))
@@ -89,4 +93,6 @@
          (if (equal? "" (list-ref s 22)) #f (string->number (list-ref s 22))) ; entry-price
          (if (equal? "" (list-ref s 23)) #f (string->number (list-ref s 23))) ; stop-price
          (if (equal? "" (list-ref s 24)) #f (string->number (list-ref s 24))) ; target-price
+         (if (equal? "" (list-ref s 25)) #f (string->number (list-ref s 25))) ; vol-slope
+         (if (equal? "" (list-ref s 26)) #f (string->number (list-ref s 26))) ; iv-hv
          ))
