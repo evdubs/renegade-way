@@ -113,7 +113,11 @@
 (define use-live-data-check-box
   (new check-box%
        [parent filter-input-pane]
-       [label "Use Live Data"]))
+       [label "Use Live Data"]
+       [callback (λ (b e)
+                   (earnings-vibes-analysis-filter #:hide-large-spread (send hide-spread-check-box get-value)
+                                                   #:hide-non-weekly (send hide-non-weekly-check-box get-value)
+                                                   #:use-live-data (send use-live-data-check-box get-value)))]))
 
 (define fit-vols-check-box
   (new check-box%

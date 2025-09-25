@@ -2,14 +2,12 @@
 
 (require gregor
          gregor/period
-         racket/async-channel
          racket/class
          racket/gui/base
          racket/list
-         racket/string
          interactive-brokers-api/response-messages
          "../db-queries.rkt"
-         "../ibkr.rkt"
+         "../finviz-prices.rkt"
          "../ibkr-market-data.rkt"
          "../structs.rkt"
          "chart.rkt"
@@ -27,9 +25,12 @@
 
 (define hide-non-weekly (make-parameter #f))
 
-(define (earnings-vibes-analysis-filter #:hide-large-spread large-spread #:hide-non-weekly non-weekly)
+(define use-live-data (make-parameter #f))
+
+(define (earnings-vibes-analysis-filter #:hide-large-spread large-spread #:hide-non-weekly non-weekly #:use-live-data live-data)
   (hide-large-spread large-spread)
   (hide-non-weekly non-weekly)
+  (use-live-data live-data)
   (update-analysis-box earnings-vibes-analysis-list))
 
 (define (run-earnings-vibes-analysis market sector start-date end-date #:use-live-data live-data)
@@ -86,7 +87,9 @@
                                     end-date)
                      (refresh-option-strategy stock
                                               end-date
-                                              (dohlc-close (last (get-date-ohlc stock start-date end-date)))
+                                              (if (use-live-data)
+                                                  (hash-ref (get-prices (list stock)) stock)
+                                                  (dohlc-close (last (get-date-ohlc stock start-date end-date))))
                                               "EC"))]
          [style (list 'single 'column-headers 'vertical-label)]
          [columns analysis-box-columns]
