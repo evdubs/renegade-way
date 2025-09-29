@@ -618,6 +618,7 @@ where
 (define (get-earnings-vibes-analysis date)
   (map (λ (row) (earnings-vibes-analysis (vector-ref row 0) (vector-ref row 1) (vector-ref row 2)
                                          (vector-ref row 3) (vector-ref row 4) (vector-ref row 5)
+                                         0 ; price-strike-ratio to be filled in
                                          (vector-ref row 6) (vector-ref row 7) (vector-ref row 8)))
        (query-rows dbc "
 with options_on_date as (

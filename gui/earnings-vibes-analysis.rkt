@@ -9,6 +9,7 @@
          "../db-queries.rkt"
          "../finviz-prices.rkt"
          "../ibkr-market-data.rkt"
+         "../option-strategy.rkt"
          "../structs.rkt"
          "chart.rkt"
          "option-strategy-frame.rkt")
@@ -38,22 +39,39 @@
 
   (cond [live-data
          (set! earnings-vibes-analysis-list
-               (map (λ (eva) (define max-omd (get-option-market-data (earnings-vibes-analysis-stock eva)
-                                                                     (earnings-vibes-analysis-max-expiration eva)
-                                                                     (earnings-vibes-analysis-strike eva)
-                                                                     'call))
+               (map (λ (eva)
+                      (define max-omd (get-option-market-data (earnings-vibes-analysis-stock eva)
+                                                              (earnings-vibes-analysis-max-expiration eva)
+                                                              (earnings-vibes-analysis-strike eva)
+                                                              'call))
                       (define min-omd (get-option-market-data (earnings-vibes-analysis-stock eva)
-                                                                     (earnings-vibes-analysis-min-expiration eva)
-                                                                     (earnings-vibes-analysis-strike eva)
-                                                                     'call))
+                                                              (earnings-vibes-analysis-min-expiration eva)
+                                                              (earnings-vibes-analysis-strike eva)
+                                                              'call))
                       (struct-copy
-                              earnings-vibes-analysis eva
-                              [vol-slope (/ (* 100 (- (option-market-data-rsp-implied-volatility max-omd)
-                                                      (option-market-data-rsp-implied-volatility min-omd)))
-                                            (period-ref (period-between (iso8601->date (earnings-vibes-analysis-min-expiration eva))
-                                                                        (iso8601->date (earnings-vibes-analysis-max-expiration eva))
-                                                                        '(days))
-                                                        'days))]))
+                       earnings-vibes-analysis eva
+                       [vol-slope (/ (* 100 (- (option-market-data-rsp-implied-volatility max-omd)
+                                               (option-market-data-rsp-implied-volatility min-omd)))
+                                     (period-ref (period-between (iso8601->date (earnings-vibes-analysis-min-expiration eva))
+                                                                 (iso8601->date (earnings-vibes-analysis-max-expiration eva))
+                                                                 '(days))
+                                                 'days))]
+                       [price-strike-ratio (* 100 (/ (- (option-market-data-rsp-price max-omd)
+                                                        (option-market-data-rsp-price min-omd))
+                                                     (earnings-vibes-analysis-strike eva)))]))
+                    earnings-vibes-analysis-list))]
+        [else
+         (set! earnings-vibes-analysis-list
+               (map (λ (eva)
+                      (define prices (get-date-ohlc (earnings-vibes-analysis-stock eva) start-date end-date))
+                      (define options (get-updated-options (earnings-vibes-analysis-stock eva) end-date
+                                                           (dohlc-close (last prices)) #:compute-all-greeks #f #:fit-vols #f))
+                      (define call-horizontal-options (hash-ref (suitable-options options "EC") "Call Horizontal Spread"))
+                      (struct-copy
+                       earnings-vibes-analysis eva
+                       [price-strike-ratio (* 100 (/ (- (option-mid (second call-horizontal-options))
+                                                        (option-mid (first call-horizontal-options)))
+                                                     (earnings-vibes-analysis-strike eva)))]))
                     earnings-vibes-analysis-list))])
 
   (update-analysis-box earnings-vibes-analysis-list))
@@ -63,6 +81,7 @@
         (map (λ (m) (earnings-vibes-analysis-stock m)) earnings-vibes-analysis-list)
         (map (λ (m) (real->decimal-string (earnings-vibes-analysis-vol-slope m))) earnings-vibes-analysis-list)
         (map (λ (m) (real->decimal-string (earnings-vibes-analysis-iv-hv m))) earnings-vibes-analysis-list)
+        (map (λ (m) (real->decimal-string (earnings-vibes-analysis-price-strike-ratio m))) earnings-vibes-analysis-list)
         (map (λ (m) (earnings-vibes-analysis-earnings-date m)) earnings-vibes-analysis-list)
         (map (λ (m) (real->decimal-string (earnings-vibes-analysis-option-spread m))) earnings-vibes-analysis-list)
         (map (λ (m) (real->decimal-string (earnings-vibes-analysis-30d-avg-volume m))) earnings-vibes-analysis-list))
@@ -70,7 +89,7 @@
   (map (λ (m i) (send analysis-box-ref set-data i m))
        earnings-vibes-analysis-list (range (length earnings-vibes-analysis-list))))
 
-(define analysis-box-columns (list "Stock" "VolSlp" "IvHv" "ErnDt" "OptSprd" "30dVlm"))
+(define analysis-box-columns (list "Stock" "VolSlp" "IvHv" "PxSrkRt" "ErnDt" "OptSprd" "30dVlm"))
 
 (define (earnings-vibes-analysis-box parent-panel start-date end-date)
   (define analysis-box
