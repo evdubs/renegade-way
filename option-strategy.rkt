@@ -162,8 +162,8 @@
                                                                res))
                                                 (first options)
                                                 options)]
-                      [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- 28 (option-dte o)))
-                                                                      (abs (- 28 (option-dte res))))
+                      [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- 56 (option-dte o)))
+                                                                      (abs (- 56 (option-dte res))))
                                                                    (not (= (option-dte o) (option-dte closest-front-dte))))
                                                               o
                                                               res))
@@ -269,8 +269,8 @@
                                                                res))
                                                 (first options)
                                                 options)]
-                      [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- 28 (option-dte o)))
-                                                                      (abs (- 28 (option-dte res))))
+                      [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- 56 (option-dte o)))
+                                                                      (abs (- 56 (option-dte res))))
                                                                    (not (= (option-dte o) (option-dte closest-front-dte))))
                                                               o
                                                               res))
@@ -584,8 +584,8 @@
                                                                res))
                                                 (first options)
                                                 options)]
-                      [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- 28 (option-dte o)))
-                                                                      (abs (- 28 (option-dte res))))
+                      [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- 56 (option-dte o)))
+                                                                      (abs (- 56 (option-dte res))))
                                                                    (not (= (option-dte o) (option-dte closest-front-dte))))
                                                               o
                                                               res))
@@ -622,8 +622,8 @@
                                                                res))
                                                 (first options)
                                                 options)]
-                      [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- 28 (option-dte o)))
-                                                                      (abs (- 28 (option-dte res))))
+                      [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- 56 (option-dte o)))
+                                                                      (abs (- 56 (option-dte res))))
                                                                    (not (= (option-dte o) (option-dte closest-front-dte))))
                                                               o
                                                               res))
