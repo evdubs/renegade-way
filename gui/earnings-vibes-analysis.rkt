@@ -74,6 +74,9 @@
                                                      (earnings-vibes-analysis-strike eva)))]))
                     earnings-vibes-analysis-list))])
 
+  (set! earnings-vibes-analysis-list (sort earnings-vibes-analysis-list (λ (eva-1 eva-2) (< (earnings-vibes-analysis-vol-slope eva-1)
+                                                                                            (earnings-vibes-analysis-vol-slope eva-2)))))
+
   (update-analysis-box earnings-vibes-analysis-list))
 
 (define (update-analysis-box earnings-vibes-analysis-list)
