@@ -48,17 +48,19 @@
                                                               (earnings-vibes-analysis-min-expiration eva)
                                                               (earnings-vibes-analysis-strike eva)
                                                               'call))
-                      (struct-copy
-                       earnings-vibes-analysis eva
-                       [vol-slope (/ (* 100 (- (option-market-data-rsp-implied-volatility max-omd)
-                                               (option-market-data-rsp-implied-volatility min-omd)))
-                                     (period-ref (period-between (iso8601->date (earnings-vibes-analysis-min-expiration eva))
-                                                                 (iso8601->date (earnings-vibes-analysis-max-expiration eva))
-                                                                 '(days))
-                                                 'days))]
-                       [price-strike-ratio (* 100 (/ (- (option-market-data-rsp-price max-omd)
-                                                        (option-market-data-rsp-price min-omd))
-                                                     (earnings-vibes-analysis-strike eva)))]))
+                      (if (and max-omd min-omd)
+                          (struct-copy
+                           earnings-vibes-analysis eva
+                           [vol-slope (/ (* 100 (- (option-market-data-rsp-implied-volatility max-omd)
+                                                   (option-market-data-rsp-implied-volatility min-omd)))
+                                         (period-ref (period-between (iso8601->date (earnings-vibes-analysis-min-expiration eva))
+                                                                     (iso8601->date (earnings-vibes-analysis-max-expiration eva))
+                                                                     '(days))
+                                                     'days))]
+                           [price-strike-ratio (* 100 (/ (- (option-market-data-rsp-price max-omd)
+                                                            (option-market-data-rsp-price min-omd))
+                                                         (earnings-vibes-analysis-strike eva)))])
+                          eva))
                     earnings-vibes-analysis-list))]
         [else
          (set! earnings-vibes-analysis-list
@@ -80,17 +82,21 @@
   (update-analysis-box earnings-vibes-analysis-list))
 
 (define (update-analysis-box earnings-vibes-analysis-list)
-  (send analysis-box-ref set
-        (map (λ (m) (earnings-vibes-analysis-stock m)) earnings-vibes-analysis-list)
-        (map (λ (m) (real->decimal-string (earnings-vibes-analysis-vol-slope m))) earnings-vibes-analysis-list)
-        (map (λ (m) (real->decimal-string (earnings-vibes-analysis-iv-hv m))) earnings-vibes-analysis-list)
-        (map (λ (m) (real->decimal-string (earnings-vibes-analysis-price-strike-ratio m))) earnings-vibes-analysis-list)
-        (map (λ (m) (earnings-vibes-analysis-earnings-date m)) earnings-vibes-analysis-list)
-        (map (λ (m) (real->decimal-string (earnings-vibes-analysis-option-spread m))) earnings-vibes-analysis-list)
-        (map (λ (m) (real->decimal-string (earnings-vibes-analysis-30d-avg-volume m))) earnings-vibes-analysis-list))
-  ; We set data here so that we can retrieve it later with `get-data`
-  (map (λ (m i) (send analysis-box-ref set-data i m))
-       earnings-vibes-analysis-list (range (length earnings-vibes-analysis-list))))
+  (let* ([filter-spread (if (hide-large-spread)
+                            (filter (λ (m) (and (>= 0.50 (earnings-vibes-analysis-option-spread m))
+                                                (<= 7.5 (earnings-vibes-analysis-30d-avg-volume m)))) earnings-vibes-analysis-list)
+                            earnings-vibes-analysis-list)])
+   (send analysis-box-ref set
+        (map (λ (m) (earnings-vibes-analysis-stock m)) filter-spread)
+        (map (λ (m) (real->decimal-string (earnings-vibes-analysis-vol-slope m))) filter-spread)
+        (map (λ (m) (real->decimal-string (earnings-vibes-analysis-iv-hv m))) filter-spread)
+        (map (λ (m) (real->decimal-string (earnings-vibes-analysis-price-strike-ratio m))) filter-spread)
+        (map (λ (m) (earnings-vibes-analysis-earnings-date m)) filter-spread)
+        (map (λ (m) (real->decimal-string (earnings-vibes-analysis-option-spread m))) filter-spread)
+        (map (λ (m) (real->decimal-string (earnings-vibes-analysis-30d-avg-volume m))) filter-spread))
+   ; We set data here so that we can retrieve it later with `get-data`
+   (map (λ (m i) (send analysis-box-ref set-data i m))
+       filter-spread (range (length filter-spread)))))
 
 (define analysis-box-columns (list "Stock" "VolSlp" "IvHv" "PxSrkRt" "ErnDt" "OptSprd" "30dVlm"))
 

@@ -10,7 +10,12 @@
          black-scholes-rho)
 
 (define (black-scholes price years-left strike call-put rate vol divs)
-  (let* ([discounted-price
+  (let* ([price (exact->inexact price)]
+         [years-left (exact->inexact years-left)]
+         [strike (exact->inexact strike)]
+         [rate (exact->inexact rate)]
+         [vol (exact->inexact vol)]
+         [discounted-price
           (- price (foldl (λ (div res)
                             (if (>= years-left (vector-ref div 0))
                                 (+ res (* (vector-ref div 1)
