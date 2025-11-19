@@ -162,9 +162,9 @@
                                                                res))
                                                 (first options)
                                                 options)]
-                      [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- 56 (option-dte o)))
-                                                                      (abs (- 56 (option-dte res))))
-                                                                   (not (= (option-dte o) (option-dte closest-front-dte))))
+                      [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- 42 (option-dte o)))
+                                                                      (abs (- 42 (option-dte res))))
+                                                                   (>= (option-dte o) (+ 21 (option-dte closest-front-dte))))
                                                               o
                                                               res))
                                                (last options)
@@ -269,9 +269,9 @@
                                                                res))
                                                 (first options)
                                                 options)]
-                      [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- 56 (option-dte o)))
-                                                                      (abs (- 56 (option-dte res))))
-                                                                   (not (= (option-dte o) (option-dte closest-front-dte))))
+                      [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- 42 (option-dte o)))
+                                                                      (abs (- 42 (option-dte res))))
+                                                                   (>= (option-dte o) (+ 21 (option-dte closest-front-dte))))
                                                               o
                                                               res))
                                                (last options)
@@ -584,9 +584,9 @@
                                                                res))
                                                 (first options)
                                                 options)]
-                      [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- 56 (option-dte o)))
-                                                                      (abs (- 56 (option-dte res))))
-                                                                   (not (= (option-dte o) (option-dte closest-front-dte))))
+                      [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- 42 (option-dte o)))
+                                                                      (abs (- 42 (option-dte res))))
+                                                                   (>= (option-dte o) (+ 21 (option-dte closest-front-dte))))
                                                               o
                                                               res))
                                                (last options)
@@ -622,9 +622,9 @@
                                                                res))
                                                 (first options)
                                                 options)]
-                      [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- 56 (option-dte o)))
-                                                                      (abs (- 56 (option-dte res))))
-                                                                   (not (= (option-dte o) (option-dte closest-front-dte))))
+                      [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- 42 (option-dte o)))
+                                                                      (abs (- 42 (option-dte res))))
+                                                                   (>= (option-dte o) (+ 21 (option-dte closest-front-dte))))
                                                               o
                                                               res))
                                                (last options)

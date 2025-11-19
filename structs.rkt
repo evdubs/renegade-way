@@ -117,7 +117,8 @@
                                 stock-rr earnings-date option-spread is-weekly)
   #:transparent)
 
-(struct earnings-vibes-analysis (stock min-expiration max-expiration strike vol-slope iv-hv price-strike-ratio earnings-date option-spread 30d-avg-volume))
+(struct earnings-vibes-analysis (stock min-expiration max-expiration strike vol-slope iv-hv price-strike-ratio earnings-date option-spread 30d-avg-volume)
+  #:transparent)
 
 (struct position-analysis (sector stock expiration strike call-put account signed-shares stock-stop stock-close stock-target end-date strategy)
   #:transparent)

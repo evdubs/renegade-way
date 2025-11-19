@@ -703,13 +703,18 @@ from
     options_on_date) syms
 join
   (select
-    act_symbol,
-    min(expiration) as min_expiration,
-    max(expiration) as max_expiration
+    ood1.act_symbol,
+    min(ood1.expiration) as min_expiration,
+    min(ood2.expiration) as max_expiration
   from
-    options_on_date
+    options_on_date ood1
+  join
+    options_on_date ood2
+  on
+    ood1.act_symbol = ood2.act_symbol and
+    ood1.expiration + interval '21 days' <= ood2.expiration
   group by
-    act_symbol) exprs
+    ood1.act_symbol) exprs
 on
   syms.act_symbol = exprs.act_symbol
 join
