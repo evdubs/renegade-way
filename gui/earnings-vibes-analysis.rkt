@@ -35,7 +35,9 @@
   (update-analysis-box earnings-vibes-analysis-list))
 
 (define (run-earnings-vibes-analysis market sector start-date end-date #:use-live-data live-data)
-  (set! earnings-vibes-analysis-list (get-earnings-vibes-analysis end-date))
+  (set! earnings-vibes-analysis-list
+        (get-earnings-vibes-analysis end-date #:live-prices (if live-data (get-prices (get-earnings-symbols-for-date end-date))
+                                                                #f)))
 
   (cond [live-data
          (set! earnings-vibes-analysis-list
@@ -68,7 +70,8 @@
                       (define prices (get-date-ohlc (earnings-vibes-analysis-stock eva) start-date end-date))
                       (define options (get-updated-options (earnings-vibes-analysis-stock eva) end-date
                                                            (dohlc-close (last prices)) #:compute-all-greeks #f #:fit-vols #f))
-                      (define call-horizontal-options (hash-ref (suitable-options options "EC") "Call Horizontal Spread"))
+                      (define call-horizontal-options (hash-ref (suitable-options options "EC" (dohlc-close (last prices)))
+                                                                "Call Horizontal Spread"))
                       (struct-copy
                        earnings-vibes-analysis eva
                        [price-strike-ratio (* 100 (/ (- (option-mid (second call-horizontal-options))
@@ -86,19 +89,22 @@
                             (filter (λ (m) (and (>= 0.50 (earnings-vibes-analysis-option-spread m))
                                                 (<= 7.5 (earnings-vibes-analysis-30d-avg-volume m)))) earnings-vibes-analysis-list)
                             earnings-vibes-analysis-list)])
-   (send analysis-box-ref set
-        (map (λ (m) (earnings-vibes-analysis-stock m)) filter-spread)
-        (map (λ (m) (real->decimal-string (earnings-vibes-analysis-vol-slope m))) filter-spread)
-        (map (λ (m) (real->decimal-string (earnings-vibes-analysis-iv-hv m))) filter-spread)
-        (map (λ (m) (real->decimal-string (earnings-vibes-analysis-price-strike-ratio m))) filter-spread)
-        (map (λ (m) (earnings-vibes-analysis-earnings-date m)) filter-spread)
-        (map (λ (m) (real->decimal-string (earnings-vibes-analysis-option-spread m))) filter-spread)
-        (map (λ (m) (real->decimal-string (earnings-vibes-analysis-30d-avg-volume m))) filter-spread))
-   ; We set data here so that we can retrieve it later with `get-data`
-   (map (λ (m i) (send analysis-box-ref set-data i m))
-       filter-spread (range (length filter-spread)))))
+    (send analysis-box-ref set
+          (map (λ (m) (earnings-vibes-analysis-stock m)) filter-spread)
+          (map (λ (m) (substring (earnings-vibes-analysis-min-expiration m) 2)) filter-spread)
+          (map (λ (m) (substring (earnings-vibes-analysis-max-expiration m) 2)) filter-spread)
+          (map (λ (m) (real->decimal-string (earnings-vibes-analysis-strike m))) filter-spread)
+          (map (λ (m) (real->decimal-string (earnings-vibes-analysis-vol-slope m))) filter-spread)
+          (map (λ (m) (real->decimal-string (earnings-vibes-analysis-iv-hv m))) filter-spread)
+          (map (λ (m) (real->decimal-string (earnings-vibes-analysis-price-strike-ratio m))) filter-spread)
+          (map (λ (m) (earnings-vibes-analysis-earnings-date m)) filter-spread)
+          (map (λ (m) (real->decimal-string (earnings-vibes-analysis-option-spread m))) filter-spread)
+          (map (λ (m) (real->decimal-string (earnings-vibes-analysis-30d-avg-volume m))) filter-spread))
+    ; We set data here so that we can retrieve it later with `get-data`
+    (map (λ (m i) (send analysis-box-ref set-data i m))
+         filter-spread (range (length filter-spread)))))
 
-(define analysis-box-columns (list "Stock" "VolSlp" "IvHv" "PxSrkRt" "ErnDt" "OptSprd" "30dVlm"))
+(define analysis-box-columns (list "Stock" "FrntExp" "BckExp" "Strk" "VolSlp" "IvHv" "PxSrkRt" "ErnDt" "OptSprd" "30dVlm"))
 
 (define (earnings-vibes-analysis-box parent-panel start-date end-date)
   (define analysis-box

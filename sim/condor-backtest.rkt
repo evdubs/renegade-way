@@ -114,7 +114,7 @@ where
                                                                              ref-price
                                                                              #:compute-all-greeks #f
                                                                              #:fit-vols #t)
-                                                        (suitable-options _ "DV")))
+                                                        (suitable-options _ "DV" ref-price)))
                   (define call-condor (hash-ref decreasing-vol-strategies "Call Condor"))
                   (define put-condor (hash-ref decreasing-vol-strategies "Put Condor"))
                   (define call-condor-price (- (+ (option-mid (first call-condor))

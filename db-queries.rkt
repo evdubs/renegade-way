@@ -2,6 +2,8 @@
 
 (require db
          gregor
+         racket/format
+         racket/list
          racket/string
          interactive-brokers-api/base-structs
          interactive-brokers-api/response-messages
@@ -17,6 +19,7 @@
          get-dividend-dates
          get-dividend-estimates
          get-earnings-dates
+         get-earnings-symbols-for-date
          get-earnings-vibes-analysis
          get-next-earnings-date
          get-options
@@ -75,9 +78,9 @@ where
   date <= $3::text::date and
   hv_current is not null;
 "
-                                 ticker-symbol
-                                 start-date
-                                 end-date)])
+                                            ticker-symbol
+                                            start-date
+                                            end-date)])
     (map (λ (row) (dv (->posix (iso8601->date (vector-ref row 0))) (vector-ref row 1)))
          variance-history-query)))
 
@@ -94,9 +97,9 @@ where
   date <= $3::text::date and
   iv_current is not null;
 "
-                                 ticker-symbol
-                                 start-date
-                                 end-date)])
+                                       ticker-symbol
+                                       start-date
+                                       end-date)])
     (map (λ (row) (dv (->posix (iso8601->date (vector-ref row 0))) (vector-ref row 1)))
          vol-history-query)))
 
@@ -155,6 +158,18 @@ order by
                    ticker-symbol
                    start-date
                    end-date)))
+
+(define (get-earnings-symbols-for-date date)
+  (query-list dbc "
+select
+  ec.act_symbol
+from
+  zacks.earnings_calendar ec
+where
+  ((ec.date = $1::text::date and ec.\"when\" = 'After market close'::zacks.\"when\") or
+   (ec.date = $1::text::date + interval '1 day' and ec.\"when\" = 'Before market open'::zacks.\"when\"));
+"
+              date))
 
 ;; Get market/sector/industry/stock breakdown for ETF components
 (define (get-price-analysis market sector start-date end-date)
@@ -398,7 +413,7 @@ left outer join
   from
     oic.option_chain
   where
-    date = (select max(date) from oic.option_chain where date <= $2::text::date ) and 
+    date = (select max(date) from oic.option_chain where date <= $2::text::date ) and
     expiration > $2::text::date and
     expiration <= $2::text::date + interval '3 months' and
     bid > 0.0 and
@@ -488,7 +503,7 @@ on
 left outer join
   oic.volatility_history sector_vol
 on
-  spdr.to_sector_etf(market.sector) = sector_vol.act_symbol and 
+  spdr.to_sector_etf(market.sector) = sector_vol.act_symbol and
   sector_vol.date = (select max(date) from oic.volatility_history where date <= $2::text::date)
 left outer join
   hist_vol sector_hist_vol
@@ -560,7 +575,7 @@ order by
   (map (λ (row) (condor-analysis (vector-ref row 0) "" "" (vector-ref row 1) "" "" (vector-ref row 2)  "" ""
                                  (vector-ref row 3) "" "" (vector-ref row 4) (vector-ref row 5) (vector-ref row 6)))
        (query-rows dbc "
-select 
+select
   market.etf_symbol as market,
   coalesce(spdr.to_sector_etf(market.sector), '') as sector,
   coalesce(industry.etf_symbol, '') as industry,
@@ -571,7 +586,7 @@ select
     when w.act_symbol is not null then true
     else false
   end as is_weekly
-from 
+from
   spdr.etf_holding market
 left outer join
   spdr.etf_holding industry
@@ -615,36 +630,112 @@ where
                    market
                    date)))
 
-(define (get-earnings-vibes-analysis date)
+(define (get-earnings-vibes-analysis date #:live-prices [live-prices-arg #f])
+  (define prices (if live-prices-arg live-prices-arg
+                     (apply hash (flatten (map (λ (row) (list (vector-ref row 0) (vector-ref row 1)))
+                                               (query-rows dbc "
+select
+  o.act_symbol,
+  o.close
+from
+  polygon.ohlc o
+join
+  zacks.earnings_calendar ec
+on
+  o.act_symbol = ec.act_symbol
+where
+  o.date = (select max(date) from polygon.ohlc where date <= $1::text::date) and
+  ((ec.date = $1::text::date and ec.\"when\" = 'After market close'::zacks.\"when\") or
+   (ec.date = $1::text::date + interval '1 day' and ec.\"when\" = 'Before market open'::zacks.\"when\"));
+"
+                                                           date))))))
+
   (map (λ (row) (earnings-vibes-analysis (vector-ref row 0) (vector-ref row 1) (vector-ref row 2)
                                          (vector-ref row 3) (vector-ref row 4) (vector-ref row 5)
                                          0 ; price-strike-ratio to be filled in
                                          (vector-ref row 6) (vector-ref row 7) (vector-ref row 8)))
-       (query-rows dbc "
-with options_on_date as (
+       (query-rows dbc (string-append "
+with prices as (
 select
   act_symbol,
-  expiration,
-  strike,
-  avg(vol) as avg_vol,
-  sum(vega) as cps_vega, -- call put sum vega
-  avg((ask - bid) / ask) as avg_sprd,
-  avg(abs(delta)) as avg_abs_delta
+  price
+from (values " (if (hash-empty? prices)
+                   "(null, null::numeric)"
+                   (string-join (map (λ (kv) (~a "('" (car kv) "', " (real->decimal-string (cdr kv)) ")")) (hash->list prices)) ", "))
+                                      ")
+  as prices (act_symbol, price)),
+all_expirations as (
+select distinct
+  oc.act_symbol,
+  oc.expiration
 from
-  oic.option_chain
+  oic.option_chain oc
 where
   date = (select max(date) from oic.option_chain where date <= $1::text::date) and
-  expiration > date and -- vols are way off at expiration close
-  bid > 0.0 and
-  ask > 0.0
+  act_symbol in (select distinct act_symbol from prices)
+),
+exprs as (
+select
+  ae1.act_symbol,
+  min(ae1.expiration) as min_expiration,
+  min(ae2.expiration) as max_expiration
+from
+  all_expirations ae1
+join
+  all_expirations ae2
+on
+  ae1.act_symbol = ae2.act_symbol and
+  ae1.expiration + interval '21 days' <= ae2.expiration
 group by
-  act_symbol,
-  expiration,
-  strike
-order by
-  act_symbol,
-  expiration,
-  strike),
+  ae1.act_symbol
+),
+eligible_strikes as (
+select
+  oc1.act_symbol,
+  oc1.strike,
+  p.price
+from
+  oic.option_chain oc1
+join
+  oic.option_chain oc2
+on
+  oc1.date = oc2.date and
+  oc1.act_symbol = oc2.act_symbol and
+  oc1.strike = oc2.strike and
+  oc1.call_put = oc2.call_put
+join
+  exprs e
+on
+  oc1.act_symbol = e.act_symbol and
+  oc2.act_symbol = e.act_symbol and
+  oc1.expiration = e.min_expiration and
+  oc2.expiration = e.max_expiration
+join
+  prices p
+on
+  oc1.act_symbol = p.act_symbol
+where
+  oc1.date = (select max(date) from oic.option_chain where date <= $1::text::date) and
+  oc1.call_put = 'Call'
+),
+strks as (
+select
+  es.act_symbol,
+  es.strike
+from
+  eligible_strikes es
+join
+  (select
+    act_symbol,
+    min(abs(strike - price)) as strike_price_diff
+  from
+    eligible_strikes
+  group by
+    act_symbol) es_atm
+on
+  es.act_symbol = es_atm.act_symbol and
+  abs(es.strike - es.price) = es_atm.strike_price_diff
+),
 earnings_near_date as (
 select
   act_symbol,
@@ -653,8 +744,9 @@ select
 from
   zacks.earnings_calendar ec
 where
-  (ec.date = $1::text::date and ec.\"when\" = 'After market close'::zacks.\"when\") or
-  (ec.date = $1::text::date + interval '1 day' and ec.\"when\" = 'Before market open'::zacks.\"when\")
+  ((ec.date = $1::text::date and ec.\"when\" = 'After market close'::zacks.\"when\") or
+  (ec.date = $1::text::date + interval '1 day' and ec.\"when\" = 'Before market open'::zacks.\"when\")) and
+  ec.act_symbol in (select distinct act_symbol from prices)
 order by
   act_symbol,
   date
@@ -668,7 +760,8 @@ from
   oic.volatility_history
 where
   date >= $1::text::date - interval '1 year' and
-  date <= $1::text::date
+  date <= $1::text::date and
+  act_symbol in (select distinct act_symbol from prices)
 group by
   act_symbol
 order by
@@ -682,117 +775,80 @@ from
   polygon.ohlc o
 where
   date >= $1::text::date - interval '30 days' and
-  date <= $1::text::date
+  date <= $1::text::date and
+  act_symbol in (select distinct act_symbol from prices)
+group by
+  act_symbol
+),
+sprds as (
+select
+  act_symbol,
+  avg((ask - bid) / ask) as spread
+from
+  oic.option_chain
+where
+  date = (select max(date) from oic.option_chain where date <= $1::text::date ) and
+  act_symbol in (select distinct act_symbol from prices) and
+  expiration > $1::text::date and
+  expiration <= $1::text::date + interval '3 months' and
+  bid > 0.0 and
+  ask > 0.0 and
+  ((delta >= 0.2 and delta <= 0.8) or
+  (delta <= -0.2 and delta >= -0.8))
 group by
   act_symbol
 )
 select
-  syms.act_symbol,
+  exprs.act_symbol,
   exprs.min_expiration::text,
   exprs.max_expiration::text,
-  strikes.strike,
-  coalesce(trunc(100 * (back_vol.avg_vol - front_vol.avg_vol) / nullif(exprs.max_expiration - exprs.min_expiration, 0), 2), 0) as vol_slope,
-  coalesce(trunc(100 * avg_iv / nullif(avg_hv, 0), 2), 0) as iv_hv,
+  strks.strike,
+  coalesce(trunc(100 * (back_vol.vol - front_vol.vol) / nullif(exprs.max_expiration - exprs.min_expiration, 0), 2), 0) as vol_slope,
+  coalesce(trunc(100 * iv_hv.avg_iv / nullif(iv_hv.avg_hv, 0), 2), 0) as iv_hv,
   coalesce(to_char(en.date, 'YY-MM-DD'), '') || coalesce(substring(en.\"when\"::text for 1), '') as earnings_date,
-  trunc(spreads.spread, 2) as opt_spread,
+  trunc(sprds.spread, 2) as opt_spread,
   vlm.avg_vlm
 from
-  (select distinct
-    act_symbol
-  from
-    options_on_date) syms
+  exprs
 join
-  (select
-    ood1.act_symbol,
-    min(ood1.expiration) as min_expiration,
-    min(ood2.expiration) as max_expiration
-  from
-    options_on_date ood1
-  join
-    options_on_date ood2
-  on
-    ood1.act_symbol = ood2.act_symbol and
-    ood1.expiration + interval '21 days' <= ood2.expiration
-  group by
-    ood1.act_symbol) exprs
+  strks
 on
-  syms.act_symbol = exprs.act_symbol
-join
-  (with vegas as
-    (select
-      act_symbol,
-      strike,
-      sum(cps_vega) as sum_cps_vega
-    from
-      options_on_date
-    group by
-      act_symbol,
-      strike
-    order by
-      act_symbol,
-      strike)
-  select
-    vegas.act_symbol,
-    vegas.strike
-  from
-    vegas
-  join
-    (select
-      act_symbol,
-      max(sum_cps_vega) as max_sum_cps_vega
-    from
-      vegas
-    group by
-      act_symbol
-    order by
-      act_symbol) max_vegas
-  on
-    vegas.act_symbol = max_vegas.act_symbol and
-    vegas.sum_cps_vega = max_vegas.max_sum_cps_vega) strikes
-on
-  syms.act_symbol = strikes.act_symbol
-join
-  options_on_date front_vol
-on
-  syms.act_symbol = front_vol.act_symbol and
-  exprs.min_expiration = front_vol.expiration and
-  strikes.strike = front_vol.strike
-join
-  options_on_date back_vol
-on
-  syms.act_symbol = back_vol.act_symbol and
-  exprs.max_expiration = back_vol.expiration and
-  strikes.strike = back_vol.strike
-join
-  (select
-    act_symbol,
-    avg(avg_sprd) as spread
-  from
-    options_on_date
-  where
-    avg_abs_delta >= 0.20 and
-    avg_abs_delta <= 0.80
-  group by
-    act_symbol
-  order by
-    act_symbol) spreads
-on
-  syms.act_symbol = spreads.act_symbol
+  exprs.act_symbol = strks.act_symbol
 join
   earnings_near_date en
 on
-  syms.act_symbol = en.act_symbol
+  exprs.act_symbol = en.act_symbol
 join
   iv_hv
 on
-  syms.act_symbol = iv_hv.act_symbol
+  exprs.act_symbol = iv_hv.act_symbol
 join
   vlm
 on
-  syms.act_symbol = vlm.act_symbol
+  exprs.act_symbol = vlm.act_symbol
+join
+  sprds
+on
+  exprs.act_symbol = sprds.act_symbol
+join
+  oic.option_chain front_vol
+on
+  front_vol.date = (select max(date) from oic.option_chain where date <= $1::text::date ) and
+  exprs.act_symbol = front_vol.act_symbol and
+  exprs.min_expiration = front_vol.expiration and
+  strks.strike = front_vol.strike and
+  front_vol.call_put = 'Call'
+join
+  oic.option_chain back_vol
+on
+  back_vol.date = (select max(date) from oic.option_chain where date <= $1::text::date ) and
+  exprs.act_symbol = back_vol.act_symbol and
+  exprs.max_expiration = back_vol.expiration and
+  strks.strike = back_vol.strike and
+  back_vol.call_put = 'Call'
 order by
-  coalesce((back_vol.avg_vol - front_vol.avg_vol) / nullif(exprs.max_expiration - exprs.min_expiration, 0), 0) asc;
-"
+  coalesce((back_vol.vol - front_vol.vol) / nullif(exprs.max_expiration - exprs.min_expiration, 0), 0) asc;
+")
                    date)))
 
 (define (get-position-analysis date)

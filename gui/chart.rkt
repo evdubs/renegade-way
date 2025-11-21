@@ -154,7 +154,7 @@
                  #:height (- (send canvas get-height) 12))
       (let* ([grouped-kvs (group-by (λ (kv) (list (vector-ref kv 0) (vector-ref kv 1)))
                                     kvs)]
-             [fit-kvs (map (λ (kvs) (list (string-append (vector-ref (first kvs) 0) " Fit")
+             [fit-kvs (map (λ (kvs) (list (string-append (substring (vector-ref (first kvs) 0) 2) " Fit")
                                           (polynomial-fit-coefficients (map (λ (kv) (vector-ref kv 2)) kvs)
                                                                        (map (λ (kv) (vector-ref kv 3)) kvs)
                                                                        (length kvs)
@@ -162,10 +162,11 @@
                            (group-by (λ (kv) (list (vector-ref kv 0)))
                                      kvs))])
         (parameterize ([plot-width (- (send canvas get-width) 12)]
-                       [plot-height (- (send canvas get-height) 12)])
+                       [plot-height (- (send canvas get-height) 12)]
+                       [plot-legend-layout (list 'rows 4 'compact)])
           (plot-snip (append (list (tick-grid))
                              (map (λ (kvs i) (lines (map (λ (kv) (vector (vector-ref kv 2) (vector-ref kv 3))) kvs)
-                                                    #:label (string-append (vector-ref (first kvs) 0) " " (vector-ref (first kvs) 1))
+                                                    #:label (string-append (substring (vector-ref (first kvs) 0) 2) " " (vector-ref (first kvs) 1))
                                                     #:style 'long-dash
                                                     #:color (+ 1 i)))
                                   grouped-kvs
@@ -179,7 +180,8 @@
                      #:title (string-append (get-security-name (send symbol-field get-value)) " ("
                                             (send symbol-field get-value) ")")
                      #:x-label "Strike"
-                     #:y-label "Vol")))))
+                     #:y-label "Vol"
+                     #:legend-anchor 'outside-top)))))
 
 (define (chart-vol-history-plot symbol-field canvas)
   (define vol-dvs (get-date-vol-history (send symbol-field get-value)

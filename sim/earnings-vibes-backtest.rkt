@@ -81,7 +81,7 @@ where
                                                                          ref-price
                                                                          #:compute-all-greeks #f
                                                                          #:fit-vols #f)
-                                                    (suitable-options _ "EC")))
+                                                    (suitable-options _ "EC" ref-price)))
            (define horizontal-spread (hash-ref horizontal-spread-strategies "Call Horizontal Spread"))
            (define horizontal-spread-price (max 0.01 (+ (- (option-mid (first horizontal-spread)))
                                                      (option-mid (second horizontal-spread)))))

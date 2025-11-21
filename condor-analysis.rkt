@@ -19,7 +19,7 @@
                    (λ (e) (list 0 0))])
     (let* ([prices (get-date-ohlc symbol start-date end-date)]
            [options (get-updated-options symbol end-date (dohlc-close (last prices)) #:compute-all-greeks #f #:fit-vols fit-vols?)]
-           [call-condor-options (hash-ref (suitable-options options "CC") "Call Condor")]
+           [call-condor-options (hash-ref (suitable-options options "CC" (dohlc-close (last prices))) "Call Condor")]
            [call-low-strike (option-strike (second call-condor-options))]
            [call-high-strike (option-strike (third call-condor-options))]
            [call-cost (+ (option-mid (first call-condor-options))
@@ -38,7 +38,7 @@
            [call-avg (mean (map (λ (price) (if (and (<= call-low-strike (dohlc-close price))
                                                     (>= call-high-strike (dohlc-close price)))
                                                1 0)) prices))]
-           [put-condor-options (hash-ref (suitable-options options "PC") "Put Condor")]
+           [put-condor-options (hash-ref (suitable-options options "PC" (dohlc-close (last prices))) "Put Condor")]
            [put-high-strike (option-strike (second put-condor-options))]
            [put-low-strike (option-strike (third put-condor-options))]
            [put-cost (+ (option-mid (first put-condor-options))

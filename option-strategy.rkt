@@ -107,7 +107,7 @@
                      #f)))
        options))
 
-(define (suitable-options options patterns)
+(define (suitable-options options patterns underlying-price)
   (cond [(or (string-contains? patterns "BP")
              (string-contains? patterns "HB")
              (string-contains? patterns "AT")
@@ -178,8 +178,8 @@
                                                                            options-at-both-dtes))))]
                       [long-call (foldl (λ (o res) (if (and (= (option-dte o) (option-dte closest-back-dte))
                                                             (index-of eligible-strikes (option-strike o))
-                                                            (<= (abs (- 5/10 (option-delta o)))
-                                                                (abs (- 5/10 (option-delta res))))
+                                                            (<= (abs (- underlying-price (option-strike o)))
+                                                                (abs (- underlying-price (option-strike res))))
                                                             (equal? (option-call-put o) "Call"))
                                                        o
                                                        res))
@@ -285,8 +285,8 @@
                                                                            options-at-both-dtes))))]
                       [long-put (foldl (λ (o res) (if (and (= (option-dte o) (option-dte closest-back-dte))
                                                            (index-of eligible-strikes (option-strike o))
-                                                           (<= (abs (- -5/10 (option-delta o)))
-                                                               (abs (- -5/10 (option-delta res))))
+                                                           (<= (abs (- underlying-price (option-strike o)))
+                                                               (abs (- underlying-price (option-strike res))))
                                                            (equal? (option-call-put o) "Put"))
                                                       o
                                                       res))
@@ -600,8 +600,8 @@
                                                                            options-at-both-dtes))))]
                       [long-call (foldl (λ (o res) (if (and (= (option-dte o) (option-dte closest-back-dte))
                                                             (index-of eligible-strikes (option-strike o))
-                                                            (<= (abs (- 5/10 (option-delta o)))
-                                                                (abs (- 5/10 (option-delta res))))
+                                                            (<= (abs (- underlying-price (option-strike o)))
+                                                                (abs (- underlying-price (option-strike res))))
                                                             (equal? (option-call-put o) "Call"))
                                                        o
                                                        res))
@@ -638,8 +638,8 @@
                                                                            options-at-both-dtes))))]
                       [long-put (foldl (λ (o res) (if (and (= (option-dte o) (option-dte closest-back-dte))
                                                            (index-of eligible-strikes (option-strike o))
-                                                           (<= (abs (- -5/10 (option-delta o)))
-                                                               (abs (- -5/10 (option-delta res))))
+                                                           (<= (abs (- underlying-price (option-strike o)))
+                                                               (abs (- underlying-price (option-strike res))))
                                                            (equal? (option-call-put o) "Put"))
                                                       o
                                                       res))

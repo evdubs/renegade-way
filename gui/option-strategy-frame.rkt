@@ -84,7 +84,8 @@
   (send ref-price-field set-value (real->decimal-string ref-price))
   (send patterns-field set-value patterns)
   (define pattern-options
-    (hash-map (suitable-options (get-updated-options symbol date ref-price #:fit-vols (send fit-vols-check-box get-value)) patterns)
+    (hash-map (suitable-options (get-updated-options symbol date ref-price #:fit-vols (send fit-vols-check-box get-value))
+                                patterns ref-price)
               (λ (k options)
                 (cond [(send live-data-check-box get-value)
                        (define updated-options

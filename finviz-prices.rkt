@@ -1,6 +1,7 @@
 #lang racket/base
 
 (require net/http-easy
+         racket/hash
          racket/list
          racket/match
          racket/string
@@ -42,4 +43,6 @@
         (map (λ (s) (string-split s ",")) _)
         (flatten _)
         (apply hash _)
-        (hash-map/copy _ (λ (k v) (values k (string->number v)))))))
+        (hash-map/copy _ (λ (k v) (values k (string->number v))))
+        (hash-filter _ (λ (k v) v)) ; remove entries that don't have prices
+        )))

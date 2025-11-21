@@ -192,7 +192,7 @@ from
                                                                                     (date->iso8601 date)
                                                                                     entry-price
                                                                                     #:compute-all-greeks #f)
-                                                               (suitable-options _ patterns)
+                                                               (suitable-options _ patterns (second exit-date-stock-price))
                                                                (hash-ref _ (if (bearish?) "Long Put" "Long Call"))
                                                                (first _)))
                                             (define option-closing-price (price-option dbc option (first exit-date-stock-price)
