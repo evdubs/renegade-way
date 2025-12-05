@@ -28,8 +28,13 @@
                (chart-price-plot chart-market-field chart-market-canvas))
          (send chart-sector-canvas set-snip
                (chart-price-plot chart-sector-field chart-sector-canvas))
-         (send chart-industry-canvas set-snip
-               (chart-price-plot chart-industry-field chart-industry-canvas))
+         (cond [(equal? "" industry)
+                (send chart-industry-stock-panel change-children
+                      (λ (child-list) (list chart-stock-canvas)))]
+               [else (send chart-industry-stock-panel change-children
+                           (λ (child-list) (list chart-industry-canvas chart-stock-canvas)))
+                     (send chart-industry-canvas set-snip
+                           (chart-price-plot chart-industry-field chart-industry-canvas))])
          (send chart-stock-canvas set-snip
                (chart-price-plot chart-stock-field chart-stock-canvas))]
         [(equal? "Vol History" (send chart-type-choice get-string-selection))
@@ -37,8 +42,13 @@
                (chart-vol-history-plot chart-market-field chart-market-canvas))
          (send chart-sector-canvas set-snip
                (chart-vol-history-plot chart-sector-field chart-sector-canvas))
-         (send chart-industry-canvas set-snip
-               (chart-vol-history-plot chart-industry-field chart-industry-canvas))
+         (cond [(equal? "" industry)
+                (send chart-industry-stock-panel change-children
+                      (λ (child-list) (list chart-stock-canvas)))]
+               [else (send chart-industry-stock-panel change-children
+                           (λ (child-list) (list chart-industry-canvas chart-stock-canvas)))
+                     (send chart-industry-canvas set-snip
+                           (chart-vol-history-plot chart-industry-field chart-industry-canvas))])
          (send chart-stock-canvas set-snip
                (chart-vol-history-plot chart-stock-field chart-stock-canvas))]
         [(equal? "Vol Surface" (send chart-type-choice get-string-selection))
@@ -46,8 +56,13 @@
                (chart-vol-surface-plot chart-market-field chart-market-canvas))
          (send chart-sector-canvas set-snip
                (chart-vol-surface-plot chart-sector-field chart-sector-canvas))
-         (send chart-industry-canvas set-snip
-               (chart-vol-surface-plot chart-industry-field chart-industry-canvas))
+         (cond [(equal? "" industry)
+                (send chart-industry-stock-panel change-children
+                      (λ (child-list) (list chart-stock-canvas)))]
+               [else (send chart-industry-stock-panel change-children
+                           (λ (child-list) (list chart-industry-canvas chart-stock-canvas)))
+                     (send chart-industry-canvas set-snip
+                           (chart-vol-surface-plot chart-industry-field chart-industry-canvas))])
          (send chart-stock-canvas set-snip
                (chart-vol-surface-plot chart-stock-field chart-stock-canvas))]))
 
@@ -56,47 +71,47 @@
 
 (define chart-frame (new frame% [label "Market/Sector/Industry/Stock Chart"] [width 1500] [height 1000]))
 
-(define chart-input-pane (new horizontal-pane%
-                              [parent chart-frame]
-                              [stretchable-height #f]))
+(define chart-input-panel (new horizontal-panel%
+                               [parent chart-frame]
+                               [stretchable-height #f]))
 
 (define chart-market-field (new text-field%
-                                [parent chart-input-pane]
+                                [parent chart-input-panel]
                                 [label "Market"]
                                 [init-value "SPY"]))
 
 (define chart-sector-field (new text-field%
-                                [parent chart-input-pane]
+                                [parent chart-input-panel]
                                 [label "Sector"]
                                 [init-value "XLI"]))
 
 (define chart-industry-field (new text-field%
-                                  [parent chart-input-pane]
+                                  [parent chart-input-panel]
                                   [label "Industry"]
                                   [init-value "XAR"]))
 
 (define chart-stock-field (new text-field%
-                               [parent chart-input-pane]
+                               [parent chart-input-panel]
                                [label "Stock"]
                                [init-value "BA"]))
 
 (define chart-start-date-field (new text-field%
-                                    [parent chart-input-pane]
+                                    [parent chart-input-panel]
                                     [label "Start Date"]
                                     [init-value (date->iso8601 (-months (today) 5))]))
 
 (define chart-end-date-field (new text-field%
-                                  [parent chart-input-pane]
+                                  [parent chart-input-panel]
                                   [label "End Date"]
                                   [init-value (date->iso8601 (today))]))
 
 (define chart-type-choice (new choice%
-                               [parent chart-input-pane]
+                               [parent chart-input-panel]
                                [label "Type "]
                                [choices (list "Price" "Vol History" "Vol Surface")]))
 
 (define chart-refresh-button (new button%
-                                  [parent chart-input-pane]
+                                  [parent chart-input-panel]
                                   [label "Refresh"]
                                   [callback (λ (b e)
                                               (cond [(equal? "Price" (send chart-type-choice get-string-selection))
@@ -104,8 +119,13 @@
                                                            (chart-price-plot chart-market-field chart-market-canvas))
                                                      (send chart-sector-canvas set-snip
                                                            (chart-price-plot chart-sector-field chart-sector-canvas))
-                                                     (send chart-industry-canvas set-snip
-                                                           (chart-price-plot chart-industry-field chart-industry-canvas))
+                                                     (cond [(equal? "" (send chart-industry-field get-value))
+                                                            (send chart-industry-stock-panel change-children
+                                                                  (λ (child-list) (list chart-stock-canvas)))]
+                                                           [else (send chart-industry-stock-panel change-children
+                                                                       (λ (child-list) (list chart-industry-canvas chart-stock-canvas)))
+                                                                 (send chart-industry-canvas set-snip
+                                                                       (chart-price-plot chart-industry-field chart-industry-canvas))])
                                                      (send chart-stock-canvas set-snip
                                                            (chart-price-plot chart-stock-field chart-stock-canvas))]
                                                     [(equal? "Vol History" (send chart-type-choice get-string-selection))
@@ -113,8 +133,13 @@
                                                            (chart-vol-history-plot chart-market-field chart-market-canvas))
                                                      (send chart-sector-canvas set-snip
                                                            (chart-vol-history-plot chart-sector-field chart-sector-canvas))
-                                                     (send chart-industry-canvas set-snip
-                                                           (chart-vol-history-plot chart-industry-field chart-industry-canvas))
+                                                     (cond [(equal? "" (send chart-industry-field get-value))
+                                                            (send chart-industry-stock-panel change-children
+                                                                  (λ (child-list) (list chart-stock-canvas)))]
+                                                           [else (send chart-industry-stock-panel change-children
+                                                                       (λ (child-list) (list chart-industry-canvas chart-stock-canvas)))
+                                                                 (send chart-industry-canvas set-snip
+                                                                       (chart-vol-history-plot chart-industry-field chart-industry-canvas))])
                                                      (send chart-stock-canvas set-snip
                                                            (chart-vol-history-plot chart-stock-field chart-stock-canvas))]
                                                     [(equal? "Vol Surface" (send chart-type-choice get-string-selection))
@@ -122,13 +147,18 @@
                                                            (chart-vol-surface-plot chart-market-field chart-market-canvas))
                                                      (send chart-sector-canvas set-snip
                                                            (chart-vol-surface-plot chart-sector-field chart-sector-canvas))
-                                                     (send chart-industry-canvas set-snip
-                                                           (chart-vol-surface-plot chart-industry-field chart-industry-canvas))
+                                                     (cond [(equal? "" (send chart-industry-field get-value))
+                                                            (send chart-industry-stock-panel change-children
+                                                                  (λ (child-list) (list chart-stock-canvas)))]
+                                                           [else (send chart-industry-stock-panel change-children
+                                                                       (λ (child-list) (list chart-industry-canvas chart-stock-canvas)))
+                                                                 (send chart-industry-canvas set-snip
+                                                                       (chart-vol-surface-plot chart-industry-field chart-industry-canvas))])
                                                      (send chart-stock-canvas set-snip
                                                            (chart-vol-surface-plot chart-stock-field chart-stock-canvas))]))]))
 
-(define chart-plot-pane (new vertical-pane%
-                             [parent chart-frame]))
+(define chart-plot-panel (new vertical-pane%
+                              [parent chart-frame]))
 
 (define prev-time-stamp (current-milliseconds))
 
@@ -184,11 +214,15 @@
                      #:legend-anchor 'outside-top)))))
 
 (define (chart-vol-history-plot symbol-field canvas)
+  (define adjusted-start-date-str (if (and (equal? "" (send chart-industry-field get-value))
+                                           (equal? symbol-field chart-stock-field))
+                                      (date->iso8601 (-months (iso8601->date (send chart-end-date-field get-value)) 11))
+                                      (send chart-start-date-field get-value)))
   (define vol-dvs (get-date-vol-history (send symbol-field get-value)
-                                        (send chart-start-date-field get-value)
+                                        adjusted-start-date-str
                                         (send chart-end-date-field get-value)))
   (define variance-dvs (get-date-variance-history (send symbol-field get-value)
-                                                  (send chart-start-date-field get-value)
+                                                  adjusted-start-date-str
                                                   (send chart-end-date-field get-value)))
   (if (or (equal? (send symbol-field get-value) "")
           (and (= 0 (length vol-dvs))
@@ -203,7 +237,7 @@
                              (apply min (map (λ (dv) (dv-value dv)) variance-dvs)))]
              [earnings-dates-points (map (λ (d) (point-label (vector d min-value) "E" #:anchor 'bottom))
                                          (get-earnings-dates (send symbol-field get-value)
-                                                             (send chart-start-date-field get-value)
+                                                             adjusted-start-date-str
                                                              (send chart-end-date-field get-value)))]
              [snip (parameterize ([plot-x-ticks (date-ticks)]
                                   [plot-width (- (send canvas get-width) 12)]
@@ -259,17 +293,21 @@
                  #:y-label "Price"
                  #:width (- (send canvas get-width) 12)
                  #:height (- (send canvas get-height) 12))
-      (let* ([dohlcs (get-date-ohlc (send symbol-field get-value)
-                                    (send chart-start-date-field get-value)
+      (let* ([adjusted-start-date-str (if (and (equal? "" (send chart-industry-field get-value))
+                                               (equal? symbol-field chart-stock-field))
+                                          (date->iso8601 (-months (iso8601->date (send chart-end-date-field get-value)) 11))
+                                          (send chart-start-date-field get-value))]
+             [dohlcs (get-date-ohlc (send symbol-field get-value)
+                                    adjusted-start-date-str
                                     (send chart-end-date-field get-value))]
              [min-low (apply min (map (λ (el) (dohlc-low el)) dohlcs))]
              [earnings-dates-points (map (λ (d) (point-label (vector d min-low) "E" #:anchor 'bottom))
                                          (get-earnings-dates (send symbol-field get-value)
-                                                             (send chart-start-date-field get-value)
+                                                             adjusted-start-date-str
                                                              (send chart-end-date-field get-value)))]
              [dividend-dates-points (map (λ (d) (point-label (vector d min-low) "D" #:anchor 'bottom))
                                          (get-dividend-dates (send symbol-field get-value)
-                                                             (send chart-start-date-field get-value)
+                                                             adjusted-start-date-str
                                                              (send chart-end-date-field get-value)))]
              [snip (parameterize ([plot-x-ticks (date-ticks)]
                                   [plot-y-ticks (currency-ticks #:kind 'USD)]
@@ -326,23 +364,23 @@
         (send snip set-mouse-event-callback (make-current-value-renderer dohlcs))
         snip)))
 
-(define chart-market-sector-pane (new horizontal-pane% 
-                                      [parent chart-plot-pane]))
+(define chart-market-sector-panel (new horizontal-panel%
+                                       [parent chart-plot-panel]))
 
-(define chart-industry-stock-pane (new horizontal-pane% 
-                                       [parent chart-plot-pane]))
+(define chart-industry-stock-panel (new horizontal-panel%
+                                        [parent chart-plot-panel]))
 
 (define chart-market-canvas (new settable-snip-canvas%
-                                 [parent chart-market-sector-pane]))
+                                 [parent chart-market-sector-panel]))
 
 (define chart-sector-canvas (new settable-snip-canvas%
-                                 [parent chart-market-sector-pane]))
+                                 [parent chart-market-sector-panel]))
 
 (define chart-industry-canvas (new settable-snip-canvas%
-                                   [parent chart-industry-stock-pane]))
+                                   [parent chart-industry-stock-panel]))
 
 (define chart-stock-canvas (new settable-snip-canvas%
-                                [parent chart-industry-stock-pane]))
+                                [parent chart-industry-stock-panel]))
 
 (define (show-chart)
   (send chart-frame show #t))
