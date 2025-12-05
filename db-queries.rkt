@@ -685,7 +685,7 @@ join
   all_expirations ae2
 on
   ae1.act_symbol = ae2.act_symbol and
-  ae1.expiration + interval '21 days' <= ae2.expiration
+  ae1.expiration + interval '21 days' < ae2.expiration
 group by
   ae1.act_symbol
 ),

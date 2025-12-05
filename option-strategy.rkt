@@ -30,7 +30,7 @@
                                                                           (map (λ (o) (option-vol o)) option-group)
                                                                           (length option-group)
                                                                           3)))
-                                       options-by-expiration))
+                                     options-by-expiration))
                      #f))
   (map (λ (o)
          (define days-in-this-year (days-in-year (->year (iso8601->date date))))
@@ -162,9 +162,9 @@
                                                                res))
                                                 (first options)
                                                 options)]
-                      [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- 42 (option-dte o)))
-                                                                      (abs (- 42 (option-dte res))))
-                                                                   (>= (option-dte o) (+ 21 (option-dte closest-front-dte))))
+                      [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- (+ 28 (option-dte closest-front-dte)) (option-dte o)))
+                                                                      (abs (- (+ 28 (option-dte closest-front-dte)) (option-dte res))))
+                                                                   (> (option-dte o) (+ 21 (option-dte closest-front-dte))))
                                                               o
                                                               res))
                                                (last options)
@@ -269,9 +269,9 @@
                                                                res))
                                                 (first options)
                                                 options)]
-                      [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- 42 (option-dte o)))
-                                                                      (abs (- 42 (option-dte res))))
-                                                                   (>= (option-dte o) (+ 21 (option-dte closest-front-dte))))
+                      [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- (+ 28 (option-dte closest-front-dte)) (option-dte o)))
+                                                                      (abs (- (+ 28 (option-dte closest-front-dte)) (option-dte res))))
+                                                                   (> (option-dte o) (+ 21 (option-dte closest-front-dte))))
                                                               o
                                                               res))
                                                (last options)
@@ -584,9 +584,9 @@
                                                                res))
                                                 (first options)
                                                 options)]
-                      [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- 42 (option-dte o)))
-                                                                      (abs (- 42 (option-dte res))))
-                                                                   (>= (option-dte o) (+ 21 (option-dte closest-front-dte))))
+                      [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- (+ 28 (option-dte closest-front-dte)) (option-dte o)))
+                                                                      (abs (- (+ 28 (option-dte closest-front-dte)) (option-dte res))))
+                                                                   (> (option-dte o) (+ 21 (option-dte closest-front-dte))))
                                                               o
                                                               res))
                                                (last options)
@@ -622,9 +622,9 @@
                                                                res))
                                                 (first options)
                                                 options)]
-                      [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- 42 (option-dte o)))
-                                                                      (abs (- 42 (option-dte res))))
-                                                                   (>= (option-dte o) (+ 21 (option-dte closest-front-dte))))
+                      [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- (+ 28 (option-dte closest-front-dte)) (option-dte o)))
+                                                                      (abs (- (+ 28 (option-dte closest-front-dte)) (option-dte res))))
+                                                                   (> (option-dte o) (+ 21 (option-dte closest-front-dte))))
                                                               o
                                                               res))
                                                (last options)
