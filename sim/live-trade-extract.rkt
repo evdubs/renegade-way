@@ -213,7 +213,9 @@ on
                                                    (vector-ref r 21)
                                                    (vector-ref r 22)
                                                    (vector-ref r 23)
-                                                   (vector-ref r 24))) out))
+                                                   (vector-ref r 24)
+                                                   #f
+                                                   #f)) out))
               ; do the filter here because it can get messy in the query
               (filter (λ (r) (date<=? (iso8601->date (vector-ref r 8)) (today))) rows)))
   #:exists 'replace)
