@@ -164,10 +164,10 @@
                                                 options)]
                       [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- (+ 28 (option-dte closest-front-dte)) (option-dte o)))
                                                                       (abs (- (+ 28 (option-dte closest-front-dte)) (option-dte res))))
-                                                                   (> (option-dte o) (+ 21 (option-dte closest-front-dte))))
+                                                                   (>= (option-dte o) (+ 21 (option-dte closest-front-dte))))
                                                               o
                                                               res))
-                                               (last options)
+                                               (first options)
                                                options)]
                       [eligible-strikes (let* ([options-at-dtes (filter (λ (o) (or (= (option-dte closest-front-dte) (option-dte o))
                                                                                    (= (option-dte closest-back-dte) (option-dte o))))
@@ -271,10 +271,10 @@
                                                 options)]
                       [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- (+ 28 (option-dte closest-front-dte)) (option-dte o)))
                                                                       (abs (- (+ 28 (option-dte closest-front-dte)) (option-dte res))))
-                                                                   (> (option-dte o) (+ 21 (option-dte closest-front-dte))))
+                                                                   (>= (option-dte o) (+ 21 (option-dte closest-front-dte))))
                                                               o
                                                               res))
-                                               (last options)
+                                               (first options)
                                                options)]
                       [eligible-strikes (let* ([options-at-dtes (filter (λ (o) (or (= (option-dte closest-front-dte) (option-dte o))
                                                                                    (= (option-dte closest-back-dte) (option-dte o))))
@@ -586,10 +586,10 @@
                                                 options)]
                       [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- (+ 28 (option-dte closest-front-dte)) (option-dte o)))
                                                                       (abs (- (+ 28 (option-dte closest-front-dte)) (option-dte res))))
-                                                                   (> (option-dte o) (+ 21 (option-dte closest-front-dte))))
+                                                                   (>= (option-dte o) (+ 21 (option-dte closest-front-dte))))
                                                               o
                                                               res))
-                                               (last options)
+                                               (first options)
                                                options)]
                       [eligible-strikes (let* ([options-at-dtes (filter (λ (o) (or (= (option-dte closest-front-dte) (option-dte o))
                                                                                    (= (option-dte closest-back-dte) (option-dte o))))
@@ -624,10 +624,10 @@
                                                 options)]
                       [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- (+ 28 (option-dte closest-front-dte)) (option-dte o)))
                                                                       (abs (- (+ 28 (option-dte closest-front-dte)) (option-dte res))))
-                                                                   (> (option-dte o) (+ 21 (option-dte closest-front-dte))))
+                                                                   (>= (option-dte o) (+ 21 (option-dte closest-front-dte))))
                                                               o
                                                               res))
-                                               (last options)
+                                               (first options)
                                                options)]
                       [eligible-strikes (let* ([options-at-dtes (filter (λ (o) (or (= (option-dte closest-front-dte) (option-dte o))
                                                                                    (= (option-dte closest-back-dte) (option-dte o))))
