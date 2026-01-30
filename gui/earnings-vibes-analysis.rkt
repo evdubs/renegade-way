@@ -86,7 +86,7 @@
 
 (define (update-analysis-box earnings-vibes-analysis-list)
   (let* ([filter-spread (if (hide-large-spread)
-                            (filter (λ (m) (and (>= 0.50 (earnings-vibes-analysis-option-spread m))
+                            (filter (λ (m) (and (>= 0.40 (earnings-vibes-analysis-option-spread m))
                                                 (<= 7.5 (earnings-vibes-analysis-30d-avg-volume m)))) earnings-vibes-analysis-list)
                             earnings-vibes-analysis-list)])
     (send analysis-box-ref set
