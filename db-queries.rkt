@@ -21,6 +21,7 @@
          get-earnings-dates
          get-earnings-symbols-for-date
          get-earnings-vibes-analysis
+         get-execution-tick
          get-next-earnings-date
          get-options
          get-position-history
@@ -34,6 +35,7 @@
          insert-condor-analysis
          insert-contract
          insert-execution
+         insert-execution-tick
          insert-price-analysis
          insert-order
          insert-order-note)
@@ -170,6 +172,22 @@ where
    (ec.date = $1::text::date + interval '1 day' and ec.\"when\" = 'Before market open'::zacks.\"when\"));
 "
               date))
+
+(define (get-execution-tick execution-id)
+  (query-rows dbc "
+select
+  execution_id,
+  \"timestamp\",
+  bid_price,
+  bid_size,
+  ask_price,
+  ask_size
+from
+  ibkr.execution_tick
+where
+  execution_id = $1
+"
+              execution-id))
 
 ;; Get market/sector/industry/stock breakdown for ETF components
 (define (get-price-analysis market sector start-date end-date)
@@ -1209,7 +1227,7 @@ insert into ibkr.execution (
               (execution-rsp-order-id execution)
               (execution-rsp-contract-id execution)
               (execution-rsp-execution-id execution)
-              (~t (execution-rsp-timestamp execution) "yyyy-MM-dd'T'HH:mm:ss")
+              (~t (execution-rsp-timestamp execution) "yyyy-MM-dd'T'HH:mm:ssZ")
               (execution-rsp-account execution)
               (execution-rsp-executing-exchange execution)
               (execution-rsp-side execution)
@@ -1222,6 +1240,32 @@ insert into ibkr.execution (
               (execution-rsp-average-price execution)
               (execution-rsp-order-reference execution)
               (execution-rsp-model-code execution)))
+
+(define (insert-execution-tick execution-id tick)
+  (log-message file-log 'info (format "insert-execution-tick ~v ~v" execution-id tick))
+  (query-exec dbc "
+insert into ibkr.execution_tick (
+  execution_id,
+  \"timestamp\",
+  bid_price,
+  bid_size,
+  ask_price,
+  ask_size
+) values (
+  $1,
+  $2::text::timestamptz,
+  $3,
+  $4,
+  $5,
+  $6
+) on conflict (execution_id) do nothing;
+"
+              execution-id
+              (~t (historical-tick-moment tick) "yyyy-MM-dd'T'HH:mm:ssZ")
+              (historical-tick-bid-price tick)
+              (historical-tick-bid-size tick)
+              (historical-tick-ask-price tick)
+              (historical-tick-ask-size tick)))
 
 (define (insert-condor-analysis date
                                 condor-analysis

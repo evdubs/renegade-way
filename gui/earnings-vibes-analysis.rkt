@@ -7,7 +7,7 @@
          racket/list
          interactive-brokers-api/response-messages
          "../db-queries.rkt"
-         "../finviz-prices.rkt"
+         "../web-prices.rkt"
          "../ibkr-market-data.rkt"
          "../option-strategy.rkt"
          "../structs.rkt"

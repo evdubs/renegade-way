@@ -7,7 +7,7 @@
          racket/list
          racket/string
          "../db-queries.rkt"
-         "../finviz-prices.rkt"
+         "../web-prices.rkt"
          "../structs.rkt"
          "chart.rkt")
 

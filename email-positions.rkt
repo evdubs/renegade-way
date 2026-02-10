@@ -47,7 +47,7 @@
          racket/string
          threading
          "db-queries.rkt"
-         "finviz-prices.rkt"
+         "web-prices.rkt"
          "params.rkt"
          "structs.rkt")
 

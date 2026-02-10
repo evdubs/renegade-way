@@ -167,6 +167,17 @@ CREATE TABLE ibkr.execution
 
 CREATE INDEX ON ibkr.execution ("timestamp");
 
+CREATE TABLE ibkr.execution_tick (
+    execution_id text NULL,
+    "timestamp" timestamptz NULL,
+    bid_price numeric NULL,
+    bid_size numeric NULL,
+    ask_price numeric NULL,
+    ask_size numeric NULL,
+    CONSTRAINT execution_tick_execution_id_key UNIQUE (execution_id),
+    CONSTRAINT execution_tick_execution_id_fkey FOREIGN KEY (execution_id) REFERENCES ibkr.execution(execution_id)
+);
+
 CREATE TABLE ibkr.commission_report
 (
     execution_id text,

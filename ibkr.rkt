@@ -33,6 +33,7 @@
                                                     (thread (λ () (send ibkr send-msg
                                                                         (new contract-details-req% [contract-id (execution-rsp-contract-id e)]))))]))))
                    (cons 'historical-data (list))
+                   (cons 'historical-ticks (list))
                    (cons 'market-data (list))
                    (cons 'next-valid-id (list (λ (nvi) (set! ibkr-next-order-id (next-valid-id-rsp-order-id nvi)))))
                    (cons 'open-order (list (λ (oo) (insert-order oo))))
@@ -51,6 +52,7 @@
                   [handle-err-rsp (λ (e) (for-each (λ (eh) (eh e)) (hash-ref ibkr-handlers 'err)))]
                   [handle-execution-rsp (λ (e) (for-each (λ (eh) (eh e)) (hash-ref ibkr-handlers 'execution)))]
                   [handle-historical-data-rsp (λ (hd) (for-each (λ (hdh) (hdh hd)) (hash-ref ibkr-handlers 'historical-data)))]
+                  [handle-historical-ticks-rsp (λ (hd) (for-each (λ (hdh) (hdh hd)) (hash-ref ibkr-handlers 'historical-ticks)))]
                   [handle-market-data-rsp (λ (md) (for-each (λ (mdh) (mdh md)) (hash-ref ibkr-handlers 'market-data)))]
                   [handle-next-valid-id-rsp (λ (nvi) (for-each (λ (nvih) (nvih nvi)) (hash-ref ibkr-handlers 'next-valid-id)))]
                   [handle-open-order-rsp (λ (oo) (for-each (λ (ooh) (ooh oo)) (hash-ref ibkr-handlers 'open-order)))]
