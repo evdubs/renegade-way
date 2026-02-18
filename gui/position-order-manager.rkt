@@ -453,7 +453,7 @@
                                                 [contract-id (first contract-ids)]
                                                 [order-type "LMT"]
                                                 [limit-price (order-price first-item)]
-                                                [time-in-force 'gtc]
+                                                [time-in-force 'day]
                                                 [oca-group (string-append (date->iso8601 (today)) "."
                                                                           (cond [(equal? 'long-call (order-strategy first-item)) "bull"]
                                                                                 [(equal? 'long-put (order-strategy first-item)) "bear"]))]
@@ -488,7 +488,7 @@
                                                                      (equal? 'put-horizontal-spread (order-strategy first-item)))
                                                                  total-price
                                                                  (abs total-price))]
-                                                [time-in-force 'gtc]
+                                                [time-in-force 'day]
                                                 [oca-group (cond [(or (equal? 'bull-call-vertical-spread (order-strategy first-item))
                                                                       (equal? 'bull-put-vertical-spread (order-strategy first-item))
                                                                       (equal? 'call-ratio-spread (order-strategy first-item))
