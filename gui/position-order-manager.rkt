@@ -7,6 +7,7 @@
          racket/class
          racket/gui/base
          racket/list
+         racket/string
          threading
          interactive-brokers-api/base-structs
          interactive-brokers-api/request-messages
@@ -406,7 +407,7 @@
                      (map (λ (i)
                             (define item (send order-box get-data i))
                             (send ibkr send-msg (new contract-details-req%
-                                                     [symbol (order-symbol item)]
+                                                     [symbol (string-replace (order-symbol item) "." " ")]
                                                      [security-type 'opt]
                                                      [expiry (order-expiration item)]
                                                      [strike (order-strike item)]
@@ -415,7 +416,7 @@
                             ; go through channel to find our contract. trades may have happened, so we need
                             ; to ignore those entries in the contract channel
                             (do ([c (async-channel-get contract-channel) (async-channel-get contract-channel)])
-                                ((and (equal? (order-symbol item) (contract-details-rsp-symbol c))
+                                ((and (equal? (string-replace (order-symbol item) "." " ") (contract-details-rsp-symbol c))
                                       (equal? 'opt (contract-details-rsp-security-type c))
                                       (date=? (order-expiration item) (contract-details-rsp-expiry c))
                                       (equal? (order-strike item) (contract-details-rsp-strike c))
@@ -424,14 +425,15 @@
                           (range (send order-box get-number))))
                    (define first-item (send order-box get-data 0))
                    (send ibkr send-msg (new contract-details-req%
-                                            [symbol (order-symbol first-item)]
+                                            [symbol (string-replace (order-symbol first-item) "." " ")]
                                             [security-type 'stk]
                                             [exchange "SMART"]
                                             [currency "USD"]))
                    ; go through channel to find our contract. trades may have happened, so we need
                    ; to ignore those entries in the contract channel
                    (define underlying-contract-id (do ([c (async-channel-get contract-channel) (async-channel-get contract-channel)])
-                                                      ((and (equal? (order-symbol first-item) (contract-details-rsp-symbol c))
+                                                      ((and (equal? (string-replace (order-symbol first-item) "." " ")
+                                                                    (contract-details-rsp-symbol c))
                                                             (equal? 'stk (contract-details-rsp-security-type c)))
                                                        (contract-details-rsp-contract-id c))))
                    (define quantity
@@ -448,7 +450,7 @@
                    (if (= 1 (length contract-ids))
                        (send ibkr send-msg (new place-order-req%
                                                 [order-id ibkr-next-order-id]
-                                                [symbol (order-symbol first-item)]
+                                                [symbol (string-replace (order-symbol first-item) "." " ")]
                                                 [security-type 'opt]
                                                 [contract-id (first contract-ids)]
                                                 [order-type "LMT"]
@@ -477,7 +479,7 @@
                                                 [use-price-management-algo #t]))
                        (send ibkr send-msg (new place-order-req%
                                                 [order-id ibkr-next-order-id]
-                                                [symbol (order-symbol first-item)]
+                                                [symbol (string-replace (order-symbol first-item) "." " ")]
                                                 [security-type 'bag]
                                                 [order-type "LMT"]
                                                 [limit-price (if (or (equal? 'bull-put-vertical-spread (order-strategy first-item))

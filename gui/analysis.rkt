@@ -40,13 +40,17 @@
   (new text-field%
        [parent analysis-input-pane]
        [label "Start Date"]
-       [init-value (date->iso8601 (+days (-months (today) 5) 1))]))
+       [init-value (if (>= 12 (->hours (current-time)))
+                       (date->iso8601 (-months (today) 5))
+                       (date->iso8601 (+days (-months (today) 5) 1)))]))
 
 (define end-date-field
   (new text-field%
        [parent analysis-input-pane]
        [label "End Date"]
-       [init-value (date->iso8601 (+days (today) 1))]))
+       [init-value (if (>= 12 (->hours (current-time)))
+                       (date->iso8601 (today))
+                       (date->iso8601 (+days (today) 1)))]))
 
 (define filter-input-pane
   (new horizontal-pane%

@@ -710,7 +710,7 @@ join
   all_expirations ae2
 on
   ae1.act_symbol = ae2.act_symbol and
-  ae1.expiration + interval '21 days' <= ae2.expiration and
+  ae1.expiration + interval '21 days' < ae2.expiration and
   ae1.expiration >= $1::text::date
 group by
   ae1.act_symbol
