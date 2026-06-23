@@ -12,6 +12,7 @@
          "structs.rkt")
 
 (provide get-1-month-rate
+         get-atm-curve
          get-condor-analysis
          get-date-ohlc
          get-date-variance-history
@@ -124,6 +125,61 @@ order by
 "
               ticker-symbol
               date))
+
+(define (get-atm-curve ticker-symbol date)
+  (query-rows dbc "
+select
+  alc.expiration::date::text,
+  round(((ahc.strike - alc.strike) - (o.close - alc.strike)) / (ahc.strike - alc.strike) * alc.vol / 2 +
+  ((ahc.strike - alc.strike) - (ahc.strike - o.close)) / (ahc.strike - alc.strike) * ahc.vol / 2 +
+  ((ahp.strike - alp.strike) - (o.close - alp.strike)) / (ahp.strike - alp.strike) * alp.vol / 2 +
+  ((ahp.strike - alp.strike) - (ahp.strike - o.close)) / (ahp.strike - alp.strike) * ahp.vol / 2, 4),
+  alc.vol,
+  ahc.vol,
+  alp.vol,
+  ahp.vol
+from
+  oic.atm_curve alc
+left outer join
+  oic.atm_curve ahc
+on
+  alc.date = ahc.date and
+  alc.act_symbol = ahc.act_symbol and
+  alc.expiration = ahc.expiration and
+  ahc.call_put = 'Call' and
+  alc.strike < ahc.strike
+left outer join
+  oic.atm_curve alp
+on
+  alc.date = alp.date and
+  alc.act_symbol = alp.act_symbol and
+  alc.expiration = alp.expiration and
+  alp.call_put = 'Put' and
+  alp.strike < ahc.strike
+left outer join
+  oic.atm_curve ahp
+on
+  alc.date = ahp.date and
+  alc.act_symbol = ahp.act_symbol and
+  alc.expiration = ahp.expiration and
+  ahp.call_put = 'Put' and
+  alp.strike < ahp.strike
+join
+  polygon.ohlc o
+on
+  alc.date = o.date and
+  alc.act_symbol = o.act_symbol
+where
+  alc.date = (select max(date) from polygon.ohlc where date <= $1::text::date) and
+  alc.act_symbol = $2 and
+  alc.call_put = 'Call' and
+  alc.strike < ahc.strike and
+  alc.date != alc.expiration
+order by
+  alc.expiration;
+"
+              date
+              ticker-symbol))
 
 (define (get-dividend-dates ticker-symbol start-date end-date)
   (map (λ (el) (->posix (iso8601->date el)))

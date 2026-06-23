@@ -64,7 +64,21 @@
                      (send chart-industry-canvas set-snip
                            (chart-vol-surface-plot chart-industry-field chart-industry-canvas))])
          (send chart-stock-canvas set-snip
-               (chart-vol-surface-plot chart-stock-field chart-stock-canvas))]))
+               (chart-vol-surface-plot chart-stock-field chart-stock-canvas))]
+        [(equal? "ATM Curve" (send chart-type-choice get-string-selection))
+         (send chart-market-canvas set-snip
+               (chart-atm-curve-plot chart-market-field chart-market-canvas))
+         (send chart-sector-canvas set-snip
+               (chart-atm-curve-plot chart-sector-field chart-sector-canvas))
+         (cond [(equal? "" industry)
+                (send chart-industry-stock-panel change-children
+                      (λ (child-list) (list chart-stock-canvas)))]
+               [else (send chart-industry-stock-panel change-children
+                           (λ (child-list) (list chart-industry-canvas chart-stock-canvas)))
+                     (send chart-industry-canvas set-snip
+                           (chart-atm-curve-plot chart-industry-field chart-industry-canvas))])
+         (send chart-stock-canvas set-snip
+               (chart-atm-curve-plot chart-stock-field chart-stock-canvas))]))
 
 (plot-y-tick-labels? #f)
 (plot-y-far-tick-labels? #t)
@@ -108,7 +122,7 @@
 (define chart-type-choice (new choice%
                                [parent chart-input-panel]
                                [label "Type "]
-                               [choices (list "Price" "Vol History" "Vol Surface")]))
+                               [choices (list "Price" "Vol History" "Vol Surface" "ATM Curve")]))
 
 (define chart-refresh-button (new button%
                                   [parent chart-input-panel]
@@ -155,7 +169,21 @@
                                                                  (send chart-industry-canvas set-snip
                                                                        (chart-vol-surface-plot chart-industry-field chart-industry-canvas))])
                                                      (send chart-stock-canvas set-snip
-                                                           (chart-vol-surface-plot chart-stock-field chart-stock-canvas))]))]))
+                                                           (chart-vol-surface-plot chart-stock-field chart-stock-canvas))]
+                                                    [(equal? "ATM Curve" (send chart-type-choice get-string-selection))
+                                                     (send chart-market-canvas set-snip
+                                                           (chart-atm-curve-plot chart-market-field chart-market-canvas))
+                                                     (send chart-sector-canvas set-snip
+                                                           (chart-atm-curve-plot chart-sector-field chart-sector-canvas))
+                                                     (cond [(equal? "" (send chart-industry-field get-value))
+                                                            (send chart-industry-stock-panel change-children
+                                                                  (λ (child-list) (list chart-stock-canvas)))]
+                                                           [else (send chart-industry-stock-panel change-children
+                                                                       (λ (child-list) (list chart-industry-canvas chart-stock-canvas)))
+                                                                 (send chart-industry-canvas set-snip
+                                                                       (chart-atm-curve-plot chart-industry-field chart-industry-canvas))])
+                                                     (send chart-stock-canvas set-snip
+                                                           (chart-atm-curve-plot chart-stock-field chart-stock-canvas))]))]))
 
 (define chart-plot-panel (new vertical-pane%
                               [parent chart-frame]))
@@ -366,6 +394,89 @@
                  (send snip set-overlay-renderers overlays)
                  (set! prev-time-stamp (current-milliseconds))]))
         (send snip set-mouse-event-callback (make-current-value-renderer dohlcs))
+        snip)))
+
+(define (chart-atm-curve-plot symbol-field canvas)
+  (define atm-curve (get-atm-curve (send symbol-field get-value)
+                                   (send chart-end-date-field get-value)))
+  (if (or (equal? (send symbol-field get-value) "")
+          (= 0 (length atm-curve)))
+      (plot-snip (lines (list #(0 0) #(1 0)))
+                 #:title ""
+                 #:x-label "Expiration"
+                 #:y-label "Vol"
+                 #:width (- (send canvas get-width) 12)
+                 #:height (- (send canvas get-height) 12))
+      (let [(snip (parameterize ([plot-x-ticks (date-ticks)]
+                                 [plot-width (- (send canvas get-width) 12)]
+                                 [plot-height (- (send canvas get-height) 12)]
+                                 [plot-legend-layout (list 'rows 4 'compact)])
+                    (plot-snip (list (tick-grid)
+                                     (lines (map (λ (p) (vector (->posix (iso8601->date (vector-ref p 0))) (vector-ref p 1))) atm-curve)
+                                            #:label "Fit"
+                                            #:color 1)
+                                     (lines (map (λ (p) (vector (->posix (iso8601->date (vector-ref p 0))) (vector-ref p 2))) atm-curve)
+                                            #:label "Closest ITM Call"
+                                            #:style 'long-dash
+                                            #:color 2)
+                                     (lines (map (λ (p) (vector (->posix (iso8601->date (vector-ref p 0))) (vector-ref p 3))) atm-curve)
+                                            #:label "Closest OTM Call"
+                                            #:style 'long-dash
+                                            #:color 3)
+                                     (lines (map (λ (p) (vector (->posix (iso8601->date (vector-ref p 0))) (vector-ref p 4))) atm-curve)
+                                            #:label "Closest OTM Put"
+                                            #:style 'long-dash
+                                            #:color 4)
+                                     (lines (map (λ (p) (vector (->posix (iso8601->date (vector-ref p 0))) (vector-ref p 5))) atm-curve)
+                                            #:label "Closest ITM Put"
+                                            #:style 'long-dash
+                                            #:color 5))
+                               #:title (string-append (get-security-name (send symbol-field get-value)) " ("
+                                                      (send symbol-field get-value) ")")
+                               #:x-label "Expiration"
+                               #:y-label "Vol"
+                               #:legend-anchor 'outside-top
+                               #:x-min (->posix (iso8601->date (send chart-end-date-field get-value)))
+                               #:x-max (->posix (+months (iso8601->date (send chart-end-date-field get-value))  5)))))]
+        (define item-font (send the-font-list find-or-create-font 12 'default 'normal 'normal))
+        (define background (make-object color% #xff #xf8 #xdc 0.8))
+        (define (make-tag vol-point)
+          (define p (if (empty? vol-point) (text "" item-font)
+                        (vl-append
+                         (hc-append
+                          (text "Exp: " item-font)
+                          (text (vector-ref (first vol-point) 0) item-font))
+                         (hc-append
+                          (text "Vol: " item-font)
+                          (text (real->decimal-string (vector-ref (first vol-point) 1) 4) item-font)))))
+          (define r (filled-rectangle
+                     (+ (pict-width p) 10) (+ (pict-height p) 10)
+                     #:draw-border? #f #:color background))
+          (cc-superimpose r p))
+        (define (get-vol-point curve d)
+          (list (foldl (λ (e res) (if (<= (abs (period-ref (period-between (->date (posix->datetime d))
+                                                                           (iso8601->date (vector-ref e 0)) '(days)) 'days))
+                                          (abs (period-ref (period-between (->date (posix->datetime d))
+                                                                           (iso8601->date (vector-ref res 0)) '(days)) 'days)))
+                                      e
+                                      res))
+                       (first curve)
+                       curve)))
+        (define ((make-current-value-renderer curve) snip event x y)
+          (define delta (- (current-milliseconds) prev-time-stamp))
+          (cond [(< 40 delta)
+                 (define overlays
+                   (and x y (eq? (send event get-event-type) 'motion)
+                        (let ([shift (if (< 43200 (modulo (round x) 86400)) 86400 0)])
+                          (define nearest (get-vol-point curve (+ x 43200)))
+                          (define nearest-x (->posix (iso8601->date (vector-ref (first nearest) 0))))
+                          (list (vrule nearest-x #:style 'long-dash)
+                                (point-pict (vector nearest-x y)
+                                            (make-tag nearest)
+                                            #:anchor 'auto)))))
+                 (send snip set-overlay-renderers overlays)
+                 (set! prev-time-stamp (current-milliseconds))]))
+        (send snip set-mouse-event-callback (make-current-value-renderer atm-curve))
         snip)))
 
 (define chart-market-sector-panel (new horizontal-panel%
