@@ -290,10 +290,10 @@
                           (text (~t (posix->datetime (dv-date (if (empty? vol-dv) (first variance-dv) (first vol-dv)))) "yyyy-MM-dd") item-font))
                          (hc-append
                           (text "Vol: " item-font)
-                          (if (empty? vol-dv) "" (text (real->decimal-string (dv-value (first vol-dv))) item-font)))
+                          (if (empty? vol-dv) "" (text (real->decimal-string (dv-value (first vol-dv)) 4) item-font)))
                          (hc-append
                           (text "Variance: " item-font)
-                          (if (empty? variance-dv) "" (text (real->decimal-string (dv-value (first variance-dv))) item-font))))))
+                          (if (empty? variance-dv) "" (text (real->decimal-string (dv-value (first variance-dv)) 4) item-font))))))
           (define r (filled-rectangle
                      (+ (pict-width p) 10) (+ (pict-height p) 10)
                      #:draw-border? #f #:color background))
