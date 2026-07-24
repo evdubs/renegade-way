@@ -26,6 +26,7 @@
          get-etf-vrp-analysis
          get-execution-tick
          get-forward-factor-analysis
+         get-is-etf
          get-next-earnings-date
          get-options
          get-position-history
@@ -1103,7 +1104,7 @@ left outer join
   zacks.earnings_calendar ec
 on
   vol_by_exp.act_symbol = ec.act_symbol and
-  ec.date >= $1::text::date and
+  ec.date >= $1::text::date - '1 day'::interval and
   ec.date <= $1::text::date + '28 days'::interval),
 max_front_vol as (select
   vol_by_exp.act_symbol,
@@ -1363,7 +1364,6 @@ select
       when 'BULL CALL VERTICAL SPREAD' then 1
       when 'BULL PUT VERTICAL SPREAD' then 1
       when 'CALL RATIO SPREAD' then 1
-      when 'CALL HORIZONTAL SPREAD' then 1
       when 'CALL DIAGONAL SPREAD' then 1
     else 0
     end
@@ -1376,6 +1376,10 @@ select
       when 'PUT BUTTERFLY' then 1
       when 'CALL CONDOR' then 1
       when 'PUT CONDOR' then 1
+      when 'CALL HORIZONTAL SPREAD' then 1
+      when 'PUT HORIZONTAL SPREAD' then 1
+      when 'CALL DOUBLE HORIZONTAL SPREAD' then 1
+      when 'PUT DOUBLE HORIZONTAL SPREAD' then 1
     else 0
     end
   ) || ' Bears: ' ||
@@ -1385,7 +1389,6 @@ select
       when 'BEAR CALL VERTICAL SPREAD' then 1
       when 'BEAR PUT VERTICAL SPREAD' then 1
       when 'PUT RATIO SPREAD' then 1
-      when 'PUT HORIZONTAL SPREAD' then 1
       when 'PUT DIAGONAL SPREAD' then 1
     else 0
     end
@@ -1408,6 +1411,17 @@ on
   (query-value dbc "
 select
   security_name
+from
+  nasdaq.symbol
+where
+  act_symbol = $1;
+"
+               act-symbol))
+
+(define (get-is-etf act-symbol)
+  (query-value dbc "
+select
+  is_etf
 from
   nasdaq.symbol
 where

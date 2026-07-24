@@ -8,6 +8,7 @@
          racket/match
          racket/string
          threading
+         "db-queries.rkt"
          "params.rkt"
          "sim/list-partition.rkt")
 
@@ -64,7 +65,9 @@
                      (displayln error)
                      (apply hash (flatten (map (λ (symbol) (list symbol 0.0)) symbols))))])
     (~> (get (string-append "https://api.nasdaq.com/api/quote/watchlist?type=Rv&"
-                            (string-join (map (λ (symbol) (string-append "symbol=" symbol "|stocks")) symbols) "&")))
+                            (string-join (map (λ (symbol) (if (get-is-etf symbol)
+                                                              (string-append "symbol=" symbol "|etf")
+                                                              (string-append "symbol=" symbol "|stocks"))) symbols) "&")))
         (response-body _)
         (bytes->string/utf-8 _)
         (string->jsexpr _ #:null (hash))

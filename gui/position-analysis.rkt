@@ -75,7 +75,9 @@
                           (equal? "CALL CONDOR" s)
                           (equal? "PUT CONDOR" s)
                           (equal? "CALL HORIZONTAL SPREAD" s)
-                          (equal? "PUT HORIZONTAL SPREAD" s))
+                          (equal? "PUT HORIZONTAL SPREAD" s)
+                          (equal? "CALL DOUBLE HORIZONTAL SPREAD" s)
+                          (equal? "PUT DOUBLE HORIZONTAL SPREAD" s))
                       (hash-set m (position-analysis-stock p) 'roo)]
                      [else (hash-set m (position-analysis-stock p) 'unknown)])))
            (hash)
