@@ -130,7 +130,8 @@ on
 where
   ac.act_symbol = $1 and
   ac.date >= $2::text::date and
-  ac.date <= $3::text::date
+  ac.date <= $3::text::date and
+  ac.expiration >= ac.date + '2 days'::interval
 group by
   ac.date,
   ac.act_symbol)
@@ -1237,7 +1238,8 @@ order by
 (define (get-position-analysis date)
   (map (λ (row) (position-analysis (vector-ref row 0) (vector-ref row 1) (vector-ref row 2) (vector-ref row 3)
                                    (vector-ref row 4) (vector-ref row 5) (vector-ref row 6) (vector-ref row 7)
-                                   (vector-ref row 8) (vector-ref row 9) (vector-ref row 10) (vector-ref row 11)))
+                                   (vector-ref row 8) (vector-ref row 9) (vector-ref row 10) (vector-ref row 11)
+                                   (vector-ref row 12) (vector-ref row 13)))
        (query-rows dbc "
 with earnings_end_date as (
   select
@@ -1283,9 +1285,11 @@ select
   c.right::text,
   e.account,
   e.signed_shares,
-  coalesce(trunc(n.underlying_stop_price, 2), 0.00),
+  coalesce(trunc(n.underlying_low_stop_price, 2), 0.00),
+  coalesce(trunc(n.underlying_low_target_price, 2), 0.00),
   coalesce(trunc(ch.close, 2), 0.00),
-  coalesce(trunc(n.underlying_target_price, 2), 0.00),
+  coalesce(trunc(n.underlying_high_stop_price, 2), 0.00),
+  coalesce(trunc(n.underlying_high_target_price, 2), 0.00),
   coalesce(to_char(case when ed.end_date is not null and ed.end_date < n.end_date
     then case when eed.expiry is not null and eed.expiry < ed.end_date
       then eed.expiry else ed.end_date end
@@ -2047,8 +2051,10 @@ insert into ibkr.order_note (
   order_id,
   order_strategy,
   underlying_entry_price,
-  underlying_stop_price,
-  underlying_target_price,
+  underlying_low_stop_price,
+  underlying_low_target_price,
+  underlying_high_stop_price,
+  underlying_high_target_price,
   end_date,
   pattern
 ) values (
@@ -2058,15 +2064,19 @@ insert into ibkr.order_note (
   $4,
   $5,
   $6,
-  $7::text::date,
-  $8::text::ibkr.pattern
+  $7,
+  $8,
+  $9::text::date,
+  $10::text::ibkr.pattern
 ) on conflict (account, order_id) do nothing;
 "
               account
               order-id
               (string-replace (string-upcase (symbol->string (order-strategy order-note))) "-" " ")
               (order-stock-entry order-note)
-              (order-stock-stop order-note)
-              (order-stock-target order-note)
+              (if (order-stock-low-stop order-note) (order-stock-low-stop order-note) sql-null)
+              (if (order-stock-low-target order-note) (order-stock-low-target order-note) sql-null)
+              (if (order-stock-high-stop order-note) (order-stock-high-stop order-note) sql-null)
+              (if (order-stock-high-target order-note) (order-stock-high-target order-note) sql-null)
               (date->iso8601 (order-end-date order-note))
               (string-replace (string-upcase (symbol->string (order-pattern order-note))) "-" " ")))

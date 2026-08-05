@@ -69,8 +69,10 @@ select
   '' as num,
   on2.\"pattern\"::text as ptrn,
   trunc(on2.underlying_entry_price, 2) as ent,
-  trunc(on2.underlying_stop_price, 2) as stp,
-  trunc(on2.underlying_target_price, 2) as tgt
+  trunc(on2.underlying_low_stop_price, 2) as lostp,
+  trunc(on2.underlying_low_target_price, 2) as lotgt,
+  trunc(on2.underlying_high_stop_price, 2) as histp,
+  trunc(on2.underlying_high_target_price, 2) as hitgt
 from
 (select 
   ot.account,
@@ -214,6 +216,8 @@ on
                                                    (vector-ref r 22)
                                                    (vector-ref r 23)
                                                    (vector-ref r 24)
+                                                   (vector-ref r 25)
+                                                   (vector-ref r 26)
                                                    #f
                                                    #f)) out))
               ; do the filter here because it can get messy in the query

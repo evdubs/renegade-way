@@ -27,7 +27,7 @@
   (vector-ref v (- (vector-length v) 1)))
 
 (define manager-frame
-  (new frame% [label "Position/Order Manager"] [width 700] [height 600]))
+  (new frame% [label "Position/Order Manager"] [width 750] [height 600]))
 
 (define manager-pane
   (new vertical-pane% [parent manager-frame]))
@@ -90,58 +90,66 @@
                                   (struct-copy order ord
                                                [quantity (floor (/ (string->number (send trade-risk-field get-value))
                                                                    (* 100 (order-price ord))))]
-                                               [stock-stop (- (order-stock-entry ord) (* 2 atr-50))]
-                                               [stock-target (+ (order-stock-entry ord) (* 4 atr-50))])]
+                                               [stock-low-stop (- (order-stock-entry ord) (* 2 atr-50))]
+                                               [stock-high-target (+ (order-stock-entry ord) (* 4 atr-50))])]
                                  [(equal? 'long-put (order-strategy ord))
                                   (struct-copy order ord
                                                [quantity (floor (/ (string->number (send trade-risk-field get-value))
                                                                    (* 100 (order-price ord))))]
-                                               [stock-stop (+ (order-stock-entry ord) (* 2 atr-50))]
-                                               [stock-target (- (order-stock-entry ord) (* 4 atr-50))])]
+                                               [stock-high-stop (+ (order-stock-entry ord) (* 2 atr-50))]
+                                               [stock-low-target (- (order-stock-entry ord) (* 4 atr-50))])]
                                  [(equal? 'bull-call-vertical-spread (order-strategy ord))
                                   (define risk (- (order-price (send order-box get-data 0)) (order-price (send order-box get-data 1))))
                                   (struct-copy order ord
                                                [quantity (truncate (/ (string->number (send trade-risk-field get-value))
                                                                       (* 100 risk (if (= i 0) 1 -1))))]
-                                               [stock-stop (- (order-stock-entry ord) (* 2 atr-50))]
-                                               [stock-target (+ (order-stock-entry ord) (* 4 atr-50))])]
+                                               [stock-low-stop (- (order-stock-entry ord) (* 2 atr-50))]
+                                               [stock-high-target (+ (order-stock-entry ord) (* 4 atr-50))])]
                                  [(equal? 'bull-put-vertical-spread (order-strategy ord))
                                   (define risk (- (- (order-strike (send order-box get-data 0)) (order-strike (send order-box get-data 1)))
                                                   (- (order-price (send order-box get-data 0)) (order-price (send order-box get-data 1)))))
                                   (struct-copy order ord
                                                [quantity (truncate (/ (string->number (send trade-risk-field get-value))
                                                                       (* 100 risk (if (= i 1) 1 -1))))]
-                                               [stock-stop (- (order-stock-entry ord) (* 2 atr-50))]
-                                               [stock-target (+ (order-stock-entry ord) (* 4 atr-50))])]
+                                               [stock-low-stop (- (order-stock-entry ord) (* 2 atr-50))]
+                                               [stock-high-target (+ (order-stock-entry ord) (* 4 atr-50))])]
                                  [(equal? 'bear-put-vertical-spread (order-strategy ord))
                                   (define risk (- (order-price (send order-box get-data 0)) (order-price (send order-box get-data 1))))
                                   (struct-copy order ord
                                                [quantity (truncate (/ (string->number (send trade-risk-field get-value))
                                                                       (* 100 risk (if (= i 0) 1 -1))))]
-                                               [stock-stop (+ (order-stock-entry ord) (* 2 atr-50))]
-                                               [stock-target (- (order-stock-entry ord) (* 4 atr-50))])]
+                                               [stock-high-stop (+ (order-stock-entry ord) (* 2 atr-50))]
+                                               [stock-low-target (- (order-stock-entry ord) (* 4 atr-50))])]
                                  [(equal? 'bear-call-vertical-spread (order-strategy ord))
                                   (define risk (- (- (order-strike (send order-box get-data 1)) (order-strike (send order-box get-data 0)))
                                                   (- (order-price (send order-box get-data 0)) (order-price (send order-box get-data 1)))))
                                   (struct-copy order ord
                                                [quantity (truncate (/ (string->number (send trade-risk-field get-value))
                                                                       (* 100 risk (if (= i 1) 1 -1))))]
-                                               [stock-stop (+ (order-stock-entry ord) (* 2 atr-50))]
-                                               [stock-target (- (order-stock-entry ord) (* 4 atr-50))])]
+                                               [stock-high-stop (+ (order-stock-entry ord) (* 2 atr-50))]
+                                               [stock-low-target (- (order-stock-entry ord) (* 4 atr-50))])]
                                  [(equal? 'long-straddle (order-strategy ord))
                                   (define risk (+ (order-price (send order-box get-data 0)) (order-price (send order-box get-data 1))))
                                   (struct-copy order ord
                                                [quantity (truncate (/ (string->number (send trade-risk-field get-value))
                                                                       (* 100 risk)))]
-                                               [stock-stop (order-stock-entry ord)]
-                                               [stock-target (order-stock-entry ord)])]
+                                               [stock-low-target (- (order-stock-entry ord)
+                                                                    (+ (order-price (send order-box get-data 0))
+                                                                       (order-price (send order-box get-data 1))))]
+                                               [stock-high-target (+ (order-stock-entry ord)
+                                                                     (+ (order-price (send order-box get-data 0))
+                                                                        (order-price (send order-box get-data 1))))])]
                                  [(equal? 'long-strangle (order-strategy ord))
                                   (define risk (+ (order-price (send order-box get-data 0)) (order-price (send order-box get-data 1))))
                                   (struct-copy order ord
                                                [quantity (truncate (/ (string->number (send trade-risk-field get-value))
                                                                       (* 100 risk)))]
-                                               [stock-stop (order-stock-entry ord)]
-                                               [stock-target (order-stock-entry ord)])]
+                                               [stock-low-target (- (order-stock-entry ord)
+                                                                    (+ (order-price (send order-box get-data 0))
+                                                                       (order-price (send order-box get-data 1))))]
+                                               [stock-high-target (+ (order-stock-entry ord)
+                                                                     (+ (order-price (send order-box get-data 0))
+                                                                        (order-price (send order-box get-data 1))))])]
                                  [(equal? 'call-ratio-spread (order-strategy ord))
                                   (define risk (- (order-strike (send order-box get-data 1)) (order-strike (send order-box get-data 0))
                                                   (order-price (send order-box get-data 0))
@@ -149,9 +157,9 @@
                                   (define base-quantity (truncate (/ (string->number (send trade-risk-field get-value)) (* 100 risk))))
                                   (struct-copy order ord
                                                [quantity (if (= i 1) (* 3 base-quantity) (* -1 base-quantity))]
-                                               [stock-stop (order-strike (send order-box get-data 1))]
-                                               [stock-target (- (* 2 (order-strike (send order-box get-data 1)))
-                                                                (order-strike (send order-box get-data 0)))])]
+                                               [stock-low-stop (order-strike (send order-box get-data 1))]
+                                               [stock-high-target (- (* 2 (order-strike (send order-box get-data 1)))
+                                                                     (order-strike (send order-box get-data 0)))])]
                                  [(equal? 'put-ratio-spread (order-strategy ord))
                                   (define risk (- (order-strike (send order-box get-data 0)) (order-strike (send order-box get-data 1))
                                                   (order-price (send order-box get-data 0))
@@ -159,9 +167,9 @@
                                   (define base-quantity (truncate (/ (string->number (send trade-risk-field get-value)) (* 100 risk))))
                                   (struct-copy order ord
                                                [quantity (if (= i 1) (* 3 base-quantity) (* -1 base-quantity))]
-                                               [stock-stop (order-strike (send order-box get-data 1))]
-                                               [stock-target (- (* 2 (order-strike (send order-box get-data 1)))
-                                                                (order-strike (send order-box get-data 0)))])]
+                                               [stock-high-stop (order-strike (send order-box get-data 1))]
+                                               [stock-low-target (- (* 2 (order-strike (send order-box get-data 1)))
+                                                                    (order-strike (send order-box get-data 0)))])]
                                  [(equal? 'call-horizontal-spread (order-strategy ord))
                                   ; ideally, the strikes would be the same, but sometimes we do not get the same strikes across expirations
                                   ; as a result, we need to take the difference between the strikes
@@ -171,8 +179,10 @@
                                   (struct-copy order ord
                                                [quantity (truncate (/ (string->number (send trade-risk-field get-value))
                                                                       (* 100 risk (if (= i 0) -1 1))))]
-                                               [stock-stop (- (order-stock-entry ord) (* 2 atr-50))]
-                                               [stock-target (order-strike (send order-box get-data 0))])]
+                                               [stock-low-stop (- (min (order-strike (send order-box get-data 0)) (order-strike (send order-box get-data 1)))
+                                                                  (* 3 atr-50))]
+                                               [stock-high-stop (+ (max (order-strike (send order-box get-data 0)) (order-strike (send order-box get-data 1)))
+                                                                   (* 3 atr-50))])]
                                  [(equal? 'put-horizontal-spread (order-strategy ord))
                                   ; see call-horizontal-spread note
                                   (define risk (max 0.01
@@ -181,8 +191,10 @@
                                   (struct-copy order ord
                                                [quantity (truncate (/ (string->number (send trade-risk-field get-value))
                                                                       (* 100 risk (if (= i 0) -1 1))))]
-                                               [stock-stop (+ (order-stock-entry ord) (* 2 atr-50))]
-                                               [stock-target (order-strike (send order-box get-data 0))])]
+                                               [stock-low-stop (- (min (order-strike (send order-box get-data 0)) (order-strike (send order-box get-data 1)))
+                                                                  (* 3 atr-50))]
+                                               [stock-high-stop (+ (max (order-strike (send order-box get-data 0)) (order-strike (send order-box get-data 1)))
+                                                                   (* 3 atr-50))])]
                                  [(equal? 'call-double-horizontal-spread (order-strategy ord))
                                   (define risk (max 0.01
                                                     (+ (- (- (order-price (send order-box get-data 1)) (order-price (send order-box get-data 0)))
@@ -192,8 +204,10 @@
                                   (struct-copy order ord
                                                [quantity (truncate (/ (string->number (send trade-risk-field get-value))
                                                                       (* 100 risk (if (or (= i 0) (= i 2)) -1 1))))]
-                                               [stock-stop (- (order-stock-entry ord) (* 2 atr-50))]
-                                               [stock-target (order-stock-entry ord)])]
+                                               [stock-low-stop (- (min (order-strike (send order-box get-data 0)) (order-strike (send order-box get-data 1)))
+                                                                  (* 2 atr-50))]
+                                               [stock-high-stop (+ (max (order-strike (send order-box get-data 2)) (order-strike (send order-box get-data 3)))
+                                                                   (* 2 atr-50))])]
                                  [(equal? 'put-double-horizontal-spread (order-strategy ord))
                                   (define risk (max 0.01
                                                     (+ (- (- (order-price (send order-box get-data 1)) (order-price (send order-box get-data 0)))
@@ -203,22 +217,24 @@
                                   (struct-copy order ord
                                                [quantity (truncate (/ (string->number (send trade-risk-field get-value))
                                                                       (* 100 risk (if (or (= i 0) (= i 2)) -1 1))))]
-                                               [stock-stop (+ (order-stock-entry ord) (* 2 atr-50))]
-                                               [stock-target (order-stock-entry ord)])]
+                                               [stock-high-stop (+ (min (order-strike (send order-box get-data 0)) (order-strike (send order-box get-data 1)))
+                                                                   (* 2 atr-50))]
+                                               [stock-low-stop (- (max (order-strike (send order-box get-data 2)) (order-strike (send order-box get-data 3)))
+                                                                  (* 2 atr-50))])]
                                  [(equal? 'call-diagonal-spread (order-strategy ord))
                                   (define risk (- (order-price (send order-box get-data 0)) (order-price (send order-box get-data 1))))
                                   (struct-copy order ord
                                                [quantity (truncate (/ (string->number (send trade-risk-field get-value))
                                                                       (* 100 risk (if (= i 0) 1 -1))))]
-                                               [stock-stop (- (order-stock-entry ord) (* 2 atr-50))]
-                                               [stock-target (order-strike (send order-box get-data 1))])]
+                                               [stock-low-stop (- (order-stock-entry ord) (* 2 atr-50))]
+                                               [stock-high-target (order-strike (send order-box get-data 1))])]
                                  [(equal? 'put-diagonal-spread (order-strategy ord))
                                   (define risk (- (order-price (send order-box get-data 0)) (order-price (send order-box get-data 1))))
                                   (struct-copy order ord
                                                [quantity (truncate (/ (string->number (send trade-risk-field get-value))
                                                                       (* 100 risk (if (= i 0) 1 -1))))]
-                                               [stock-stop (+ (order-stock-entry ord) (* 2 atr-50))]
-                                               [stock-target (order-strike (send order-box get-data 1))])]
+                                               [stock-high-stop (+ (order-stock-entry ord) (* 2 atr-50))]
+                                               [stock-low-target (order-strike (send order-box get-data 1))])]
                                  [(equal? 'call-butterfly (order-strategy ord))
                                   (define out-of-the-money-risk (+ (order-price (send order-box get-data 0))
                                                                    (* -2 (order-price (send order-box get-data 1)))
@@ -231,8 +247,8 @@
                                   (define contracts (truncate (/ (string->number (send trade-risk-field get-value)) (* 100 risk))))
                                   (struct-copy order ord
                                                [quantity (if (= i 1) (* -2 contracts) contracts)]
-                                               [stock-stop (order-strike (send order-box get-data 0))]
-                                               [stock-target (order-strike (send order-box get-data 1))])]
+                                               [stock-low-stop (order-strike (send order-box get-data 0))]
+                                               [stock-high-stop (order-strike (send order-box get-data 2))])]
                                  [(equal? 'put-butterfly (order-strategy ord))
                                   (define out-of-the-money-risk (+ (order-price (send order-box get-data 0))
                                                                    (* -2 (order-price (send order-box get-data 1)))
@@ -245,8 +261,8 @@
                                   (define contracts (truncate (/ (string->number (send trade-risk-field get-value)) (* 100 risk))))
                                   (struct-copy order ord
                                                [quantity (if (= i 1) (* -2 contracts) contracts)]
-                                               [stock-stop (order-strike (send order-box get-data 0))]
-                                               [stock-target (order-strike (send order-box get-data 1))])]
+                                               [stock-high-stop (order-strike (send order-box get-data 0))]
+                                               [stock-low-stop (order-strike (send order-box get-data 2))])]
                                  [(equal? 'call-condor (order-strategy ord))
                                   (define out-of-the-money-risk (+ (order-price (send order-box get-data 0))
                                                                    (* -1 (order-price (send order-box get-data 1)))
@@ -261,8 +277,8 @@
                                   (define contracts (truncate (/ (string->number (send trade-risk-field get-value)) (* 100 risk))))
                                   (struct-copy order ord
                                                [quantity (if (or (= i 1) (= i 2)) (* -1 contracts) contracts)]
-                                               [stock-stop (order-strike (send order-box get-data 0))]
-                                               [stock-target (order-stock-entry ord)])]
+                                               [stock-low-stop (order-strike (send order-box get-data 0))]
+                                               [stock-high-stop (order-strike (send order-box get-data 3))])]
                                  [(equal? 'put-condor (order-strategy ord))
                                   (define out-of-the-money-risk (+ (order-price (send order-box get-data 0))
                                                                    (* -1 (order-price (send order-box get-data 1)))
@@ -277,8 +293,8 @@
                                   (define contracts (truncate (/ (string->number (send trade-risk-field get-value)) (* 100 risk))))
                                   (struct-copy order ord
                                                [quantity (if (or (= i 1) (= i 2)) (* -1 contracts) contracts)]
-                                               [stock-stop (order-strike (send order-box get-data 0))]
-                                               [stock-target (order-stock-entry ord)])]
+                                               [stock-high-stop (order-strike (send order-box get-data 0))]
+                                               [stock-low-stop (order-strike (send order-box get-data 3))])]
                                  [else ord]))
                          (range (send order-box get-number)))
                     (iso8601->date (send eval-date-field get-value)))
@@ -297,7 +313,7 @@
                          (range (send order-box get-number)))
                     (iso8601->date (send eval-date-field get-value))))]))
 
-(define order-box-columns (list "Symbol" "Expiry" "Strike" "CallPut" "Qty" "Price" "StkEntry" "StkStop" "StkTgt"))
+(define order-box-columns (list "Symbol" "Expiry" "Strike" "CallPut" "Qty" "Price" "StkEntry" "StkLoStp" "StkLoTgt" "StkHiStp" "StkHiTgt"))
 
 (define order-box
   (new list-box%
@@ -340,8 +356,10 @@
 
 (define (update-profit-loss-chart)
   (define ref-price (order-stock-entry (send order-box get-data 0)))
-  (define stop-price (order-stock-stop (send order-box get-data 0)))
-  (define target-price (order-stock-target (send order-box get-data 0)))
+  (define low-stop-price (order-stock-low-stop (send order-box get-data 0)))
+  (define low-target-price (order-stock-low-target (send order-box get-data 0)))
+  (define high-stop-price (order-stock-high-stop (send order-box get-data 0)))
+  (define high-target-price (order-stock-high-target (send order-box get-data 0)))
   (define low-price (min (* 80/100 ref-price)
                          (apply min (map (λ (i) (order-strike (send order-box get-data i)))
                                          (range (send order-box get-number))))))
@@ -352,8 +370,16 @@
                                   (range (send order-box get-number)))))
   (define prices (map (λ (i) (/ (* i ref-price) 100))
                       (range (* 100 (/ low-price ref-price)) (* 100 (/ high-price ref-price)) 0.5)))
-  (define price-nearest-target (foldl (λ (p res) (if (> (abs (- res p)) (abs (- target-price p))) p res))
-                                         (first prices) prices))
+  (define price-nearest-low-target (if low-target-price
+                                       (foldl (λ (p res) (if (> (abs (- res p)) (abs (- low-target-price p))) p res))
+                                              (first prices) prices)
+                                       (foldl (λ (p res) (if (> (abs (- res p)) (abs (- ref-price p))) p res))
+                                               (first prices) prices)))
+  (define price-nearest-high-target (if high-target-price
+                                        (foldl (λ (p res) (if (> (abs (- res p)) (abs (- high-target-price p))) p res))
+                                               (first prices) prices)
+                                        (foldl (λ (p res) (if (> (abs (- res p)) (abs (- ref-price p))) p res))
+                                               (first prices) prices)))
   (define eval-date (iso8601->date (send eval-date-field get-value)))
   (define 1-month-rate (get-1-month-rate (date->iso8601 (today))))
   (define (price-profit-loss vol-multiplier vol prices)
@@ -377,8 +403,10 @@
          prices))
   (define current-vol-profit-loss (price-profit-loss 1 #f prices))
   (define current-vol-profit-loss-values (map (λ (pl) (vector-ref pl 1)) current-vol-profit-loss))
-  (define value-near-target (vector-ref (first (filter (λ (pl) (= price-nearest-target (vector-ref pl 0)))
-                                                       current-vol-profit-loss)) 1))
+  (define value-near-target (max (vector-ref (first (filter (λ (pl) (= price-nearest-low-target (vector-ref pl 0)))
+                                                            current-vol-profit-loss)) 1)
+                                 (vector-ref (first (filter (λ (pl) (= price-nearest-high-target (vector-ref pl 0)))
+                                                            current-vol-profit-loss)) 1)))
   (send order-box set-label
         (string-append "Risk: " (if (rational? (apply min current-vol-profit-loss-values))
                                     (real->decimal-string (apply min current-vol-profit-loss-values))
@@ -403,26 +431,28 @@
                                                      (apply min current-vol-profit-loss-values))))) ") "
                        " Reqmnt: " (hash-ref ratio-requirement (order-strategy (send order-box get-data 0)))))
   (send profit-loss-canvas set-snip
-        (plot-snip (list (tick-grid)
-                         (inverse (λ (y) stop-price) #:color 4 #:label "Stop")
-                         (inverse (λ (y) target-price) #:color 5 #:label "Target")
-                         (lines (price-profit-loss 1.5 #f prices)
-                                #:color 1
-                                #:style 'long-dash
-                                #:label "Vol * 1.5")
-                         (lines (price-profit-loss 1 #f prices)
-                                #:color 2
-                                #:label "Vol")
-                         (lines (price-profit-loss 0.5 #f prices)
-                                #:color 3
-                                #:style 'long-dash
-                                #:label "Vol * 0.5")
-                         (lines (price-profit-loss #f (* (string->number (send vol-factor-field get-value))
-                                                         low-vol) prices)
-                                #:color 4
-                                #:style 'long-dash
-                                #:label (string-append "Vol = " (real->decimal-string (* (string->number (send vol-factor-field get-value))
-                                                                                         low-vol) 2))))
+        (plot-snip (flatten (list (tick-grid)
+                                  (if low-stop-price (inverse (λ (y) low-stop-price) #:color 4 #:label "Low Stop") (list))
+                                  (if low-target-price (inverse (λ (y) low-target-price) #:color 5 #:label "Low Target") (list))
+                                  (if high-stop-price (inverse (λ (y) high-stop-price) #:color 6 #:label "High Stop") (list))
+                                  (if high-target-price (inverse (λ (y) high-target-price) #:color 7 #:label "High Target") (list))
+                                  (lines (price-profit-loss 1.5 #f prices)
+                                         #:color 1
+                                         #:style 'long-dash
+                                         #:label "Vol * 1.5")
+                                  (lines (price-profit-loss 1 #f prices)
+                                         #:color 2
+                                         #:label "Vol")
+                                  (lines (price-profit-loss 0.5 #f prices)
+                                         #:color 3
+                                         #:style 'long-dash
+                                         #:label "Vol * 0.5")
+                                  (lines (price-profit-loss #f (* (string->number (send vol-factor-field get-value))
+                                                                  low-vol) prices)
+                                         #:color 4
+                                         #:style 'long-dash
+                                         #:label (string-append "Vol = " (real->decimal-string (* (string->number (send vol-factor-field get-value))
+                                                                                                  low-vol) 2)))))
                    #:title (string-append "Order Profit/Loss at " (date->iso8601 eval-date))
                    #:x-label "Stock Price"
                    #:y-label "Profit/Loss"
@@ -662,15 +692,15 @@
         (map (λ (d) (if (order-quantity d) (number->string (order-quantity d)) "")) order-data)
         (map (λ (d) (real->decimal-string (order-price d))) order-data)
         (map (λ (d) (real->decimal-string (order-stock-entry d))) order-data)
-        (map (λ (d) (if (order-stock-stop d) (real->decimal-string (order-stock-stop d)) "")) order-data)
-        (map (λ (d) (if (order-stock-stop d) (real->decimal-string (order-stock-target d)) "")) order-data))
+        (map (λ (d) (if (order-stock-low-stop d) (real->decimal-string (order-stock-low-stop d)) "")) order-data)
+        (map (λ (d) (if (order-stock-low-target d) (real->decimal-string (order-stock-low-target d)) "")) order-data)
+        (map (λ (d) (if (order-stock-high-stop d) (real->decimal-string (order-stock-high-stop d)) "")) order-data)
+        (map (λ (d) (if (order-stock-high-target d) (real->decimal-string (order-stock-high-target d)) "")) order-data))
   (for-each (λ (d i)
               (send order-box set-data i d))
             order-data (range (length order-data)))
 
   (send eval-date-field set-value (date->iso8601 eval-date)))
-
-; (define order-box-columns (list "Symbol" "Expiry" "Strike" "CallPut" "Qty" "Price" "StkEntry" "StkStop" "StkTgt"))
 
 (define (row-editor-frame index headers row)
   (define editor-frame (new frame% [label "Row Editor"] [width 300] [height 400]))
@@ -687,8 +717,14 @@
           (new text-field% [parent editor-pane] [label "Vol"] [init-value (real->decimal-string (order-vol row))])
           (new text-field% [parent editor-pane] [label "Spread"] [init-value (real->decimal-string (order-spread row))])
           (new text-field% [parent editor-pane] [label "StkEntry"] [init-value (real->decimal-string (order-stock-entry row))])
-          (new text-field% [parent editor-pane] [label "StkStop"] [init-value (if (order-stock-stop row) (real->decimal-string (order-stock-stop row)) "")])
-          (new text-field% [parent editor-pane] [label "StkTarget"] [init-value (if (order-stock-target row) (real->decimal-string (order-stock-target row)) "")])
+          (new text-field% [parent editor-pane] [label "StkLoStp"] [init-value (if (order-stock-low-stop row)
+                                                                                   (real->decimal-string (order-stock-low-stop row)) "")])
+          (new text-field% [parent editor-pane] [label "StkLoTgt"] [init-value (if (order-stock-low-target row)
+                                                                                   (real->decimal-string (order-stock-low-target row)) "")])
+          (new text-field% [parent editor-pane] [label "StkHiStp"] [init-value (if (order-stock-high-stop row)
+                                                                                   (real->decimal-string (order-stock-high-stop row)) "")])
+          (new text-field% [parent editor-pane] [label "StkHiTgt"] [init-value (if (order-stock-high-target row)
+                                                                                   (real->decimal-string (order-stock-high-target row)) "")])
           (new text-field% [parent editor-pane] [label "EndDate"] [init-value (~t (order-end-date row) "yy-MM-dd")])))
   (define save-button
     (new button%
@@ -709,7 +745,9 @@
                                   (string->number (send (list-ref editor-fields 10) get-value))
                                   (string->number (send (list-ref editor-fields 11) get-value))
                                   (string->number (send (list-ref editor-fields 12) get-value))
-                                  (parse-date (send (list-ref editor-fields 13) get-value) "yy-MM-dd")))
+                                  (string->number (send (list-ref editor-fields 13) get-value))
+                                  (string->number (send (list-ref editor-fields 14) get-value))
+                                  (parse-date (send (list-ref editor-fields 15) get-value) "yy-MM-dd")))
                      (set-order-data (map (λ (i) (send order-box get-data i))
                                           (range (send order-box get-number)))
                                      (iso8601->date (send eval-date-field get-value))))]))

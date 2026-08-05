@@ -93,24 +93,32 @@
   (set! target-position-analysis-list
         (filter (λ (pa) (or (and (equal? 'bull (hash-ref bull-bear-roo (position-analysis-stock pa)))
                                  (> (hash-ref ref-prices (position-analysis-stock pa))
-                                    (position-analysis-stock-target pa)))
+                                    (position-analysis-stock-high-target pa)))
                             (and (equal? 'bear (hash-ref bull-bear-roo (position-analysis-stock pa)))
                                  (< (hash-ref ref-prices (position-analysis-stock pa))
-                                    (position-analysis-stock-target pa)))))
+                                    (position-analysis-stock-low-target pa)))))
                 updated-position-analysis-list))
 
   (set! stop-position-analysis-list
         (filter (λ (pa) (or (and (equal? 'bull (hash-ref bull-bear-roo (position-analysis-stock pa)))
                                  (< (hash-ref ref-prices (position-analysis-stock pa))
-                                    (position-analysis-stock-stop pa)))
+                                    (position-analysis-stock-low-stop pa)))
                             (and (equal? 'bear (hash-ref bull-bear-roo (position-analysis-stock pa)))
                                  (> (hash-ref ref-prices (position-analysis-stock pa))
-                                    (position-analysis-stock-stop pa)))
+                                    (position-analysis-stock-high-stop pa)))
                             (and (string-contains? (position-analysis-strategy pa) "CONDOR")
                                  (or (< (hash-ref ref-prices (position-analysis-stock pa))
                                         (first (hash-ref min-max-strikes (position-analysis-stock pa))))
                                      (> (hash-ref ref-prices (position-analysis-stock pa))
-                                        (second (hash-ref min-max-strikes (position-analysis-stock pa))))))))
+                                        (second (hash-ref min-max-strikes (position-analysis-stock pa))))))
+                            (and (position-analysis-stock-low-stop pa)
+                                 (not (= 0 (position-analysis-stock-low-stop pa)))
+                                 (< (hash-ref ref-prices (position-analysis-stock pa))
+                                    (position-analysis-stock-low-stop pa)))
+                            (and (position-analysis-stock-high-stop pa)
+                                 (not (= 0 (position-analysis-stock-high-stop pa)))
+                                 (> (hash-ref ref-prices (position-analysis-stock pa))
+                                    (position-analysis-stock-high-stop pa)))))
                 updated-position-analysis-list))
 
   (define remaining-position-analysis-list
@@ -150,16 +158,18 @@
         (map (λ (m) (position-analysis-call-put m)) position-analysis-list)
         (map (λ (m) (position-analysis-account m)) position-analysis-list)
         (map (λ (m) (real->decimal-string (position-analysis-signed-shares m))) position-analysis-list)
-        (map (λ (m) (real->decimal-string (position-analysis-stock-stop m))) position-analysis-list)
+        (map (λ (m) (real->decimal-string (position-analysis-stock-low-stop m))) position-analysis-list)
+        (map (λ (m) (real->decimal-string (position-analysis-stock-low-target m))) position-analysis-list)
         (map (λ (m) (real->decimal-string (position-analysis-stock-close m))) position-analysis-list)
-        (map (λ (m) (real->decimal-string (position-analysis-stock-target m))) position-analysis-list)
+        (map (λ (m) (real->decimal-string (position-analysis-stock-high-stop m))) position-analysis-list)
+        (map (λ (m) (real->decimal-string (position-analysis-stock-high-target m))) position-analysis-list)
         (map (λ (m) (position-analysis-end-date m)) position-analysis-list))
   ; We set data here so that we can retrieve it later with `get-data`
   (map (λ (m i) (send box-ref set-data i m))
        position-analysis-list (range (length position-analysis-list))))
 
 (define analysis-box-columns (list "Sector" "Stock" "Expiry" "Strike" "CallPut" "Account"
-                                   "Qty" "StkStop" "StkPrc" "StkTgt" "EndDt"))
+                                   "Qty" "StkLoStp" "StkLoTgt" "StkPrc" "StkHiStp" "StkHiTgt" "EndDt"))
 
 (define (position-analysis-box parent-panel start-date end-date)
   (set! position-panel (new vertical-panel% [parent parent-panel] [alignment '(left top)]))
@@ -191,7 +201,7 @@
                      [stretchable-height (not height)]))
     (let ([box-width (send box get-width)]
           [num-cols (length analysis-box-columns)])
-      (for-each (λ (i) (send box set-column-width i 100 100 100))
+      (for-each (λ (i) (send box set-column-width i 90 90 90))
                 (range num-cols)))
     box)
 

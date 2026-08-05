@@ -261,8 +261,10 @@ CREATE TABLE ibkr.order_note
     order_id integer NOT NULL,
     order_strategy ibkr.order_strategy,
     underlying_entry_price numeric,
-    underlying_stop_price numeric,
-    underlying_target_price numeric,
+    underlying_low_stop_price numeric,
+    underlying_low_target_price numeric,
+    underlying_high_stop_price numeric,
+    underlying_high_target_price numeric,
     end_date date,
     pattern ibkr.pattern,
     CONSTRAINT order_note_order_id_key UNIQUE (account, order_id)

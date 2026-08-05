@@ -50,8 +50,10 @@
              (vol rational?)
              (spread rational?)
              (stock-entry rational?)
-             (stock-stop (or/c rational? #f))
-             (stock-target (or/c rational? #f))
+             (stock-low-stop (or/c rational? #f))
+             (stock-low-target (or/c rational? #f))
+             (stock-high-stop (or/c rational? #f))
+             (stock-high-target (or/c rational? #f))
              (end-date (or/c date? #f)))]))
 
 (struct dv (date value)
@@ -89,14 +91,16 @@
                               (dohlc-close stream))]
        [else (rest stream)]))])
 
-(struct test (timeframe entry stop target)
+(struct test (timeframe entry low-stop low-target high-stop high-target)
   #:transparent)
 
 (define (test-timeframe-minus-1 t)
   (test (- (test-timeframe t) 1)
         (test-entry t)
-        (test-stop t)
-        (test-target t)))
+        (test-low-stop t)
+        (test-low-target t)
+        (test-high-stop t)
+        (test-high-target t)))
 
 (struct trade (date price amount test)
   #:transparent)
@@ -131,11 +135,13 @@
 (struct forward-factor-analysis (stock front-exp front-vol back-exp back-vol vol-ratio forward-vol forward-factor earnings-date option-spread)
   #:transparent)
 
-(struct position-analysis (sector stock expiration strike call-put account signed-shares stock-stop stock-close stock-target end-date strategy)
+(struct position-analysis (sector stock expiration strike call-put account signed-shares stock-low-stop stock-low-target stock-close
+                                  stock-high-stop stock-high-target end-date strategy)
   #:transparent)
 
 (struct option (symbol expiration dte strike call-put date bid mid ask vol delta gamma theta vega rho)
   #:transparent)
 
-(struct order (pattern strategy symbol expiration strike call-put quantity price vol spread stock-entry stock-stop stock-target end-date)
+(struct order (pattern strategy symbol expiration strike call-put quantity price vol spread stock-entry stock-low-stop stock-low-target
+                       stock-high-stop stock-high-target end-date)
   #:transparent)

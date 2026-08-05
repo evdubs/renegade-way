@@ -141,6 +141,8 @@
                                                                  (string->number (send ref-price-field get-value))
                                                                  #f
                                                                  #f
+                                                                 #f
+                                                                 #f
                                                                  (+months (iso8601->date (send date-field get-value)) 1)))
                                                         v))
                                                  (define earnings-date (get-next-earnings-date (order-symbol (first order-data))

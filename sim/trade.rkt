@@ -31,8 +31,10 @@
    num
    patterns
    entry-price
-   stop-price
-   target-price
+   low-stop-price
+   low-target-price
+   high-stop-price
+   high-target-price
    vol-slope
    iv-hv)
   #:transparent)
@@ -61,8 +63,10 @@
                  (number->string (trade-num t)) "\t"
                  (if (trade-patterns t) (trade-patterns t) "") "\t"
                  (if (trade-entry-price t) (real->decimal-string (trade-entry-price t)) "") "\t"
-                 (if (trade-stop-price t) (real->decimal-string (trade-stop-price t)) "") "\t"
-                 (if (trade-target-price t) (real->decimal-string (trade-target-price t)) "") "\t"
+                 (if (trade-low-stop-price t) (real->decimal-string (trade-low-stop-price t)) "") "\t"
+                 (if (trade-low-target-price t) (real->decimal-string (trade-low-target-price t)) "") "\t"
+                 (if (trade-high-stop-price t) (real->decimal-string (trade-high-stop-price t)) "") "\t"
+                 (if (trade-high-target-price t) (real->decimal-string (trade-high-target-price t)) "") "\t"
                  (if (trade-vol-slope t) (real->decimal-string (trade-vol-slope t)) "") "\t"
                  (if (trade-iv-hv t) (real->decimal-string (trade-iv-hv t)) "") "\t"))
 
@@ -91,8 +95,10 @@
          (string->number (list-ref s 20)) ; num
          (if (equal? "" (list-ref s 21)) #f (list-ref s 21)) ; patterns
          (if (equal? "" (list-ref s 22)) #f (string->number (list-ref s 22))) ; entry-price
-         (if (equal? "" (list-ref s 23)) #f (string->number (list-ref s 23))) ; stop-price
-         (if (equal? "" (list-ref s 24)) #f (string->number (list-ref s 24))) ; target-price
-         (if (equal? "" (list-ref s 25)) #f (string->number (list-ref s 25))) ; vol-slope
-         (if (equal? "" (list-ref s 26)) #f (string->number (list-ref s 26))) ; iv-hv
+         (if (equal? "" (list-ref s 23)) #f (string->number (list-ref s 23))) ; low-stop-price
+         (if (equal? "" (list-ref s 24)) #f (string->number (list-ref s 24))) ; low-target-price
+         (if (equal? "" (list-ref s 25)) #f (string->number (list-ref s 25))) ; high-stop-price
+         (if (equal? "" (list-ref s 26)) #f (string->number (list-ref s 26))) ; high-target-price
+         (if (equal? "" (list-ref s 27)) #f (string->number (list-ref s 27))) ; vol-slope
+         (if (equal? "" (list-ref s 28)) #f (string->number (list-ref s 28))) ; iv-hv
          ))

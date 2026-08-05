@@ -10,12 +10,6 @@
   (command-line
    #:program "racket email-positions.rkt"
    #:once-each
-   ;[("-e" "--finviz-user") user
-   ;                        "FinViz username"
-   ;                        (finviz-user user)]
-   ;[("-f" "--finviz-pass") pass
-   ;                        "FinViz password"
-   ;                        (finviz-pass pass)]
    [("-n" "--db-name") name
                        "Database name. Defaults to 'local'"
                        (db-name name)]
@@ -94,25 +88,33 @@
 
 (define-values (stop-positions go-positions)
   (partition (λ (p) (match (bull-bear-roo (position-analysis-strategy p))
-                      ['bull (>= (position-analysis-stock-stop p)
+                      ['bull (>= (position-analysis-stock-low-stop p)
                                  (get-price-from-position p))]
-                      ['bear (<= (position-analysis-stock-stop p)
+                      ['bear (<= (position-analysis-stock-high-stop p)
                                  (get-price-from-position p))]
-                      ['roo (and (or (string-contains? (position-analysis-strategy p) "BUTTERFLY")
-                                     (string-contains? (position-analysis-strategy p) "CONDOR"))
-                                 (or (> (apply min (get-strikes-for-symbol (position-analysis-stock p)))
-                                        (get-price-from-position p))
-                                     (< (apply max (get-strikes-for-symbol (position-analysis-stock p)))
-                                        (get-price-from-position p))))]
+                      ['roo (or (and (or (string-contains? (position-analysis-strategy p) "BUTTERFLY")
+                                         (string-contains? (position-analysis-strategy p) "CONDOR"))
+                                     (or (> (apply min (get-strikes-for-symbol (position-analysis-stock p)))
+                                            (get-price-from-position p))
+                                         (< (apply max (get-strikes-for-symbol (position-analysis-stock p)))
+                                            (get-price-from-position p))))
+                                (and (position-analysis-stock-low-stop p)
+                                     (not (= 0.0 (position-analysis-stock-low-stop p)))
+                                     (>= (position-analysis-stock-low-stop p)
+                                         (get-price-from-position p)))
+                                (and (position-analysis-stock-high-stop p)
+                                     (not (= 0.0 (position-analysis-stock-high-stop p)))
+                                     (<= (position-analysis-stock-high-stop p)
+                                         (get-price-from-position p))))]
                       [_ #f]))
              live-positions))
 
 (define-values (target-positions off-target-positions)
   (partition (λ (p) (match (bull-bear-roo (position-analysis-strategy p))
                       ['bull (>= (get-price-from-position p)
-                                 (position-analysis-stock-target p))]
+                                 (position-analysis-stock-high-target p))]
                       ['bear (<= (get-price-from-position p)
-                                 (position-analysis-stock-target p))]
+                                 (position-analysis-stock-low-target p))]
                       ['roo #f]
                       [_ #f]))
              go-positions))
@@ -126,6 +128,8 @@
   <td style=\"text-align: right; padding-right: 20px\">~a</td>
   <td style=\"padding-right: 20px\">~a</td>
   <td style=\"padding-right: 20px\">~a</td>
+  <td style=\"text-align: right; padding-right: 20px\">~a</td>
+  <td style=\"text-align: right; padding-right: 20px\">~a</td>
   <td style=\"text-align: right; padding-right: 20px\">~a</td>
   <td style=\"text-align: right; padding-right: 20px\">~a</td>
   <td style=\"text-align: right; padding-right: 20px\">~a</td>
@@ -152,9 +156,11 @@
           (position-analysis-call-put position)
           (position-analysis-account position)
           (real->decimal-string (position-analysis-signed-shares position))
-          (real->decimal-string (position-analysis-stock-stop position))
+          (real->decimal-string (position-analysis-stock-low-stop position))
+          (real->decimal-string (position-analysis-stock-low-target position))
           (real->decimal-string price)
-          (real->decimal-string (position-analysis-stock-target position))
+          (real->decimal-string (position-analysis-stock-high-stop position))
+          (real->decimal-string (position-analysis-stock-high-target position))
           (position-analysis-end-date position)
           (position-analysis-strategy position)))
 
@@ -179,9 +185,11 @@
     <th style=\"padding-right: 20px\">Right</th>
     <th style=\"padding-right: 20px\">Account</th>
     <th style=\"padding-right: 20px\">Quantity</th>
-    <th style=\"padding-right: 20px\">Stop</th>
+    <th style=\"padding-right: 20px\">Low Stop</th>
+    <th style=\"padding-right: 20px\">Low Target</th>
     <th style=\"padding-right: 20px\">Price</th>
-    <th style=\"padding-right: 20px\">Target</th>
+    <th style=\"padding-right: 20px\">High Stop</th>
+    <th style=\"padding-right: 20px\">High Target</th>
     <th style=\"padding-right: 20px\">End Date</th>
     <th style=\"padding-right: 20px\">Strategy</th>
   </tr>

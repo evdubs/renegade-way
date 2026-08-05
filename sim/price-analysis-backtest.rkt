@@ -62,19 +62,19 @@
 
 (define trade-risk 2000)
 
-(define (exit-price future-prices long? entry-price stop-price target-price)
+(define (exit-price future-prices long? entry-price low-stop-price low-target-price high-stop-price high-target-price)
   (cond [(empty? future-prices) #f])
   (define candle (first future-prices))
   (define date (vector-ref candle 0))
   (define high (vector-ref candle 2))
   (define low (vector-ref candle 3))
   (define close (vector-ref candle 4))
-  (cond [(and long? (> stop-price low)) (list date close)]
-        [(and long? (> high target-price)) (list date close)]
-        [(and (not long?) (> high stop-price)) (list date close)]
-        [(and (not long?) (> target-price low)) (list date close)]
+  (cond [(and (long? low-stop-price) (> low-stop-price low)) (list date close)]
+        [(and (long? high-target-price) (> high high-target-price)) (list date close)]
+        [(and (long? high-stop-price) (> high high-stop-price)) (list date close)]
+        [(and (long? low-target-price) (> low-target-price low)) (list date close)]
         [(= 1 (length future-prices)) (list date close)]
-        [else (exit-price (drop future-prices 1) long? entry-price stop-price target-price)]))
+        [else (exit-price (drop future-prices 1) long? entry-price low-stop-price low-target-price high-stop-price high-target-price)]))
 
 (define trades
   (flatten
@@ -175,17 +175,20 @@ from
                                                  (and (< entry-price (apply max (map (λ (p) (vector-ref p 2))
                                                                                      (take future-prices 5))))
                                                       (date>=? (+days (dv-date test) 4) date))))
-                         (define stop-price (test-stop (dv-value test)))
-                         (define target-price (test-target (dv-value test)))
+                         (define low-stop-price (test-low-stop (dv-value test)))
+                         (define low-target-price (test-low-target (dv-value test)))
+                         (define high-stop-price (test-high-stop (dv-value test)))
+                         (define high-target-price (test-high-target (dv-value test)))
                          (printf "~a test-date ~a entry ~a will-enter? ~a stop ~a target ~a earnings-date ~a\n"
                                  symbol
                                  (dv-date test)
                                  (real->decimal-string entry-price)
                                  will-enter?
-                                 (real->decimal-string stop-price)
-                                 (real->decimal-string target-price)
+                                 (if bearish? (real->decimal-string high-stop-price) (real->decimal-string low-stop-price))
+                                 (if bearish? (real->decimal-string low-target-price) (real->decimal-string high-target-price))
                                  earnings-date)
-                         (define exit-date-stock-price (exit-price future-prices (not (bearish?)) entry-price stop-price target-price))
+                         (define exit-date-stock-price (exit-price future-prices (not (bearish?)) entry-price
+                                                                   low-stop-price low-target-price high-stop-price high-target-price))
                          (cond [will-enter? (printf "~a exit-date: ~a stock price: ~a\n" symbol (first exit-date-stock-price)
                                                     (real->decimal-string (second exit-date-stock-price)))
                                             (define option (~> (get-updated-options symbol
@@ -221,8 +224,10 @@ from
                                                    i
                                                    (vector-ref r 13)
                                                    entry-price
-                                                   stop-price
-                                                   target-price
+                                                   low-stop-price
+                                                   low-target-price
+                                                   high-stop-price
+                                                   high-target-price
                                                    #f
                                                    #f)]
                                [else #f])]
