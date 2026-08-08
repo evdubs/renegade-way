@@ -1,12 +1,14 @@
 #lang racket/base
 
 (require gregor
+         gregor/period
          racket/async-channel
          racket/class
          racket/gui/base
          racket/list
          racket/string
          "../db-queries.rkt"
+         "../option-strategy.rkt"
          "../web-prices.rkt"
          "../structs.rkt"
          "chart.rkt")
@@ -39,6 +41,10 @@
 (define expired-analysis-box-ref #f)
 
 (define expired-position-analysis-list (list))
+
+(define greeks-box-ref #f)
+
+(define position-greeks-list (list))
 
 (define (run-position-analysis market sector start-date end-date)
   (define position-analysis-list (get-position-analysis end-date))
@@ -90,6 +96,61 @@
   (set! position-history-text (string-append "History - " (get-position-history end-date)))
   (send position-history set-label position-history-text)
 
+  (define position-greeks-hash (make-hash))
+
+  (for-each (λ (pa)
+              (define opt (option (position-analysis-stock pa)
+                                  (parse-date (position-analysis-expiration pa) "yy-MM-dd")
+                                  (period-ref (period-between (iso8601->date end-date)
+                                                              (parse-date (position-analysis-expiration pa) "yy-MM-dd")
+                                                              '(days)) 'days)
+                                  (position-analysis-strike pa)
+                                  (string-titlecase (position-analysis-call-put pa))
+                                  (iso8601->date end-date)
+                                  #f ; bid
+                                  #f ; mid
+                                  #f ; ask
+                                  (get-closest-vol (position-analysis-stock pa)
+                                                   end-date
+                                                   (date->iso8601 (parse-date (position-analysis-expiration pa) "yy-MM-dd"))
+                                                   (position-analysis-strike pa)
+                                                   (string-titlecase (position-analysis-call-put pa)))
+                                  #f ; delta
+                                  #f ; gamma
+                                  #f ; theta
+                                  #f ; vega
+                                  #f ; rho
+                                  ))
+              (define priced-option (compute-price-greeks opt (hash-ref ref-prices (position-analysis-stock pa))))
+              (define key (list (position-analysis-stock pa) (position-analysis-account pa)))
+              (cond [(hash-has-key? position-greeks-hash key)
+                     (define val (hash-ref position-greeks-hash key))
+                     (hash-set! position-greeks-hash key
+                                (struct-copy position-greeks val
+                                             [delta (+ (position-greeks-delta val)
+                                                       (* 100.0 (option-delta priced-option) (position-analysis-signed-shares pa)))]
+                                             [gamma (+ (position-greeks-gamma val)
+                                                       (* 100.0 (option-gamma priced-option) (position-analysis-signed-shares pa)))]
+                                             [theta (+ (position-greeks-theta val)
+                                                       (* 100.0 (option-theta priced-option) (position-analysis-signed-shares pa)))]
+                                             [vega (+ (position-greeks-vega val)
+                                                      (* 100.0 (option-vega priced-option) (position-analysis-signed-shares pa)))]
+                                             [rho (+ (position-greeks-rho val)
+                                                     (* 100.0 (option-rho priced-option) (position-analysis-signed-shares pa)))]))]
+                    [else
+                     (hash-set! position-greeks-hash key
+                                (position-greeks (position-analysis-sector pa)
+                                                 (position-analysis-stock pa)
+                                                 (position-analysis-account pa)
+                                                 (* 100.0 (option-delta priced-option) (position-analysis-signed-shares pa))
+                                                 (* 100.0 (option-gamma priced-option) (position-analysis-signed-shares pa))
+                                                 (* 100.0 (option-theta priced-option) (position-analysis-signed-shares pa))
+                                                 (* 100.0 (option-vega priced-option) (position-analysis-signed-shares pa))
+                                                 (* 100.0 (option-rho priced-option) (position-analysis-signed-shares pa))))]))
+            updated-position-analysis-list)
+
+  (set! position-greeks-list (sort (hash-values position-greeks-hash) string<? #:key position-greeks-stock))
+
   (set! target-position-analysis-list
         (filter (λ (pa) (or (and (equal? 'bull (hash-ref bull-bear-roo (position-analysis-stock pa)))
                                  (> (hash-ref ref-prices (position-analysis-stock pa))
@@ -126,7 +187,7 @@
              (remove* stop-position-analysis-list updated-position-analysis-list)))
 
   (set! expired-position-analysis-list (filter (λ (pa) (and (not (equal? "" (position-analysis-end-date pa)))
-                                                            (date>=? (today)
+                                                            (date>=? (iso8601->date end-date)
                                                                      (parse-date (position-analysis-end-date pa) "yy-MM-dd"))))
                                                remaining-position-analysis-list))
 
@@ -135,7 +196,8 @@
   (update-analysis-box open-analysis-box-ref open-position-analysis-list)
   (update-analysis-box stop-analysis-box-ref stop-position-analysis-list)
   (update-analysis-box target-analysis-box-ref target-position-analysis-list)
-  (update-analysis-box expired-analysis-box-ref expired-position-analysis-list))
+  (update-analysis-box expired-analysis-box-ref expired-position-analysis-list)
+  (update-greeks-box position-greeks-list))
 
 (define (get-min-max-strikes position-analysis-list)
   (foldl (λ (pa h)
@@ -170,6 +232,22 @@
 
 (define analysis-box-columns (list "Sector" "Stock" "Expiry" "Strike" "CallPut" "Account"
                                    "Qty" "StkLoStp" "StkLoTgt" "StkPrc" "StkHiStp" "StkHiTgt" "EndDt"))
+
+(define (update-greeks-box position-greeks-list)
+  (send greeks-box-ref set
+        (map (λ (m) (position-greeks-sector m)) position-greeks-list)
+        (map (λ (m) (position-greeks-stock m)) position-greeks-list)
+        (map (λ (m) (position-greeks-account m)) position-greeks-list)
+        (map (λ (m) (real->decimal-string (position-greeks-delta m))) position-greeks-list)
+        (map (λ (m) (real->decimal-string (position-greeks-gamma m))) position-greeks-list)
+        (map (λ (m) (real->decimal-string (position-greeks-theta m))) position-greeks-list)
+        (map (λ (m) (real->decimal-string (position-greeks-vega m))) position-greeks-list)
+        (map (λ (m) (real->decimal-string (position-greeks-rho m))) position-greeks-list))
+
+  (map (λ (m i) (send greeks-box-ref set-data i m))
+       position-greeks-list (range (length position-greeks-list))))
+
+(define greeks-box-columns (list "Sector" "Stock" "Account" "Delta" "Gamma" "Theta" "Vega" "Rho"))
 
 (define (position-analysis-box parent-panel start-date end-date)
   (set! position-panel (new vertical-panel% [parent parent-panel] [alignment '(left top)]))
@@ -207,9 +285,24 @@
 
   (set! open-analysis-box-ref (analysis-box "Open" #f))
   (update-analysis-box open-analysis-box-ref open-position-analysis-list)
-  (set! stop-analysis-box-ref (analysis-box "Stop" 150))
+  (set! stop-analysis-box-ref (analysis-box "Stop" 100))
   (update-analysis-box stop-analysis-box-ref stop-position-analysis-list)
-  (set! target-analysis-box-ref (analysis-box "Target" 150))
+  (set! target-analysis-box-ref (analysis-box "Target" 100))
   (update-analysis-box target-analysis-box-ref target-position-analysis-list)
-  (set! expired-analysis-box-ref (analysis-box "Expired" 150))
-  (update-analysis-box expired-analysis-box-ref expired-position-analysis-list))
+  (set! expired-analysis-box-ref (analysis-box "Expired" 100))
+  (update-analysis-box expired-analysis-box-ref expired-position-analysis-list)
+
+  (define greeks-box (new list-box%
+                          [parent position-panel]
+                          [label "Position Greeks"]
+                          [style (list 'single 'column-headers 'vertical-label)]
+                          [columns greeks-box-columns]
+                          [choices (list "")]
+                          [min-height 150]
+                          [stretchable-height (not 150)]))
+  (let ([box-width (send greeks-box get-width)]
+        [num-cols (length greeks-box-columns)])
+    (for-each (λ (i) (send greeks-box set-column-width i 90 90 90))
+              (range num-cols)))
+  (set! greeks-box-ref greeks-box)
+  (update-greeks-box position-greeks-list))

@@ -13,6 +13,7 @@
 
 (provide get-1-month-rate
          get-atm-curve
+         get-closest-vol
          get-condor-analysis
          get-date-ohlc
          get-date-variance-history
@@ -23,6 +24,7 @@
          get-earnings-dates
          get-earnings-symbols-for-date
          get-earnings-vibes-analysis
+         get-earnings-vol-premium
          get-etf-vrp-analysis
          get-execution-tick
          get-forward-factor-analysis
@@ -46,6 +48,37 @@
          insert-order-note)
 
 (define dbc (postgresql-connect #:server (db-host) #:user (db-user) #:database (db-name) #:password (db-pass)))
+
+(define (get-closest-vol symbol date expiration strike call-put)
+    (query-value dbc "
+select
+  vol
+from
+  (select
+    date,
+    act_symbol,
+    expiration,
+    strike,
+    call_put,
+    vol,
+    abs(expiration - $3::text::date) as date_diff,
+    abs(strike - $4) as strike_diff
+  from
+    oic.option_chain oc
+  where
+    act_symbol = $1 and
+    date = (select max(date) from oic.option_chain where date <= $2::text::date) and
+    call_put = $5::text::oic.call_put
+  order by
+    abs(expiration - $3::text::date) + abs(strike - $4)) cv
+limit
+  1;
+"
+                 symbol
+                 date
+                 expiration
+                 strike
+                 call-put))
 
 (define (get-date-ohlc ticker-symbol start-date end-date)
   (let ([price-query (query-rows dbc "
@@ -287,6 +320,79 @@ where
    (ec.date = $1::text::date + interval '1 day' and ec.\"when\" = 'Before market open'::zacks.\"when\"));
 "
               date))
+
+(define (get-earnings-vol-premium date symbol)
+  (query-value dbc "
+with past_earnings as (
+select
+  act_symbol,
+  date
+from
+  zacks.earnings_calendar ec
+where
+  date <= $1::text::date and
+  act_symbol = $2 and
+  date >= $1::text::date - '3 years'::interval
+), pre_earnings_vol_dates as (
+select
+  vh.act_symbol,
+  pe.date as earnings_date,
+  max(vh.date) as vol_date
+from
+  past_earnings pe
+join
+  oic.volatility_history vh
+on
+  vh.act_symbol = pe.act_symbol and
+  vh.date < pe.date and
+  vh.date > pe.date - '7 days'::interval
+group by
+  vh.act_symbol,
+  pe.date
+), post_earnings_vol_dates as (
+select
+  vh.act_symbol,
+  pe.date as earnings_date,
+  min(vh.date) as vol_date
+from
+  past_earnings pe
+join
+  oic.volatility_history vh
+on
+  vh.act_symbol = pe.act_symbol and
+  vh.date > pe.date and
+  vh.date < pe.date + '7 days'::interval
+group by
+  vh.act_symbol,
+  pe.date
+)
+select
+  coalesce(avg(vh_pre.iv_current - vh_post.iv_current), 0.00)
+from
+  past_earnings pe
+join
+  pre_earnings_vol_dates pevd
+on
+  pe.act_symbol = pevd.act_symbol and
+  pe.date = pevd.earnings_date
+join
+  post_earnings_vol_dates povd
+on
+  pe.act_symbol = povd.act_symbol and
+  pe.date = povd.earnings_date
+join
+  oic.volatility_history vh_pre
+on
+  pe.act_symbol = vh_pre.act_symbol and
+  pevd.vol_date = vh_pre.date
+join
+  oic.volatility_history vh_post
+on
+  pe.act_symbol = vh_post.act_symbol and
+  povd.vol_date = vh_post.date;
+"
+               (date->iso8601 date)
+               symbol))
 
 (define (get-execution-tick execution-id)
   (query-rows dbc "
@@ -1310,6 +1416,8 @@ from
         end) as signed_shares
   from
     ibkr.execution
+  where
+    timestamp <= ($1::text::timestamp + '20 hours'::interval)
   group by
     contract_id, account) e
 join

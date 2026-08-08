@@ -20,6 +20,7 @@
          (struct-out etf-vrp-analysis)
          (struct-out forward-factor-analysis)
          (struct-out position-analysis)
+         (struct-out position-greeks)
          (struct-out option)
          (contract-out
           [struct order
@@ -137,6 +138,9 @@
 
 (struct position-analysis (sector stock expiration strike call-put account signed-shares stock-low-stop stock-low-target stock-close
                                   stock-high-stop stock-high-target end-date strategy)
+  #:transparent)
+
+(struct position-greeks (sector stock account delta gamma theta vega rho)
   #:transparent)
 
 (struct option (symbol expiration dte strike call-put date bid mid ask vol delta gamma theta vega rho)

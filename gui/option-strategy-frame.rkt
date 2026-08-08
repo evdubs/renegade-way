@@ -156,8 +156,9 @@
                                                  (define eval-date (if (date<? (order-end-date (first order-data)) first-expiry)
                                                                        (order-end-date (first order-data))
                                                                        first-expiry))
+                                                 (define earnings-vol-premium (get-earnings-vol-premium eval-date (send symbol-field get-value)))
 
-                                                 (set-order-data order-data eval-date))])])
+                                                 (set-order-data order-data eval-date earnings-vol-premium))])])
                      (send table set
                            (map (λ (o) (option-symbol o)) v)
                            (map (λ (o) (option-expiration o)) v)

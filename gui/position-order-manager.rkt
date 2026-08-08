@@ -61,11 +61,11 @@
        [label "Eval Date"]
        [init-value ""]))
 
-(define vol-factor-field
+(define earnings-vol-premium-field
   (new text-field%
        [parent field-input-pane]
-       [label "Vol Factor"]
-       [init-value "0.67"]))
+       [label "Ern Vol Prem"]
+       [init-value "0.0000"]))
 
 (define button-input-pane
   (new horizontal-pane%
@@ -297,7 +297,8 @@
                                                [stock-low-stop (order-strike (send order-box get-data 3))])]
                                  [else ord]))
                          (range (send order-box get-number)))
-                    (iso8601->date (send eval-date-field get-value)))
+                    (iso8601->date (send eval-date-field get-value))
+                    (string->number (send earnings-vol-premium-field get-value)))
                    (update-profit-loss-chart))]))
 
 (define add-spread-button
@@ -311,7 +312,8 @@
                            (define ord (send order-box get-data i))
                            (struct-copy order ord [price (* (order-price ord) (+ 1 spread-pct))]))
                          (range (send order-box get-number)))
-                    (iso8601->date (send eval-date-field get-value))))]))
+                    (iso8601->date (send eval-date-field get-value))
+                    (string->number (send earnings-vol-premium-field get-value))))]))
 
 (define order-box-columns (list "Symbol" "Expiry" "Strike" "CallPut" "Qty" "Price" "StkEntry" "StkLoStp" "StkLoTgt" "StkHiStp" "StkHiTgt"))
 
@@ -362,12 +364,14 @@
   (define high-target-price (order-stock-high-target (send order-box get-data 0)))
   (define low-price (min (* 80/100 ref-price)
                          (apply min (map (λ (i) (order-strike (send order-box get-data i)))
-                                         (range (send order-box get-number))))))
+                                         (range (send order-box get-number))))
+                         (if low-stop-price low-stop-price (* 80/100 ref-price))
+                         (if low-target-price low-target-price (* 80/100 ref-price))))
   (define high-price (max (* 121/100 ref-price)
                           (apply max (map (λ (i) (order-strike (send order-box get-data i)))
-                                          (range (send order-box get-number))))))
-  (define low-vol (apply min (map (λ (i) (order-vol (send order-box get-data i)))
-                                  (range (send order-box get-number)))))
+                                          (range (send order-box get-number))))
+                          (if high-stop-price high-stop-price (* 121/100 ref-price))
+                          (if high-target-price high-target-price (* 121/100 ref-price))))
   (define prices (map (λ (i) (/ (* i ref-price) 100))
                       (range (* 100 (/ low-price ref-price)) (* 100 (/ high-price ref-price)) 0.5)))
   (define price-nearest-low-target (if low-target-price
@@ -382,6 +386,10 @@
                                                (first prices) prices)))
   (define eval-date (iso8601->date (send eval-date-field get-value)))
   (define 1-month-rate (get-1-month-rate (date->iso8601 (today))))
+  (define latest-30d-vol (dv-value (last (get-date-vol-history (order-symbol (send order-box get-data 0))
+                                                               ; eval date may be weeks into the future
+                                                               (date->iso8601 (-days eval-date 90))
+                                                               (date->iso8601 eval-date)))))
   (define (price-profit-loss vol-multiplier vol prices)
     (map (λ (p)
            (vector p (foldl (λ (i res)
@@ -447,12 +455,12 @@
                                          #:color 3
                                          #:style 'long-dash
                                          #:label "Vol * 0.5")
-                                  (lines (price-profit-loss #f (* (string->number (send vol-factor-field get-value))
-                                                                  low-vol) prices)
+                                  (lines (price-profit-loss #f (- latest-30d-vol (string->number (send earnings-vol-premium-field get-value))) prices)
                                          #:color 4
                                          #:style 'long-dash
-                                         #:label (string-append "Vol = " (real->decimal-string (* (string->number (send vol-factor-field get-value))
-                                                                                                  low-vol) 2)))))
+                                         #:label (string-append "Vol = "
+                                                                (real->decimal-string (- latest-30d-vol (string->number (send earnings-vol-premium-field get-value)))
+                                                                                      2)))))
                    #:title (string-append "Order Profit/Loss at " (date->iso8601 eval-date))
                    #:x-label "Stock Price"
                    #:y-label "Profit/Loss"
@@ -683,7 +691,7 @@
                                                   (string->number (send trade-risk-percent-field get-value)))))
                    (send ibkr send-msg (new account-data-req% [subscribe #f])))]))
 
-(define (set-order-data order-data eval-date)
+(define (set-order-data order-data eval-date vol-premium)
   (send order-box set
         (map (λ (d) (order-symbol d)) order-data)
         (map (λ (d) (~t (order-expiration d) "yy-MM-dd")) order-data)
@@ -700,7 +708,8 @@
               (send order-box set-data i d))
             order-data (range (length order-data)))
 
-  (send eval-date-field set-value (date->iso8601 eval-date)))
+  (send eval-date-field set-value (date->iso8601 eval-date))
+  (send earnings-vol-premium-field set-value (real->decimal-string vol-premium 4)))
 
 (define (row-editor-frame index headers row)
   (define editor-frame (new frame% [label "Row Editor"] [width 300] [height 400]))
@@ -750,7 +759,8 @@
                                   (parse-date (send (list-ref editor-fields 15) get-value) "yy-MM-dd")))
                      (set-order-data (map (λ (i) (send order-box get-data i))
                                           (range (send order-box get-number)))
-                                     (iso8601->date (send eval-date-field get-value))))]))
+                                     (iso8601->date (send eval-date-field get-value))
+                                     (string->number (send earnings-vol-premium-field get-value))))]))
   (send editor-frame show #t))
 
 (define (show-position-order-manager)

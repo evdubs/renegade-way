@@ -9,7 +9,7 @@
 (provide price-option)
 
 (define (price-option dbc option date stock-price)
-  (define closest-exit-vol
+  (define closest-vol
     (query-value dbc "
 select
   vol
@@ -42,7 +42,7 @@ limit
   (define interest-rate
     (query-value dbc "
 select
-  \"1_month\" / 100
+  \"1_month\" / 100.0
 from
   ust.yield_curve
 where
@@ -52,7 +52,7 @@ where
   (define dividends
     (query-rows dbc "
 select
-  ((previous.ex_date + interval '1 year')::date - $2::text::date) / 365,
+  ((previous.ex_date + interval '1 year')::date - $2::text::date) / 365.0,
   latest.amount
 from
   yahoo.dividend latest
@@ -81,7 +81,7 @@ where
   ;;         (option-strike option)
   ;;         (option-call-put option)
   ;;         interest-rate
-  ;;         closest-exit-vol
+  ;;         closest-vol
   ;;         dividends)
   (define option-closing-price
     (black-scholes stock-price
@@ -89,7 +89,7 @@ where
                    (option-strike option)
                    (string->symbol (option-call-put option))
                    interest-rate
-                   closest-exit-vol
+                   closest-vol
                    dividends))
-  ; (printf "price: ~a vol: ~a option: ~a\n" option-closing-price closest-exit-vol option)
+  ; (printf "price: ~a vol: ~a option: ~a\n" option-closing-price closest-vol option)
   option-closing-price)

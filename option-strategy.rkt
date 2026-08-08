@@ -10,7 +10,8 @@
          "pricing-risk.rkt"
          "structs.rkt")
 
-(provide get-updated-options
+(provide compute-price-greeks
+         get-updated-options
          suitable-options)
 
 ; taken from alex-hhh/data-frame ... least-squares-fit.rkt
@@ -21,6 +22,58 @@
   (define x (matrix* x-matrix-transposed x-matrix))
   (define y (matrix* x-matrix-transposed y-matrix))
   (matrix->list (matrix-solve x y)))
+
+(define (compute-price-greeks opt ref-price)
+  (define days-in-this-year (days-in-year (->year (option-date opt))))
+  (define divs (map (λ (div) (vector (/ (vector-ref div 0) days-in-this-year)
+                                     (vector-ref div 1)))
+                    (get-dividend-estimates (option-symbol opt)
+                                            (option-date opt)
+                                            (option-expiration opt))))
+  (define 1-month-rate (get-1-month-rate (date->iso8601 (option-date opt))))
+  (struct-copy option opt
+               [mid (black-scholes ref-price
+                                   (/ (option-dte opt) days-in-this-year)
+                                   (option-strike opt)
+                                   (string->symbol (option-call-put opt))
+                                   1-month-rate
+                                   (option-vol opt)
+                                   divs)]
+               [delta (black-scholes-delta ref-price
+                                           (/ (option-dte opt) days-in-this-year)
+                                           (option-strike opt)
+                                           (string->symbol (option-call-put opt))
+                                           1-month-rate
+                                           (option-vol opt)
+                                           divs)]
+               [gamma (black-scholes-gamma ref-price
+                                           (/ (option-dte opt) days-in-this-year)
+                                           (option-strike opt)
+                                           (string->symbol (option-call-put opt))
+                                           1-month-rate
+                                           (option-vol opt)
+                                           divs)]
+               [theta (black-scholes-theta ref-price
+                                           (/ (option-dte opt) days-in-this-year)
+                                           (option-strike opt)
+                                           (string->symbol (option-call-put opt))
+                                           1-month-rate
+                                           (option-vol opt)
+                                           divs)]
+               [vega (black-scholes-vega ref-price
+                                         (/ (option-dte opt) days-in-this-year)
+                                         (option-strike opt)
+                                         (string->symbol (option-call-put opt))
+                                         1-month-rate
+                                         (option-vol opt)
+                                         divs)]
+               [rho (black-scholes-rho ref-price
+                                       (/ (option-dte opt) days-in-this-year)
+                                       (option-strike opt)
+                                       (string->symbol (option-call-put opt))
+                                       1-month-rate
+                                       (option-vol opt)
+                                       divs)]))
 
 (define (get-updated-options symbol date ref-price #:compute-all-greeks [compute-all-greeks? #t] #:fit-vols [fit-vols? #f])
   (define options (get-options symbol date))
