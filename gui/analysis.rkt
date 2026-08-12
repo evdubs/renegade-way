@@ -85,7 +85,8 @@
                    (etf-vrp-analysis-filter #:hide-no-pattern (send hide-no-pattern-check-box get-value)
                                             #:hide-large-spread (send hide-spread-check-box get-value))
                    (forward-factor-analysis-filter #:hide-no-pattern (send hide-no-pattern-check-box get-value)
-                                                   #:hide-large-spread (send hide-spread-check-box get-value)))]))
+                                                   #:hide-large-spread (send hide-spread-check-box get-value)
+                                                   #:use-live-data (send use-live-data-check-box get-value)))]))
 
 (define hide-spread-check-box
   (new check-box%
@@ -109,7 +110,8 @@
                    (etf-vrp-analysis-filter #:hide-no-pattern (send hide-no-pattern-check-box get-value)
                                             #:hide-large-spread (send hide-spread-check-box get-value))
                    (forward-factor-analysis-filter #:hide-no-pattern (send hide-no-pattern-check-box get-value)
-                                                   #:hide-large-spread (send hide-spread-check-box get-value)))]))
+                                                   #:hide-large-spread (send hide-spread-check-box get-value)
+                                                   #:use-live-data (send use-live-data-check-box get-value)))]))
 
 (define hide-non-weekly-check-box
   (new check-box%
@@ -135,6 +137,9 @@
        [callback (λ (b e)
                    (earnings-vibes-analysis-filter #:hide-large-spread (send hide-spread-check-box get-value)
                                                    #:hide-non-weekly (send hide-non-weekly-check-box get-value)
+                                                   #:use-live-data (send use-live-data-check-box get-value))
+                   (forward-factor-analysis-filter #:hide-no-pattern (send hide-no-pattern-check-box get-value)
+                                                   #:hide-large-spread (send hide-spread-check-box get-value)
                                                    #:use-live-data (send use-live-data-check-box get-value)))]))
 
 (define fit-vols-check-box

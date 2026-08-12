@@ -4,6 +4,7 @@
          racket/gui/base
          racket/list
          "../db-queries.rkt"
+         "../web-prices.rkt"
          "../structs.rkt"
          "chart.rkt"
          "option-strategy-frame.rkt")
@@ -20,9 +21,12 @@
 
 (define hide-large-spread (make-parameter #f))
 
-(define (forward-factor-analysis-filter #:hide-no-pattern no-pattern #:hide-large-spread large-spread)
+(define use-live-data (make-parameter #f))
+
+(define (forward-factor-analysis-filter #:hide-no-pattern no-pattern #:hide-large-spread large-spread #:use-live-data live-data)
   (hide-no-pattern no-pattern)
   (hide-large-spread large-spread)
+  (use-live-data live-data)
   (update-analysis-box forward-factor-analysis-list))
 
 (define (run-forward-factor-analysis end-date)
@@ -70,7 +74,9 @@
                                       end-date)
                        (refresh-option-strategy stock
                                                 end-date
-                                                (dohlc-close (last (get-date-ohlc stock start-date end-date)))
+                                                (if (use-live-data)
+                                                  (hash-ref (get-prices (list stock)) stock)
+                                                  (dohlc-close (last (get-date-ohlc stock start-date end-date))))
                                                 "FF")))]
          [style (list 'single 'column-headers 'vertical-label)]
          [columns analysis-box-columns]

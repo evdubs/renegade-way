@@ -31,6 +31,7 @@
 
 (require 'cmd
          gregor
+         gregor/period
          json
          net/head
          net/http-easy
@@ -41,9 +42,10 @@
          racket/string
          threading
          "db-queries.rkt"
-         "web-prices.rkt"
+         "option-strategy.rkt"
          "params.rkt"
-         "structs.rkt")
+         "structs.rkt"
+         "web-prices.rkt")
 
 (define (bull-bear-roo strategy)
   (cond [(or (equal? "LONG CALL" strategy)
@@ -119,6 +121,61 @@
                       [_ #f]))
              go-positions))
 
+(define position-greeks-hash (make-hash))
+
+(for-each (λ (pa)
+            (define opt (option (position-analysis-stock pa)
+                                (parse-date (position-analysis-expiration pa) "yy-MM-dd")
+                                (period-ref (period-between (today)
+                                                            (parse-date (position-analysis-expiration pa) "yy-MM-dd")
+                                                            '(days)) 'days)
+                                (position-analysis-strike pa)
+                                (string-titlecase (position-analysis-call-put pa))
+                                (today)
+                                #f ; bid
+                                #f ; mid
+                                #f ; ask
+                                (get-closest-vol (position-analysis-stock pa)
+                                                 (date->iso8601 (today))
+                                                 (date->iso8601 (parse-date (position-analysis-expiration pa) "yy-MM-dd"))
+                                                 (position-analysis-strike pa)
+                                                 (string-titlecase (position-analysis-call-put pa)))
+                                #f ; delta
+                                #f ; gamma
+                                #f ; theta
+                                #f ; vega
+                                #f ; rho
+                                ))
+            (define priced-option (compute-price-greeks opt (hash-ref symbols-prices (position-analysis-stock pa))))
+            (define key (list (position-analysis-stock pa) (position-analysis-account pa)))
+            (cond [(hash-has-key? position-greeks-hash key)
+                   (define val (hash-ref position-greeks-hash key))
+                   (hash-set! position-greeks-hash key
+                              (struct-copy position-greeks val
+                                           [delta (+ (position-greeks-delta val)
+                                                     (* 100.0 (option-delta priced-option) (position-analysis-signed-shares pa)))]
+                                           [gamma (+ (position-greeks-gamma val)
+                                                     (* 100.0 (option-gamma priced-option) (position-analysis-signed-shares pa)))]
+                                           [theta (+ (position-greeks-theta val)
+                                                     (* 100.0 (option-theta priced-option) (position-analysis-signed-shares pa)))]
+                                           [vega (+ (position-greeks-vega val)
+                                                    (* 100.0 (option-vega priced-option) (position-analysis-signed-shares pa)))]
+                                           [rho (+ (position-greeks-rho val)
+                                                   (* 100.0 (option-rho priced-option) (position-analysis-signed-shares pa)))]))]
+                  [else
+                   (hash-set! position-greeks-hash key
+                              (position-greeks (position-analysis-sector pa)
+                                               (position-analysis-stock pa)
+                                               (position-analysis-account pa)
+                                               (* 100.0 (option-delta priced-option) (position-analysis-signed-shares pa))
+                                               (* 100.0 (option-gamma priced-option) (position-analysis-signed-shares pa))
+                                               (* 100.0 (option-theta priced-option) (position-analysis-signed-shares pa))
+                                               (* 100.0 (option-vega priced-option) (position-analysis-signed-shares pa))
+                                               (* 100.0 (option-rho priced-option) (position-analysis-signed-shares pa))))]))
+          positions)
+
+(define position-greeks-list (sort (hash-values position-greeks-hash) string<? #:key position-greeks-stock))
+
 (define (position->html-str position price)
   (format "
 <tr style=\"background-color:~a\">
@@ -164,6 +221,28 @@
           (position-analysis-end-date position)
           (position-analysis-strategy position)))
 
+(define (position-greeks->html-str position-greeks)
+  (format "
+<tr>
+  <td style=\"padding-right: 20px\">~a</td>
+  <td style=\"padding-right: 20px\">~a</td>
+  <td style=\"padding-right: 20px\">~a</td>
+  <td style=\"text-align: right; padding-right: 20px\">~a</td>
+  <td style=\"text-align: right; padding-right: 20px\">~a</td>
+  <td style=\"text-align: right; padding-right: 20px\">~a</td>
+  <td style=\"text-align: right; padding-right: 20px\">~a</td>
+  <td style=\"text-align: right; padding-right: 20px\">~a</td>
+</tr>
+"
+          (position-greeks-sector position-greeks)
+          (position-greeks-stock position-greeks)
+          (position-greeks-account position-greeks)
+          (real->decimal-string (position-greeks-delta position-greeks))
+          (real->decimal-string (position-greeks-gamma position-greeks))
+          (real->decimal-string (position-greeks-theta position-greeks))
+          (real->decimal-string (position-greeks-vega position-greeks))
+          (real->decimal-string (position-greeks-rho position-greeks))))
+
 (smtp-send-message "smtp.gmail.com"
                    (email-user)
                    (list (email-user))
@@ -176,6 +255,7 @@
                                              (list)
                                              (format "Option Positions ~a" (date->iso8601 (today)))))
                    (list (format "
+<h3>Positions</h3>
 <table>
   <tr>
     <th style=\"padding-right: 20px\">Sector</th>
@@ -219,11 +299,27 @@
   </tr>
   ~a
 </table>
+<br/><br/>
+<h3>Greeks</h3>
+<table>
+  <tr>
+    <th style=\"padding-right: 20px\">Sector</th>
+    <th style=\"padding-right: 20px\">Stock</th>
+    <th style=\"padding-right: 20px\">Account</th>
+    <th style=\"padding-right: 20px\">Delta</th>
+    <th style=\"padding-right: 20px\">Gamma</th>
+    <th style=\"padding-right: 20px\">Theta</th>
+    <th style=\"padding-right: 20px\">Vega</th>
+    <th style=\"padding-right: 20px\">Rho</th>
+  </tr>
+  ~a
+</table>
 "
                                  (string-join (map (λ (p) (position->html-str p (get-price-from-position p))) expired-positions) "\n")
                                  (string-join (map (λ (p) (position->html-str p (get-price-from-position p))) stop-positions) "\n")
                                  (string-join (map (λ (p) (position->html-str p (get-price-from-position p))) target-positions) "\n")
-                                 (string-join (map (λ (p) (position->html-str p (get-price-from-position p))) off-target-positions) "\n")))
+                                 (string-join (map (λ (p) (position->html-str p (get-price-from-position p))) off-target-positions) "\n")
+                                 (string-join (map (λ (pg) (position-greeks->html-str pg)) position-greeks-list) "\n")))
                    #:port-no 465
                    #:auth-user (email-user)
                    #:auth-passwd (email-pass)

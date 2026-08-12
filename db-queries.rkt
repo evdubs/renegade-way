@@ -1237,7 +1237,7 @@ join
 on
   vol_by_exp.act_symbol = earnings_date.act_symbol
 where
-  expiration >= earnings_date.pivot and
+  expiration > earnings_date.pivot + '7 days'::interval and
   expiration <= earnings_date.pivot + '56 days'::interval
 group by
   vol_by_exp.act_symbol),
