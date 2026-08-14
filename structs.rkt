@@ -5,24 +5,160 @@
          racket/list
          racket/stream) ; needed for gen:stream
 
-(provide (struct-out dv)
-         (struct-out dohlc)
-         (struct-out test)
+(provide (struct-out test)
          test-timeframe-minus-1
          (struct-out trade)
          (struct-out position)
          (struct-out history)
-         (struct-out price-analysis)
-         (struct-out rank-analysis)
-         (struct-out vol-analysis)
-         (struct-out condor-analysis)
-         (struct-out earnings-vibes-analysis)
-         (struct-out etf-vrp-analysis)
-         (struct-out forward-factor-analysis)
-         (struct-out position-analysis)
-         (struct-out position-greeks)
-         (struct-out option)
          (contract-out
+          [struct dv
+            ((date integer?) ; posix time for date
+             (value any/c))]
+          [struct dohlc
+            ((date integer?) ; posix time for date
+             (open rational?)
+             (high rational?)
+             (low rational?)
+             (close rational?))]
+          [struct price-analysis
+            ((market string?)
+             (sector string?)
+             (sector-vs-market rational?)
+             (industry (or/c string? #f))
+             (stock string?)
+             (stock-vs-sector rational?)
+             (next-div-date (or/c date? #f))
+             (earnings-date (or/c date? #f))
+             (option-spread rational?)
+             (zacks-rank (or/c 'strong-buy 'buy 'hold 'sell 'strong-sell #f))
+             (is-weekly boolean?))]
+          [struct rank-analysis
+            ((market string?)
+             (market-rank rational?)
+             (sector string?)
+             (sector-rank rational?)
+             (industry (or/c string? #f))
+             (industry-rank (or/c rational? #f))
+             (stock string?)
+             (stock-rank rational?)
+             (stock-best-rank rational?)
+             (stock-avg-rank rational?)
+             (stock-worst-rank rational?)
+             (earnings-date (or/c date? #f))
+             (option-spread rational?)
+             (is-weekly boolean?))]
+          [struct vol-analysis
+            ((market string?)
+             (market-iv rational?)
+             (market-iv-rank rational?)
+             (sector (or/c string? #f))
+             (sector-iv rational?)
+             (sector-iv-rank rational?)
+             (industry (or/c string? #f))
+             (industry-iv rational?)
+             (industry-iv-rank rational?)
+             (stock string?)
+             (stock-iv rational?)
+             (stock-iv-rank rational?)
+             (earnings-date (or/c date? #f))
+             (option-spread rational?)
+             (is-weekly boolean?))]
+          [struct condor-analysis
+            ((market string?)
+             (market-rtg (or/c rational? #f))
+             (market-rr (or/c rational? #f))
+             (sector (or/c string? #f))
+             (sector-rtg (or/c rational? #f))
+             (sector-rr (or/c rational? #f))
+             (industry (or/c string? #f))
+             (industry-rtg (or/c rational? #f))
+             (industry-rr (or/c rational? #f))
+             (stock string?)
+             (stock-rtg (or/c rational? #f))
+             (stock-rr (or/c rational? #f))
+             (earnings-date (or/c date? #f))
+             (option-spread rational?)
+             (is-weekly boolean?))]
+          [struct earnings-vibes-analysis
+            ((stock string?)
+             (min-expiration date?)
+             (max-expiration date?)
+             (strike rational?)
+             (vol-slope rational?)
+             (iv-hv rational?)
+             (price-strike-ratio (or/c rational? #f))
+             (earnings-date date?)
+             (earnings-when (or/c 'before-market-open 'after-market-close))
+             (option-spread rational?)
+             (30d-avg-volume rational?))]
+          [struct etf-vrp-analysis
+            ((etf string?)
+             (iv-hv rational?)
+             (ivp-1yr rational?)
+             (30d-60d-fwd-vol (or/c number? #f))
+             (30d-60d-flat-fwd-vol (or/c rational? #f))
+             (flat-fwd-to-fwd-ratio (or/c number? #f))
+             (option-spread rational?))]
+          [struct forward-factor-analysis
+            ((stock string?)
+             (front-exp date?)
+             (front-vol rational?)
+             (back-exp date?)
+             (back-vol rational?)
+             (vol-ratio rational?)
+             (forward-vol rational?)
+             (forward-factor rational?)
+             (earnings-date (or/c date? #f))
+             (option-spread rational?))]
+          [struct position-analysis
+            ((sector string?)
+             (stock string?)
+             (expiration date?)
+             (strike rational?)
+             (call-put (or/c 'call 'put))
+             (account string?)
+             (signed-shares rational?)
+             (stock-low-stop (or/c rational? #f))
+             (stock-low-target (or/c rational? #f))
+             (stock-close (or/c rational? #f))
+             (stock-high-stop (or/c rational? #f))
+             (stock-high-target (or/c rational? #f))
+             (end-date (or/c date? #f))
+             (strategy (or/c 'long-call 'long-put
+                             'bull-call-vertical-spread 'bear-call-vertical-spread
+                             'bull-put-vertical-spread 'bear-put-vertical-spread
+                             'long-straddle 'long-strangle
+                             'call-ratio-spread 'put-ratio-spread
+                             'call-horizontal-spread 'put-horizontal-spread
+                             'call-double-horizontal-spread 'put-double-horizontal-spread
+                             'call-diagonal-spread 'put-diagonal-spread
+                             'call-butterfly 'call-condor
+                             'put-butterfly 'put-condor)))]
+          [struct position-greeks
+            ((sector string?)
+             (stock string?)
+             (account string?)
+             (delta rational?)
+             (gamma rational?)
+             (theta rational?)
+             (vega rational?)
+             (rho rational?))]
+          [struct option
+            ((symbol string?)
+             (expiration date?)
+             (dte rational?)
+             (strike rational?)
+             (call-put (or/c 'call 'put))
+             (date date?)
+             (bid (or/c rational? #f))
+             (mid (or/c rational? #f))
+             (ask (or/c rational? #f))
+             (vol (or/c rational? #f))
+             (delta (or/c rational? #f))
+             (gamma (or/c rational? #f))
+             (theta (or/c rational? #f))
+             (vega (or/c rational? #f))
+             (rho (or/c rational? #f)))]
           [struct order
             ((pattern (or/c 'bull-pullback 'bear-rally
                             'high-base 'low-base
@@ -127,7 +263,8 @@
                                 stock-rr earnings-date option-spread is-weekly)
   #:transparent)
 
-(struct earnings-vibes-analysis (stock min-expiration max-expiration strike vol-slope iv-hv price-strike-ratio earnings-date option-spread 30d-avg-volume)
+(struct earnings-vibes-analysis (stock min-expiration max-expiration strike vol-slope iv-hv price-strike-ratio earnings-date earnings-when
+                                       option-spread 30d-avg-volume)
   #:transparent)
 
 (struct etf-vrp-analysis (etf iv-hv ivp-1yr 30d-60d-fwd-vol 30d-60d-flat-fwd-vol flat-fwd-to-fwd-ratio option-spread)

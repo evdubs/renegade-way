@@ -473,6 +473,14 @@
        [alignment '(center center)]
        [stretchable-height #f]))
 
+(define connect-button
+  (new button%
+       [label "Connect"]
+       [parent button-pane]
+       [callback (λ (b e)
+                   (send ibkr connect)
+                   (send ibkr send-msg (new market-data-type-req% [market-data-type 'delayed-frozen])))]))
+
 (define send-button
   (new button%
        [label "Send"]

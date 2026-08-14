@@ -84,16 +84,16 @@
   (send ref-price-field set-value (real->decimal-string ref-price))
   (send patterns-field set-value patterns)
   (define pattern-options
-    (hash-map (suitable-options (get-updated-options symbol date ref-price #:fit-vols (send fit-vols-check-box get-value))
+    (hash-map (suitable-options (get-updated-options symbol (iso8601->date date) ref-price #:fit-vols (send fit-vols-check-box get-value))
                                 patterns ref-price)
               (λ (k options)
                 (cond [(send live-data-check-box get-value)
                        (define updated-options
                          (map (λ (o) (define omd (get-option-market-data
                                                   (option-symbol o)
-                                                  (date->iso8601 (parse-date (option-expiration o) "yy-MM-dd"))
+                                                  (option-expiration o)
                                                   (option-strike o)
-                                                  (string->symbol (string-downcase (option-call-put o)))))
+                                                  (option-call-put o)))
                                 (struct-copy option o
                                              [mid (option-market-data-rsp-price omd)]
                                              [vol (option-market-data-rsp-implied-volatility omd)]))
@@ -131,9 +131,9 @@
                                                           (order pattern
                                                                  (string->symbol (string-replace (string-downcase k) " " "-"))
                                                                  (option-symbol o)
-                                                                 (parse-date (option-expiration o) "yy-MM-dd")
+                                                                 (option-expiration o)
                                                                  (option-strike o)
-                                                                 (string->symbol (string-downcase (option-call-put o)))
+                                                                 (option-call-put o)
                                                                  #f
                                                                  (option-mid o)
                                                                  (option-vol o)
@@ -161,10 +161,10 @@
                                                  (set-order-data order-data eval-date earnings-vol-premium))])])
                      (send table set
                            (map (λ (o) (option-symbol o)) v)
-                           (map (λ (o) (option-expiration o)) v)
+                           (map (λ (o) (~t (option-expiration o) "yy-MM-dd")) v)
                            (map (λ (o) (real->decimal-string (option-strike o))) v)
-                           (map (λ (o) (option-call-put o)) v)
-                           (map (λ (o) (option-date o)) v)
+                           (map (λ (o) (symbol->string (option-call-put o))) v)
+                           (map (λ (o) (~t (option-date o) "yy-MM-dd")) v)
                            (map (λ (o) (real->decimal-string (option-bid o))) v)
                            (map (λ (o) (real->decimal-string (option-ask o))) v)
                            (map (λ (o) (real->decimal-string (/ (- (option-ask o) (option-bid o)) (option-ask o)))) v)

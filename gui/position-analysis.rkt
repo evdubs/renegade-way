@@ -100,21 +100,21 @@
 
   (for-each (λ (pa)
               (define opt (option (position-analysis-stock pa)
-                                  (parse-date (position-analysis-expiration pa) "yy-MM-dd")
+                                  (position-analysis-expiration pa)
                                   (period-ref (period-between (iso8601->date end-date)
-                                                              (parse-date (position-analysis-expiration pa) "yy-MM-dd")
+                                                              (position-analysis-expiration pa)
                                                               '(days)) 'days)
                                   (position-analysis-strike pa)
-                                  (string-titlecase (position-analysis-call-put pa))
+                                  (position-analysis-call-put pa)
                                   (iso8601->date end-date)
                                   #f ; bid
                                   #f ; mid
                                   #f ; ask
                                   (get-closest-vol (position-analysis-stock pa)
                                                    end-date
-                                                   (date->iso8601 (parse-date (position-analysis-expiration pa) "yy-MM-dd"))
+                                                   (date->iso8601 (position-analysis-expiration pa))
                                                    (position-analysis-strike pa)
-                                                   (string-titlecase (position-analysis-call-put pa)))
+                                                   (string-titlecase (symbol->string (position-analysis-call-put pa))))
                                   #f ; delta
                                   #f ; gamma
                                   #f ; theta
@@ -167,7 +167,8 @@
                             (and (equal? 'bear (hash-ref bull-bear-roo (position-analysis-stock pa)))
                                  (> (hash-ref ref-prices (position-analysis-stock pa))
                                     (position-analysis-stock-high-stop pa)))
-                            (and (string-contains? (position-analysis-strategy pa) "CONDOR")
+                            (and (or (equal? 'call-condor (position-analysis-strategy pa))
+                                     (equal? 'put-condor (position-analysis-strategy pa)))
                                  (or (< (hash-ref ref-prices (position-analysis-stock pa))
                                         (first (hash-ref min-max-strikes (position-analysis-stock pa))))
                                      (> (hash-ref ref-prices (position-analysis-stock pa))
@@ -186,9 +187,9 @@
     (remove* target-position-analysis-list
              (remove* stop-position-analysis-list updated-position-analysis-list)))
 
-  (set! expired-position-analysis-list (filter (λ (pa) (and (not (equal? "" (position-analysis-end-date pa)))
+  (set! expired-position-analysis-list (filter (λ (pa) (and (position-analysis-end-date pa)
                                                             (date>=? (iso8601->date end-date)
-                                                                     (parse-date (position-analysis-end-date pa) "yy-MM-dd"))))
+                                                                     (position-analysis-end-date pa))))
                                                remaining-position-analysis-list))
 
   (set! open-position-analysis-list (remove* expired-position-analysis-list remaining-position-analysis-list))
@@ -215,9 +216,9 @@
   (send box-ref set
         (map (λ (m) (position-analysis-sector m)) position-analysis-list)
         (map (λ (m) (position-analysis-stock m)) position-analysis-list)
-        (map (λ (m) (position-analysis-expiration m)) position-analysis-list)
+        (map (λ (m) (~t (position-analysis-expiration m) "yy-MM-dd")) position-analysis-list)
         (map (λ (m) (real->decimal-string (position-analysis-strike m))) position-analysis-list)
-        (map (λ (m) (position-analysis-call-put m)) position-analysis-list)
+        (map (λ (m) (symbol->string (position-analysis-call-put m))) position-analysis-list)
         (map (λ (m) (position-analysis-account m)) position-analysis-list)
         (map (λ (m) (real->decimal-string (position-analysis-signed-shares m))) position-analysis-list)
         (map (λ (m) (real->decimal-string (position-analysis-stock-low-stop m))) position-analysis-list)
@@ -225,7 +226,7 @@
         (map (λ (m) (real->decimal-string (position-analysis-stock-close m))) position-analysis-list)
         (map (λ (m) (real->decimal-string (position-analysis-stock-high-stop m))) position-analysis-list)
         (map (λ (m) (real->decimal-string (position-analysis-stock-high-target m))) position-analysis-list)
-        (map (λ (m) (position-analysis-end-date m)) position-analysis-list))
+        (map (λ (m) (~t (position-analysis-end-date m) "yy-MM-dd")) position-analysis-list))
   ; We set data here so that we can retrieve it later with `get-data`
   (map (λ (m i) (send box-ref set-data i m))
        position-analysis-list (range (length position-analysis-list))))

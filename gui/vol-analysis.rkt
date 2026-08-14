@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require racket/class
+(require gregor
+         racket/class
          racket/gui/base
          racket/list
          "../db-queries.rkt"
@@ -32,7 +33,7 @@
 (define (update-analysis-box vol-analysis-list)
   (let* ([filter-spread (if (hide-large-spread)
                             (filter (λ (m) (and (not (equal? "" (vol-analysis-option-spread m)))
-                                                (> 30 (string->number (vol-analysis-option-spread m))))) vol-analysis-list)
+                                                (> 0.30 (vol-analysis-option-spread m)))) vol-analysis-list)
                             vol-analysis-list)]
          [filter-weekly (if (hide-non-weekly)
                             (filter (λ (m) (vol-analysis-is-weekly m)) filter-spread)
@@ -41,17 +42,17 @@
           (map (λ (m) (vol-analysis-market m)) filter-weekly)
           (map (λ (m) (real->decimal-string (vol-analysis-market-iv m))) filter-weekly)
           (map (λ (m) (real->decimal-string (vol-analysis-market-iv-rank m))) filter-weekly)
-          (map (λ (m) (vol-analysis-sector m)) filter-weekly)
+          (map (λ (m) (if (vol-analysis-sector m) (vol-analysis-sector m) "")) filter-weekly)
           (map (λ (m) (real->decimal-string (vol-analysis-sector-iv m))) filter-weekly)
           (map (λ (m) (real->decimal-string (vol-analysis-sector-iv-rank m))) filter-weekly)
-          (map (λ (m) (vol-analysis-industry m)) filter-weekly)
+          (map (λ (m) (if (vol-analysis-industry m) (vol-analysis-industry m) "")) filter-weekly)
           (map (λ (m) (real->decimal-string (vol-analysis-industry-iv m))) filter-weekly)
           (map (λ (m) (real->decimal-string (vol-analysis-industry-iv-rank m))) filter-weekly)
           (map (λ (m) (vol-analysis-stock m)) filter-weekly)
           (map (λ (m) (real->decimal-string (vol-analysis-stock-iv m))) filter-weekly)
           (map (λ (m) (real->decimal-string (vol-analysis-stock-iv-rank m))) filter-weekly)
-          (map (λ (m) (vol-analysis-earnings-date m)) filter-weekly)
-          (map (λ (m) (vol-analysis-option-spread m)) filter-weekly))
+          (map (λ (m) (if (vol-analysis-earnings-date m) (~t (vol-analysis-earnings-date m) "yy-MM-dd") "")) filter-weekly)
+          (map (λ (m) (real->decimal-string (vol-analysis-option-spread m))) filter-weekly))
     ; We set data here so that we can retrieve it later with `get-data`
     (map (λ (m i) (send analysis-box-ref set-data i m))
          filter-weekly (range (length filter-weekly)))))
@@ -71,8 +72,8 @@
                            [stock (vol-analysis-stock (send b get-data (first (send b get-selections))))]
                            [earnings-date (vol-analysis-earnings-date (send b get-data (first (send b get-selections))))])
                        (refresh-chart market
-                                      sector
-                                      industry
+                                      (if sector sector "")
+                                      (if industry industry "")
                                       stock
                                       start-date
                                       end-date)

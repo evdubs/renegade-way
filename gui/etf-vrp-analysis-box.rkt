@@ -28,12 +28,12 @@
                              (filter (λ (m) (and (real? (etf-vrp-analysis-iv-hv m))
                                                  (<= 0.0 (etf-vrp-analysis-iv-hv m))
                                                  (real? (etf-vrp-analysis-ivp-1yr m))
-                                                 (>= 80.0 (etf-vrp-analysis-ivp-1yr m))
+                                                 (>= 0.80 (etf-vrp-analysis-ivp-1yr m))
                                                  (real? (etf-vrp-analysis-flat-fwd-to-fwd-ratio m))
                                                  (<= 0.95 (etf-vrp-analysis-flat-fwd-to-fwd-ratio m)))) etf-vrp-analysis-list)
                              etf-vrp-analysis-list)]
          [filter-spread (if (hide-large-spread)
-                            (filter (λ (m) (and (> 30.0 (etf-vrp-analysis-option-spread m)))) filter-pattern)
+                            (filter (λ (m) (and (> 0.30 (etf-vrp-analysis-option-spread m)))) filter-pattern)
                             filter-pattern)])
     (send analysis-box-ref set
           (map (λ (m) (etf-vrp-analysis-etf m)) filter-spread)

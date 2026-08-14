@@ -71,8 +71,10 @@
                 (> dc-50-low (- dc-10-low (/ satr 5))))
            (let ([new-test (test 20
                                  (* dc-10-low 999/1000)
+                                 #f
+                                 (- dc-10-low (* satr 4))
                                  (+ dc-10-low (* satr 2))
-                                 (- dc-10-low (* satr 4)))])
+                                 #f)])
              (low-base (history (append (history-test h)
                                         (list (dv date new-test)))
                                 (history-trade h))

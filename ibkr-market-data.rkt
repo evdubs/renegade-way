@@ -3,6 +3,7 @@
 (require gregor
          racket/async-channel
          racket/class
+         racket/contract
          racket/format
          racket/list
          racket/set
@@ -12,13 +13,12 @@
          "db-queries.rkt"
          "ibkr.rkt")
 
-(provide get-option-market-data)
+(provide (contract-out
+          [get-option-market-data (-> string? date? rational? (or/c 'call 'put) (or/c option-market-data-rsp? #f))]))
 
 (define omd-req-id 0)
 
 (define option-market-data-channel (make-async-channel))
-
-(send ibkr send-msg (new market-data-type-req% [market-data-type 'delayed-frozen]))
 
 (define omd-hash (make-hash))
 
@@ -47,7 +47,7 @@
                            [exchange "SMART"]
                            [currency "USD"]
                            [symbol (string-replace sym "." " ")]
-                           [expiry (iso8601->date exp)]
+                           [expiry exp]
                            [strike strk]
                            [right rt]))
   (let loop ()

@@ -3,8 +3,7 @@
 ; This (module) is a hack to get this code to load before the (requires) call below.
 ; We want to first set up the command line args before initializing stuff in db-queries.rkt.
 (module cmd racket/base
-  (require gregor
-           racket/cmdline
+  (require racket/cmdline
            "params.rkt")
 
   (command-line
@@ -32,15 +31,12 @@
 (require 'cmd
          gregor
          gregor/period
-         json
          net/head
-         net/http-easy
          net/smtp
          openssl
          racket/list
          racket/match
          racket/string
-         threading
          "db-queries.rkt"
          "option-strategy.rkt"
          "params.rkt"
@@ -78,8 +74,8 @@
 (define symbols-prices (get-prices symbols))
 
 (define-values (expired-positions live-positions)
-  (partition (λ (p) (and (not (equal? "" (position-analysis-end-date p)))
-                         (date>=? (today) (parse-date (position-analysis-end-date p) "yy-MM-dd")))) positions))
+  (partition (λ (p) (and (position-analysis-end-date p)
+                         (date>=? (today) (position-analysis-end-date p)))) positions))
 
 (define (get-price-from-position position)
   (hash-ref symbols-prices (position-analysis-stock position)))
@@ -125,21 +121,21 @@
 
 (for-each (λ (pa)
             (define opt (option (position-analysis-stock pa)
-                                (parse-date (position-analysis-expiration pa) "yy-MM-dd")
+                                (position-analysis-expiration pa)
                                 (period-ref (period-between (today)
-                                                            (parse-date (position-analysis-expiration pa) "yy-MM-dd")
+                                                            (position-analysis-expiration pa)
                                                             '(days)) 'days)
                                 (position-analysis-strike pa)
-                                (string-titlecase (position-analysis-call-put pa))
+                                (position-analysis-call-put pa)
                                 (today)
                                 #f ; bid
                                 #f ; mid
                                 #f ; ask
                                 (get-closest-vol (position-analysis-stock pa)
                                                  (date->iso8601 (today))
-                                                 (date->iso8601 (parse-date (position-analysis-expiration pa) "yy-MM-dd"))
+                                                 (date->iso8601 (position-analysis-expiration pa))
                                                  (position-analysis-strike pa)
-                                                 (string-titlecase (position-analysis-call-put pa)))
+                                                 (string-titlecase (symbol->string (position-analysis-call-put pa))))
                                 #f ; delta
                                 #f ; gamma
                                 #f ; theta
@@ -194,21 +190,21 @@
   <td style=\"padding-right: 20px\">~a</td>
   <td style=\"padding-right: 20px\">~a</td>
 </tr>"
-          (cond [(and (equal? "CALL" (position-analysis-call-put position))
+          (cond [(and (equal? 'call (position-analysis-call-put position))
                       (<= (position-analysis-strike position) price))
                  "#eeffee"]
-                [(and (equal? "CALL" (position-analysis-call-put position))
+                [(and (equal? 'call (position-analysis-call-put position))
                       (> (position-analysis-strike position) price))
                  "#ffffee"]
-                [(and (equal? "PUT" (position-analysis-call-put position))
+                [(and (equal? 'put (position-analysis-call-put position))
                       (>= (position-analysis-strike position) price))
                  "#eeffee"]
-                [(and (equal? "PUT" (position-analysis-call-put position))
+                [(and (equal? 'put (position-analysis-call-put position))
                       (< (position-analysis-strike position) price))
                  "#ffffee"])
           (position-analysis-sector position)
           (position-analysis-stock position)
-          (position-analysis-expiration position)
+          (date->iso8601 (position-analysis-expiration position))
           (real->decimal-string (position-analysis-strike position))
           (position-analysis-call-put position)
           (position-analysis-account position)
@@ -218,7 +214,7 @@
           (real->decimal-string price)
           (real->decimal-string (position-analysis-stock-high-stop position))
           (real->decimal-string (position-analysis-stock-high-target position))
-          (position-analysis-end-date position)
+          (if (position-analysis-end-date position) (date->iso8601 (position-analysis-end-date position)) "")
           (position-analysis-strategy position)))
 
 (define (position-greeks->html-str position-greeks)

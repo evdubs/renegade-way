@@ -66,6 +66,8 @@
            (let ([new-test (test 20
                                  (* high 1001/1000)
                                  (- high (* satr 2))
+                                 #f
+                                 #f
                                  (+ high (* satr 4)))])
              (bull-pullback (history (append (history-test h)
                                              (list (dv date new-test)))

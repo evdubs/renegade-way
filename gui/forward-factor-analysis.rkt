@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require racket/class
+(require gregor
+         racket/class
          racket/gui/base
          racket/list
          "../db-queries.rkt"
@@ -36,21 +37,21 @@
 (define (update-analysis-box forward-factor-analysis-list)
   (let* ([filter-spread (if (hide-large-spread)
                             (filter (λ (m) (and (not (equal? "" (forward-factor-analysis-option-spread m)))
-                                                (> 30 (forward-factor-analysis-option-spread m)))) forward-factor-analysis-list)
+                                                (> 0.30 (forward-factor-analysis-option-spread m)))) forward-factor-analysis-list)
                             forward-factor-analysis-list)]
          [filter-pattern (if (hide-no-pattern)
-                             (filter (λ (m) (<= 23 (forward-factor-analysis-forward-factor m))) filter-spread)
+                             (filter (λ (m) (<= 0.23 (forward-factor-analysis-forward-factor m))) filter-spread)
                              filter-spread)])
     (send analysis-box-ref set
           (map (λ (m) (forward-factor-analysis-stock m)) filter-pattern)
-          (map (λ (m) (forward-factor-analysis-front-exp m)) filter-pattern)
+          (map (λ (m) (~t (forward-factor-analysis-front-exp m) "yy-MM-dd")) filter-pattern)
           (map (λ (m) (real->decimal-string (forward-factor-analysis-front-vol m))) filter-pattern)
-          (map (λ (m) (forward-factor-analysis-back-exp m)) filter-pattern)
+          (map (λ (m) (~t (forward-factor-analysis-back-exp m) "yy-MM-dd")) filter-pattern)
           (map (λ (m) (real->decimal-string (forward-factor-analysis-back-vol m))) filter-pattern)
           (map (λ (m) (real->decimal-string (forward-factor-analysis-vol-ratio m))) filter-pattern)
           (map (λ (m) (real->decimal-string (forward-factor-analysis-forward-vol m))) filter-pattern)
           (map (λ (m) (real->decimal-string (forward-factor-analysis-forward-factor m))) filter-pattern)
-          (map (λ (m) (forward-factor-analysis-earnings-date m)) filter-pattern)
+          (map (λ (m) (if (forward-factor-analysis-earnings-date m) (~t (forward-factor-analysis-earnings-date m) "yy-MM-dd") "")) filter-pattern)
           (map (λ (m) (real->decimal-string (forward-factor-analysis-option-spread m))) filter-pattern))
     ; We set data here so that we can retrieve it later with `get-data`
     (map (λ (m i) (send analysis-box-ref set-data i m))

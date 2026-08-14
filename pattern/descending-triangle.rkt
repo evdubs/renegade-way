@@ -61,8 +61,10 @@
                 (< (+ dc-25-high (* (- dc-25-high dc-25-low) 1/2)) dc-25-prev-high))
            (let ([new-test (test 20
                                  (* dc-25-low 999/1000)
+                                 #f
+                                 (- dc-25-low (* satr 4))
                                  (+ dc-25-low (* satr 2))
-                                 (- dc-25-low (* satr 4)))])
+                                 #f)])
              (descending-triangle (history (append (history-test h)
                                                    (list (dv date new-test)))
                                            (history-trade h))

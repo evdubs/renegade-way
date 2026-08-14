@@ -102,7 +102,10 @@ from
                                  start-date
                                  end-date)])
     (map (λ (row) (dohlc (->posix (iso8601->date (vector-ref row 0)))
-                         (vector-ref row 1) (vector-ref row 2) (vector-ref row 3) (vector-ref row 4)))
+                         (vector-ref row 1)
+                         (vector-ref row 2)
+                         (vector-ref row 3)
+                         (vector-ref row 4)))
          price-query)))
 
 (define (get-date-variance-history ticker-symbol start-date end-date)
@@ -446,16 +449,16 @@ with start_close as (
 select
   market.market_symbol as market,
   market.sector_symbol as sector,
-  trunc((((sector_end_close.close - sector_start_close.close) / sector_start_close.close) - 
-    ((market_end_close.close - market_start_close.close) / market_start_close.close)) * 100, 2) as sector_vs_market,
+  (((sector_end_close.close - sector_start_close.close) / sector_start_close.close) -
+    ((market_end_close.close - market_start_close.close) / market_start_close.close)) as sector_vs_market,
   coalesce(industry.etf_symbol, '') as industry,
   market.component_symbol,
-  trunc((((stock_end_close.close - stock_start_close.close) / stock_start_close.close) - 
-    ((sector_end_close.close - sector_start_close.close) / sector_start_close.close)) * 100, 2) as stock_vs_sector,
-  coalesce(to_char(div.ex_date + interval '1 year', 'YY-MM-DD'), '') as anticipated_dividend_ex_date,
-  coalesce(to_char(ec.date, 'YY-MM-DD'), '') as earnings_date,
-  coalesce(trunc(option_spread.spread * 100, 2)::text, '') as option_spread,
-  coalesce(replace(rank.rank::text, 'Strong', 'Str'), '') as rank,
+  (((stock_end_close.close - stock_start_close.close) / stock_start_close.close) -
+    ((sector_end_close.close - sector_start_close.close) / sector_start_close.close)) as stock_vs_sector,
+  coalesce((div.ex_date + interval '1 year')::text, '') as anticipated_dividend_ex_date,
+  coalesce(ec.date::text, '') as earnings_date,
+  option_spread.spread as option_spread,
+  coalesce(rank.rank::text, '') as rank,
   case
     when w.act_symbol is not null then true
     else false
@@ -513,7 +516,7 @@ on
   market.component_symbol = ec.act_symbol and
   ec.date >= $4::text::date and
   ec.date <= $4::text::date + interval '1 month'
-left outer join
+join
   (select
     act_symbol,
     avg((ask - bid) / ask) as spread
@@ -553,16 +556,34 @@ order by
                                 sector
                                 start-date
                                 end-date)])
-    (map (λ (row) (price-analysis (vector-ref row 0) (vector-ref row 1) (vector-ref row 2) (vector-ref row 3)
-                                  (vector-ref row 4) (vector-ref row 5) (vector-ref row 6) (vector-ref row 7)
-                                  (vector-ref row 8) (vector-ref row 9) (vector-ref row 10)))
+    (map (λ (row) (price-analysis (vector-ref row 0)
+                                  (vector-ref row 1)
+                                  (vector-ref row 2)
+                                  (if (equal? "" (vector-ref row 3)) #f (vector-ref row 3))
+                                  (vector-ref row 4)
+                                  (vector-ref row 5)
+                                  (if (equal? "" (vector-ref row 6)) #f (iso8601->date (vector-ref row 6)))
+                                  (if (equal? "" (vector-ref row 7)) #f (iso8601->date (vector-ref row 7)))
+                                  (vector-ref row 8)
+                                  (if (equal? "" (vector-ref row 9)) #f (string->symbol (string-replace (string-downcase (vector-ref row 9)) " " "-")))
+                                  (vector-ref row 10)))
          msis-query)))
 
 (define (get-rank-analysis market date)
-  (map (λ (row) (rank-analysis (vector-ref row 0) (vector-ref row 1) (vector-ref row 2) (vector-ref row 3)
-                               (vector-ref row 4) (vector-ref row 5) (vector-ref row 6) (vector-ref row 7)
-                               (vector-ref row 8) (vector-ref row 9) (vector-ref row 10) (vector-ref row 11)
-                               (vector-ref row 12) (vector-ref row 13)))
+  (map (λ (row) (rank-analysis (vector-ref row 0)
+                               (vector-ref row 1)
+                               (vector-ref row 2)
+                               (vector-ref row 3)
+                               (if (equal? "" (vector-ref row 4)) #f (vector-ref row 4))
+                               (vector-ref row 5)
+                               (vector-ref row 6)
+                               (vector-ref row 7)
+                               (vector-ref row 8)
+                               (vector-ref row 9)
+                               (vector-ref row 10)
+                               (if (equal? "" (vector-ref row 11)) #f (iso8601->date (vector-ref row 11)))
+                               (vector-ref row 12)
+                               (vector-ref row 13)))
        (query-rows dbc "
 with etf_rank as (
   select
@@ -583,18 +604,18 @@ with etf_rank as (
     \"rank\")
 select
   market.etf_symbol as market_symbol,
-  trunc(market_rank.rank, 2) as market_rank,
+  market_rank.rank as market_rank,
   spdr.to_sector_etf(market.sector) as sector_symbol,
-  trunc(sector_rank.rank, 2) as sector_rank,
+  sector_rank.rank as sector_rank,
   coalesce(industry.etf_symbol, '') as industry_symbol,
-  coalesce(trunc(industry_rank.rank, 2), 0.00) as industry_rank,
+  coalesce(industry_rank.rank, 0.00) as industry_rank,
   market.component_symbol,
   zacks.to_integer_rank(component_rank.rank) as component_rank,
   best_rank as component_best_rank,
-  trunc(component_avg_rank.rank, 2) as component_avg_rank,
+  component_avg_rank.rank as component_avg_rank,
   worst_rank as component_worst_rank,
-  coalesce(to_char(ec.date, 'YY-MM-DD'), '') as earnings_date,
-  coalesce(trunc(option_spread.spread * 100, 2)::text, '') as option_spread,
+  coalesce(ec.date::text, '') as earnings_date,
+  option_spread.spread as option_spread,
   case
     when w.act_symbol is not null then true
     else false
@@ -645,7 +666,7 @@ on
   market.component_symbol = ec.act_symbol and
   ec.date >= $2::text::date and
   ec.date <= $2::text::date + interval '1 month'
-left outer join
+join
   (select
     act_symbol,
     avg((ask - bid) / ask) as spread
@@ -679,10 +700,21 @@ order by
                    date)))
 
 (define (get-vol-analysis market date)
-  (map (λ (row) (vol-analysis (vector-ref row 0) (vector-ref row 1) (vector-ref row 2) (vector-ref row 3)
-                              (vector-ref row 4) (vector-ref row 5) (vector-ref row 6) (vector-ref row 7)
-                              (vector-ref row 8) (vector-ref row 9) (vector-ref row 10) (vector-ref row 11)
-                              (vector-ref row 12) (vector-ref row 13) (vector-ref row 14)))
+  (map (λ (row) (vol-analysis (vector-ref row 0)
+                              (vector-ref row 1)
+                              (vector-ref row 2)
+                              (if (equal? "" (vector-ref row 3)) #f (vector-ref row 3))
+                              (vector-ref row 4)
+                              (vector-ref row 5)
+                              (if (equal? "" (vector-ref row 6)) #f (vector-ref row 6))
+                              (vector-ref row 7)
+                              (vector-ref row 8)
+                              (vector-ref row 9)
+                              (vector-ref row 10)
+                              (vector-ref row 11)
+                              (if (equal? "" (vector-ref row 12)) #f (iso8601->date (vector-ref row 12)))
+                              (vector-ref row 13)
+                              (vector-ref row 14)))
        (query-rows dbc "
 with hist_vol as (
   select
@@ -699,31 +731,31 @@ with hist_vol as (
 )
 select
   market.etf_symbol,
-  coalesce(trunc(market_vol.iv_current * 100, 2), 0.00) as market_iv,
+  coalesce(market_vol.iv_current, 0.00) as market_iv,
   case when market_vol.iv_year_low is null or market_vol.iv_year_high is null
-    then coalesce(trunc((market_vol.iv_current - market_hist_vol.iv_year_low) / (market_hist_vol.iv_year_high - market_hist_vol.iv_year_low) * 100, 2), 0.00)
-    else coalesce(trunc((market_vol.iv_current - market_vol.iv_year_low) / (market_vol.iv_year_high - market_vol.iv_year_low) * 100, 2), 0.00)
+    then coalesce((market_vol.iv_current - market_hist_vol.iv_year_low) / (market_hist_vol.iv_year_high - market_hist_vol.iv_year_low), 0.00)
+    else coalesce((market_vol.iv_current - market_vol.iv_year_low) / (market_vol.iv_year_high - market_vol.iv_year_low), 0.00)
   end as market_iv_rank,
   coalesce(spdr.to_sector_etf(market.sector), ''),
-  coalesce(trunc(sector_vol.iv_current * 100, 2), 0.00) as sector_iv,
+  coalesce(sector_vol.iv_current, 0.00) as sector_iv,
   case when sector_vol.iv_year_low is null or sector_vol.iv_year_high is null
-    then coalesce(trunc((sector_vol.iv_current - sector_hist_vol.iv_year_low) / (sector_hist_vol.iv_year_high - sector_hist_vol.iv_year_low) * 100, 2), 0.00)
-    else coalesce(trunc((sector_vol.iv_current - sector_vol.iv_year_low) / (sector_vol.iv_year_high - sector_vol.iv_year_low) * 100, 2), 0.00)
+    then coalesce((sector_vol.iv_current - sector_hist_vol.iv_year_low) / (sector_hist_vol.iv_year_high - sector_hist_vol.iv_year_low), 0.00)
+    else coalesce((sector_vol.iv_current - sector_vol.iv_year_low) / (sector_vol.iv_year_high - sector_vol.iv_year_low), 0.00)
   end as sector_iv_rank,
   coalesce(industry.etf_symbol, ''),
-  coalesce(trunc(industry_vol.iv_current * 100, 2), 0.00) as industry_iv,
+  coalesce(industry_vol.iv_current, 0.00) as industry_iv,
   case when industry_vol.iv_year_low is null or industry_vol.iv_year_high is null
-    then coalesce(trunc((industry_vol.iv_current - industry_hist_vol.iv_year_low) / (industry_hist_vol.iv_year_high - industry_hist_vol.iv_year_low) * 100, 2), 0.00)
-    else coalesce(trunc((industry_vol.iv_current - industry_vol.iv_year_low) / (industry_vol.iv_year_high - industry_vol.iv_year_low) * 100, 2), 0.00)
+    then coalesce((industry_vol.iv_current - industry_hist_vol.iv_year_low) / (industry_hist_vol.iv_year_high - industry_hist_vol.iv_year_low), 0.00)
+    else coalesce((industry_vol.iv_current - industry_vol.iv_year_low) / (industry_vol.iv_year_high - industry_vol.iv_year_low), 0.00)
   end as industry_iv_rank,
   market.component_symbol,
-  coalesce(trunc(component_vol.iv_current * 100, 2), 0.00) as component_iv,
+  coalesce(component_vol.iv_current, 0.00) as component_iv,
   case when component_vol.iv_year_low is null or component_vol.iv_year_high is null
-    then coalesce(trunc((component_vol.iv_current - component_hist_vol.iv_year_low) / (component_hist_vol.iv_year_high - component_hist_vol.iv_year_low) * 100, 2), 0.00)
-    else coalesce(trunc((component_vol.iv_current - component_vol.iv_year_low) / (component_vol.iv_year_high - component_vol.iv_year_low) * 100, 2), 0.00)
+    then coalesce((component_vol.iv_current - component_hist_vol.iv_year_low) / (component_hist_vol.iv_year_high - component_hist_vol.iv_year_low), 0.00)
+    else coalesce((component_vol.iv_current - component_vol.iv_year_low) / (component_vol.iv_year_high - component_vol.iv_year_low), 0.00)
   end as component_iv_rank,
-  coalesce(to_char(ec.date, 'YY-MM-DD'), '') as earnings_date,
-  coalesce(trunc(option_spread.spread * 100, 2)::text, '') as option_spread,
+  coalesce(ec.date::text, '') as earnings_date,
+  option_spread.spread as option_spread,
   case
     when w.act_symbol is not null then true
     else false
@@ -778,7 +810,7 @@ on
   market.component_symbol = ec.act_symbol and
   ec.date >= $2::text::date and
   ec.date <= $2::text::date + interval '1 month'
-left outer join
+join
   (select
     act_symbol,
     avg((ask - bid) / ask) as spread
@@ -811,16 +843,29 @@ order by
                    date)))
 
 (define (get-condor-analysis market date)
-  (map (λ (row) (condor-analysis (vector-ref row 0) "" "" (vector-ref row 1) "" "" (vector-ref row 2)  "" ""
-                                 (vector-ref row 3) "" "" (vector-ref row 4) (vector-ref row 5) (vector-ref row 6)))
+  (map (λ (row) (condor-analysis (vector-ref row 0)
+                                 #f
+                                 #f
+                                 (if (equal? "" (vector-ref row 1)) #f (vector-ref row 1))
+                                 #f
+                                 #f
+                                 (if (equal? "" (vector-ref row 2)) #f (vector-ref row 2))
+                                 #f
+                                 #f
+                                 (if (equal? "" (vector-ref row 3)) #f (vector-ref row 3))
+                                 #f
+                                 #f
+                                 (if (equal? "" (vector-ref row 4)) #f (iso8601->date (vector-ref row 4)))
+                                 (vector-ref row 5)
+                                 (vector-ref row 6)))
        (query-rows dbc "
 select
   market.etf_symbol as market,
   coalesce(spdr.to_sector_etf(market.sector), '') as sector,
   coalesce(industry.etf_symbol, '') as industry,
   market.component_symbol as stock,
-  coalesce(to_char(ec.date, 'YY-MM-DD'), '') as earnings_date,
-  coalesce(trunc(option_spread.spread * 100, 2)::text, '') as option_spread,
+  coalesce(ec.date::text, '') as earnings_date,
+  option_spread.spread as option_spread,
   case
     when w.act_symbol is not null then true
     else false
@@ -839,7 +884,7 @@ on
   market.component_symbol = ec.act_symbol and
   ec.date >= $2::text::date and
   ec.date <= $2::text::date + interval '1 month'
-left outer join
+join
   (select
     act_symbol,
     avg((ask - bid) / ask) as spread
@@ -889,10 +934,17 @@ where
 "
                                                            date))))))
 
-  (map (λ (row) (earnings-vibes-analysis (vector-ref row 0) (vector-ref row 1) (vector-ref row 2)
-                                         (vector-ref row 3) (vector-ref row 4) (vector-ref row 5)
-                                         0 ; price-strike-ratio to be filled in
-                                         (vector-ref row 6) (vector-ref row 7) (vector-ref row 8)))
+  (map (λ (row) (earnings-vibes-analysis (vector-ref row 0)
+                                         (iso8601->date (vector-ref row 1))
+                                         (iso8601->date (vector-ref row 2))
+                                         (vector-ref row 3)
+                                         (vector-ref row 4)
+                                         (vector-ref row 5)
+                                         #f ; price-strike-ratio to be filled in
+                                         (iso8601->date (vector-ref row 6))
+                                         (string->symbol (string-replace (string-downcase (vector-ref row 7)) " " "-"))
+                                         (vector-ref row 8)
+                                         (vector-ref row 9)))
        (query-rows dbc (string-append "
 with prices as (
 select
@@ -1043,10 +1095,11 @@ select
   exprs.min_expiration::text,
   exprs.max_expiration::text,
   strks.strike,
-  coalesce(trunc(100 * (back_vol.vol - front_vol.vol) / nullif(exprs.max_expiration - exprs.min_expiration, 0), 2), 0) as vol_slope,
-  coalesce(trunc(100 * iv_hv.avg_iv / nullif(iv_hv.avg_hv, 0), 2), 0) as iv_hv,
-  coalesce(to_char(en.date, 'YY-MM-DD'), '') || coalesce(substring(en.\"when\"::text for 1), '') as earnings_date,
-  trunc(sprds.spread, 2) as opt_spread,
+  coalesce((back_vol.vol - front_vol.vol) / nullif(exprs.max_expiration - exprs.min_expiration, 0), 0) as vol_slope,
+  coalesce(iv_hv.avg_iv / nullif(iv_hv.avg_hv, 0), 0) as iv_hv,
+  en.date::text as earnings_date,
+  en.\"when\"::text as earnings_when,
+  sprds.spread as opt_spread,
   vlm.avg_vlm
 from
   exprs
@@ -1092,8 +1145,13 @@ order by
                    date)))
 
 (define (get-etf-vrp-analysis date)
-  (map (λ (row) (etf-vrp-analysis (vector-ref row 0) (vector-ref row 1) (vector-ref row 2)
-                                  #f #f #f (vector-ref row 3)))
+  (map (λ (row) (etf-vrp-analysis (vector-ref row 0)
+                                  (vector-ref row 1)
+                                  (vector-ref row 2)
+                                  #f
+                                  #f
+                                  #f
+                                  (vector-ref row 3)))
        (query-rows dbc "
 with etfs as (
 select distinct
@@ -1107,7 +1165,7 @@ order by
 ), log_iv_hv as (
 select
   vh.act_symbol,
-  trunc(log(vh.iv_current / vh.hv_current) * 100, 2) as iv_hv,
+  log(vh.iv_current / vh.hv_current) as iv_hv,
   vh.iv_current
 from
   oic.volatility_history vh
@@ -1120,12 +1178,11 @@ where
 ), ivp_1yr as (
 select
   vh.act_symbol,
-  round(
-    sum(
-      case when vh.iv_current < log_iv_hv.iv_current then 1.0
-      else 0.0
-      end
-    ) / count(*) * 100.0, 2) as ivp
+  sum(
+    case when vh.iv_current < log_iv_hv.iv_current then 1.0
+    else 0.0
+    end
+  ) / count(*) as ivp
 from
   oic.volatility_history vh
 join
@@ -1163,7 +1220,7 @@ select
   etfs.act_symbol,
   coalesce(log_iv_hv.iv_hv, 0.0) as iv_hv,
   coalesce(ivp_1yr.ivp, 0.0) as ivp,
-  trunc(sprds.spread * 100.0, 2) as spread
+  sprds.spread as spread
 from
   etfs
 left outer join
@@ -1184,9 +1241,15 @@ order by
                    date)))
 
 (define (get-forward-factor-analysis date)
-  (map (λ (row) (forward-factor-analysis (vector-ref row 0) (vector-ref row 1) (vector-ref row 2)
-                                         (vector-ref row 3) (vector-ref row 4) (vector-ref row 5)
-                                         (vector-ref row 6) (vector-ref row 7) (vector-ref row 8)
+  (map (λ (row) (forward-factor-analysis (vector-ref row 0)
+                                         (iso8601->date (vector-ref row 1))
+                                         (vector-ref row 2)
+                                         (iso8601->date (vector-ref row 3))
+                                         (vector-ref row 4)
+                                         (vector-ref row 5)
+                                         (vector-ref row 6)
+                                         (vector-ref row 7)
+                                         (if (equal? "" (vector-ref row 8)) #f (iso8601->date (vector-ref row 8)))
                                          (vector-ref row 9)))
        (query-rows dbc "
 with vol_by_exp as (select
@@ -1259,12 +1322,12 @@ group by
   act_symbol)
 select
   max_front_vol.act_symbol,
-  to_char(fvx.expiration, 'YY-MM-DD') as front_exp,
-  trunc(max_front_vol.vol * 100.0, 2) as front_vol,
-  to_char(bvx.expiration, 'YY-MM-DD') as back_exp,
-  trunc(min_back_vol.vol * 100, 2) as back_vol,
-  trunc(max_front_vol.vol / min_back_vol.vol, 2) as vol_ratio,
-  trunc(sqrt(greatest(0.0001, (((bvx.expiration - $1::text::date)::decimal /
+  fvx.expiration::text as front_exp,
+  max_front_vol.vol as front_vol,
+  bvx.expiration::text as back_exp,
+  min_back_vol.vol as back_vol,
+  max_front_vol.vol / min_back_vol.vol as vol_ratio,
+  sqrt(greatest(0.0001, (((bvx.expiration - $1::text::date)::decimal /
         (make_date(date_part('year', $1::text::date)::integer + 1, 1, 1) - make_date(date_part('year', $1::text::date)::integer, 1, 1))::decimal
         * min_back_vol.vol * min_back_vol.vol)
       - ((fvx.expiration - $1::text::date)::decimal /
@@ -1272,8 +1335,8 @@ select
         * max_front_vol.vol * max_front_vol.vol))
     / ((bvx.expiration - fvx.expiration)::decimal /
       (make_date(date_part('year', $1::text::date)::integer + 1, 1, 1) - make_date(date_part('year', $1::text::date)::integer, 1, 1))::decimal)
-    )) * 100.0, 2) as forward_vol,
-  trunc((max_front_vol.vol /
+    )) as forward_vol,
+  (max_front_vol.vol /
   sqrt(greatest(0.0001, (((bvx.expiration - $1::text::date)::decimal /
         (make_date(date_part('year', $1::text::date)::integer + 1, 1, 1) - make_date(date_part('year', $1::text::date)::integer, 1, 1))::decimal
         * min_back_vol.vol * min_back_vol.vol)
@@ -1283,9 +1346,9 @@ select
     / ((bvx.expiration - fvx.expiration)::decimal /
       (make_date(date_part('year', $1::text::date)::integer + 1, 1, 1) - make_date(date_part('year', $1::text::date)::integer, 1, 1))::decimal)
     ))
-  ), 4) * 100.0 - 100.0 as forward_factor,
-  coalesce(to_char(earnings_date.actual, 'YY-MM-DD'), '') as earnings_date,
-  trunc(sprds.spread * 100.0, 2) as opt_spread
+  ) - 1.0 as forward_factor,
+  coalesce(earnings_date.actual::text, '') as earnings_date,
+  sprds.spread as opt_spread
 from
   max_front_vol
 join
@@ -1342,10 +1405,20 @@ order by
                    date)))
 
 (define (get-position-analysis date)
-  (map (λ (row) (position-analysis (vector-ref row 0) (vector-ref row 1) (vector-ref row 2) (vector-ref row 3)
-                                   (vector-ref row 4) (vector-ref row 5) (vector-ref row 6) (vector-ref row 7)
-                                   (vector-ref row 8) (vector-ref row 9) (vector-ref row 10) (vector-ref row 11)
-                                   (vector-ref row 12) (vector-ref row 13)))
+  (map (λ (row) (position-analysis (vector-ref row 0)
+                                   (vector-ref row 1)
+                                   (iso8601->date (vector-ref row 2))
+                                   (vector-ref row 3)
+                                   (string->symbol (string-downcase (vector-ref row 4)))
+                                   (vector-ref row 5)
+                                   (vector-ref row 6)
+                                   (if (equal? 0.00 (vector-ref row 7)) #f (vector-ref row 7))
+                                   (if (equal? 0.00 (vector-ref row 8)) #f (vector-ref row 8))
+                                   (if (equal? 0.00 (vector-ref row 9)) #f (vector-ref row 9))
+                                   (if (equal? 0.00 (vector-ref row 10)) #f (vector-ref row 10))
+                                   (if (equal? 0.00 (vector-ref row 11)) #f (vector-ref row 11))
+                                   (if (equal? "" (vector-ref row 12)) #f (iso8601->date (vector-ref row 12)))
+                                   (string->symbol (string-replace (string-downcase (vector-ref row 13)) " " "-"))))
        (query-rows dbc "
 with earnings_end_date as (
   select
@@ -1386,22 +1459,22 @@ with earnings_end_date as (
 select
   coalesce(spdr.to_sector_etf(eh.sector), '') as etf_symbol,
   c.symbol,
-  to_char(c.expiry, 'YY-MM-DD') as expiry,
+  c.expiry::text,
   c.strike,
   c.right::text,
   e.account,
   e.signed_shares,
-  coalesce(trunc(n.underlying_low_stop_price, 2), 0.00),
-  coalesce(trunc(n.underlying_low_target_price, 2), 0.00),
-  coalesce(trunc(ch.close, 2), 0.00),
-  coalesce(trunc(n.underlying_high_stop_price, 2), 0.00),
-  coalesce(trunc(n.underlying_high_target_price, 2), 0.00),
-  coalesce(to_char(case when ed.end_date is not null and ed.end_date < n.end_date
+  coalesce(n.underlying_low_stop_price, 0.00),
+  coalesce(n.underlying_low_target_price, 0.00),
+  coalesce(ch.close, 0.00),
+  coalesce(n.underlying_high_stop_price, 0.00),
+  coalesce(n.underlying_high_target_price, 0.00),
+  coalesce((case when ed.end_date is not null and ed.end_date < n.end_date
     then case when eed.expiry is not null and eed.expiry < ed.end_date
       then eed.expiry else ed.end_date end
     else case when eed.expiry is not null and eed.expiry < n.end_date
       then eed.expiry else n.end_date end
-  end, 'YY-MM-DD'), '') as end_date,
+  end)::text, '') as end_date,
   coalesce(n.order_strategy::text, '') as order_strategy
 from
   (select
@@ -1543,11 +1616,11 @@ where
 
 (define (get-options act-symbol date)
   (map (λ (row) (option (vector-ref row 0)
-                        (vector-ref row 1)
+                        (iso8601->date (vector-ref row 1))
                         (vector-ref row 2)
                         (vector-ref row 3)
-                        (vector-ref row 4)
-                        (vector-ref row 5)
+                        (string->symbol (string-downcase (vector-ref row 4)))
+                        (iso8601->date (vector-ref row 5))
                         (vector-ref row 6)
                         (vector-ref row 7)
                         (vector-ref row 8)
@@ -1560,11 +1633,11 @@ where
        (query-rows dbc "
 select
   act_symbol,
-  to_char(expiration, 'YY-MM-DD'),
+  expiration::text,
   expiration - $2::text::date as dte,
   strike,
   call_put::text,
-  to_char(date, 'YY-MM-DD'),
+  date::text,
   bid,
   (bid + ask) / 2 as mid,
   ask,
@@ -1591,7 +1664,7 @@ order by
   expiration, strike, call_put;
 "
                    act-symbol
-                   date)))
+                   (date->iso8601 date))))
 
 (define (get-1-month-rate date)
   (query-value dbc "

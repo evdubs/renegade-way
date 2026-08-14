@@ -60,8 +60,10 @@
                 (>= csr-3 2))
            (let ([new-test (test 20
                                  (- low 5/100)
-                                 (+ low (* satr 1))
-                                 (- low (* satr 2)))])
+                                 (- low (* satr 2))
+                                 #f
+                                 (+ low (* satr 2))
+                                 #f)])
              (range-rally (history (append (history-test h)
                                            (list (dv date new-test)))
                                    (history-trade h))

@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require racket/class
+(require gregor
+         racket/class
          racket/gui/base
          racket/list
          racket/match
@@ -33,7 +34,7 @@
 (define (update-analysis-box rank-analysis-list)
   (let* ([filter-spread (if (hide-large-spread)
                             (filter (λ (m) (and (not (equal? "" (rank-analysis-option-spread m)))
-                                                (> 30 (string->number (rank-analysis-option-spread m))))) rank-analysis-list)
+                                                (> 0.30 (rank-analysis-option-spread m)))) rank-analysis-list)
                             rank-analysis-list)]
          [filter-weekly (if (hide-non-weekly)
                             (filter (λ (m) (rank-analysis-is-weekly m)) filter-spread)
@@ -43,15 +44,15 @@
           (map (λ (m) (real->decimal-string (rank-analysis-market-rank m))) filter-weekly)
           (map (λ (m) (rank-analysis-sector m)) filter-weekly)
           (map (λ (m) (real->decimal-string (rank-analysis-sector-rank m))) filter-weekly)
-          (map (λ (m) (rank-analysis-industry m)) filter-weekly)
+          (map (λ (m) (if (rank-analysis-industry m) (rank-analysis-industry m) "")) filter-weekly)
           (map (λ (m) (real->decimal-string (rank-analysis-industry-rank m))) filter-weekly)
           (map (λ (m) (rank-analysis-stock m)) filter-weekly)
           (map (λ (m) (real->decimal-string (rank-analysis-stock-rank m))) filter-weekly)
           (map (λ (m) (real->decimal-string (rank-analysis-stock-best-rank m))) filter-weekly)
           (map (λ (m) (real->decimal-string (rank-analysis-stock-avg-rank m))) filter-weekly)
           (map (λ (m) (real->decimal-string (rank-analysis-stock-worst-rank m))) filter-weekly)
-          (map (λ (m) (rank-analysis-earnings-date m)) filter-weekly)
-          (map (λ (m) (rank-analysis-option-spread m)) filter-weekly))
+          (map (λ (m) (if (rank-analysis-earnings-date m) (~t (rank-analysis-earnings-date m) "yy-MM-dd") "")) filter-weekly)
+          (map (λ (m) (real->decimal-string (rank-analysis-option-spread m))) filter-weekly))
     ; We set data here so that we can retrieve it later with `get-data`
     (map (λ (m i) (send analysis-box-ref set-data i m))
          filter-weekly (range (length filter-weekly)))))
@@ -72,7 +73,7 @@
                            [stock-rank (rank-analysis-stock-rank (send b get-data (first (send b get-selections))))])
                        (refresh-chart market
                                       sector
-                                      industry
+                                      (if industry industry "")
                                       stock
                                       start-date
                                       end-date)

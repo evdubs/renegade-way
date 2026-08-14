@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require math/statistics
+(require gregor
+         math/statistics
          racket/list
          "db-queries.rkt"
          "option-strategy.rkt"
@@ -16,9 +17,9 @@
 
 (define (condor-score symbol start-date end-date #:fit-vols [fit-vols? #f])
   (with-handlers ([exn:fail?
-                   (λ (e) (list 0 0))])
+                   (λ (e) (displayln e) (list 0 0))])
     (let* ([prices (get-date-ohlc symbol start-date end-date)]
-           [options (get-updated-options symbol end-date (dohlc-close (last prices)) #:compute-all-greeks #f #:fit-vols fit-vols?)]
+           [options (get-updated-options symbol (iso8601->date end-date) (dohlc-close (last prices)) #:compute-all-greeks #f #:fit-vols fit-vols?)]
            [call-condor-options (hash-ref (suitable-options options "CC" (dohlc-close (last prices))) "Call Condor")]
            [call-low-strike (option-strike (second call-condor-options))]
            [call-high-strike (option-strike (third call-condor-options))]
@@ -59,10 +60,10 @@
                                               1 0)) prices))])
       ; choose the riskier condor as it is more likely to be marketable
       (if (>= call-risk put-risk)
-          (list (if (void? call-avg) 0 (* 100 call-avg))
-                (if (= 0 call-risk) 0 (* 100 (/ call-reward call-risk))))
-          (list (if (void? put-avg) 0 (* 100 put-avg))
-                (if (= 0 put-risk) 0 (* 100 (/ put-reward put-risk))))))))
+          (list (if (void? call-avg) 0 call-avg)
+                (if (= 0 call-risk) 0 (/ call-reward call-risk)))
+          (list (if (void? put-avg) 0 put-avg)
+                (if (= 0 put-risk) 0 (/ put-reward put-risk)))))))
 
 (define (run-condor-analysis market sector start-date end-date #:fit-vols [fit-vols? #f])
   (let ([new-condor-analysis-list (get-condor-analysis market end-date)]

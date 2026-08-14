@@ -1,6 +1,7 @@
 #lang racket/base
 
-(require racket/class
+(require gregor
+         racket/class
          racket/list
          racket/gui/base
          "../condor-analysis.rkt"
@@ -29,12 +30,12 @@
 
 (define (update-condor-analysis-box condor-analysis-list condor-analysis-hash)
   (let* ([filter-pattern (if (hide-no-pattern)
-                             (filter (λ (m) (and (<= 65 (first (hash-ref condor-analysis-hash (condor-analysis-stock m))))
-                                                 (<= 65 (second (hash-ref condor-analysis-hash (condor-analysis-stock m)))))) condor-analysis-list)
+                             (filter (λ (m) (and (<= 0.65 (first (hash-ref condor-analysis-hash (condor-analysis-stock m))))
+                                                 (<= 0.65 (second (hash-ref condor-analysis-hash (condor-analysis-stock m)))))) condor-analysis-list)
                              condor-analysis-list)]
          [filter-spread (if (hide-large-spread)
-                            (filter (λ (m) (and (not (equal? "" (condor-analysis-option-spread m)))
-                                                (> 30 (string->number (condor-analysis-option-spread m))))) filter-pattern)
+                            (filter (λ (m) (and (condor-analysis-option-spread m)
+                                                (> 0.30 (condor-analysis-option-spread m)))) filter-pattern)
                             filter-pattern)]
          [filter-weekly (if (hide-non-weekly)
                             (filter (λ (m) (condor-analysis-is-weekly m)) filter-spread)
@@ -43,17 +44,17 @@
           (map (λ (m) (condor-analysis-market m)) filter-weekly)
           (map (λ (m) (real->decimal-string (first (hash-ref condor-analysis-hash (condor-analysis-market m))))) filter-weekly)
           (map (λ (m) (real->decimal-string (second (hash-ref condor-analysis-hash (condor-analysis-market m))))) filter-weekly)
-          (map (λ (m) (condor-analysis-sector m)) filter-weekly)
+          (map (λ (m) (if (condor-analysis-sector m) (condor-analysis-sector m) "")) filter-weekly)
           (map (λ (m) (real->decimal-string (first (hash-ref condor-analysis-hash (condor-analysis-sector m))))) filter-weekly)
           (map (λ (m) (real->decimal-string (second (hash-ref condor-analysis-hash (condor-analysis-sector m))))) filter-weekly)
-          (map (λ (m) (condor-analysis-industry m)) filter-weekly)
+          (map (λ (m) (if (condor-analysis-industry m) (condor-analysis-industry m) "")) filter-weekly)
           (map (λ (m) (real->decimal-string (first (hash-ref condor-analysis-hash (condor-analysis-industry m))))) filter-weekly)
           (map (λ (m) (real->decimal-string (second (hash-ref condor-analysis-hash (condor-analysis-industry m))))) filter-weekly)
           (map (λ (m) (condor-analysis-stock m)) filter-weekly)
           (map (λ (m) (real->decimal-string (first (hash-ref condor-analysis-hash (condor-analysis-stock m))))) filter-weekly)
           (map (λ (m) (real->decimal-string (second (hash-ref condor-analysis-hash (condor-analysis-stock m))))) filter-weekly)
-          (map (λ (m) (condor-analysis-earnings-date m)) filter-weekly)
-          (map (λ (m) (condor-analysis-option-spread m)) filter-weekly))
+          (map (λ (m) (if (condor-analysis-earnings-date m) (~t (condor-analysis-earnings-date m) "yy-MM-dd") "")) filter-weekly)
+          (map (λ (m) (real->decimal-string (condor-analysis-option-spread m))) filter-weekly))
     ; We set data here so that we can retrieve it later with `get-data`
     (map (λ (m i) (send analysis-box-ref set-data i (list m (hash-ref condor-analysis-hash (condor-analysis-stock m)))))
          filter-weekly (range (length filter-weekly)))))
@@ -72,8 +73,8 @@
                            [industry (condor-analysis-industry (first (send b get-data (first (send b get-selections)))))]
                            [stock (condor-analysis-stock (first (send b get-data (first (send b get-selections)))))])
                        (refresh-chart market
-                                      sector
-                                      industry
+                                      (if sector sector "")
+                                      (if industry industry "")
                                       stock
                                       start-date
                                       end-date)

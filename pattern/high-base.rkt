@@ -72,6 +72,8 @@
            (let ([new-test (test 20
                                  (* dc-10-high 1001/1000)
                                  (- dc-10-high (* satr 2))
+                                 #f
+                                 #f
                                  (+ dc-10-high (* satr 4)))])
              (high-base (history (append (history-test h)
                                          (list (dv date new-test)))

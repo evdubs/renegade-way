@@ -19,7 +19,7 @@
         (map (λ (analysis-for-symbol)
                (define symbol (etf-vrp-analysis-etf analysis-for-symbol))
                (define prices (get-date-ohlc symbol (date->iso8601 (-days (iso8601->date end-date) 7)) end-date))
-               (define options (get-updated-options symbol end-date (dohlc-close (last prices)) #:compute-all-greeks #f #:fit-vols fit-vols?))
+               (define options (get-updated-options symbol (iso8601->date end-date) (dohlc-close (last prices)) #:compute-all-greeks #f #:fit-vols fit-vols?))
                (define call-horizontal-options (hash-ref (suitable-options options "VR" (dohlc-close (last prices))) "Call Horizontal Spread"))
 
                (define short-call (first call-horizontal-options))
@@ -36,16 +36,16 @@
                
                (define fwd-vol
                  (if (= (option-dte long-call) (option-dte short-call)) #f
-                     (* 100.0 (sqrt (/ (- (* (/ (option-dte long-call) days-in-this-year) (option-vol long-call) (option-vol long-call))
-                                          (* (/ (option-dte short-call) days-in-this-year) (option-vol short-call) (option-vol short-call)))
-                                       (/ (- (option-dte long-call) (option-dte short-call)) days-in-this-year))))))
+                     (sqrt (/ (- (* (/ (option-dte long-call) days-in-this-year) (option-vol long-call) (option-vol long-call))
+                                 (* (/ (option-dte short-call) days-in-this-year) (option-vol short-call) (option-vol short-call)))
+                              (/ (- (option-dte long-call) (option-dte short-call)) days-in-this-year)))))
                
                (define spread-price (- (option-mid long-call) (option-mid short-call)))
 
                (define ffwd-vol
                  (if (= (option-dte long-call) (option-dte short-call)) #f
-                     (* 100.0 (flat-forward (option-vol long-call) spread-price short-call long-call
-                                            (dohlc-close (last prices)) days-in-this-year 1-month-rate divs))))
+                     (flat-forward (option-vol long-call) spread-price short-call long-call
+                                   (dohlc-close (last prices)) days-in-this-year 1-month-rate divs)))
                
                (struct-copy etf-vrp-analysis analysis-for-symbol
                             [30d-60d-fwd-vol fwd-vol]
@@ -59,7 +59,7 @@
   (define short-call-price (black-scholes underlying-price
                                           (/ (option-dte short-call) days-in-this-year)
                                           (option-strike short-call)
-                                          (string->symbol (option-call-put short-call))
+                                          (option-call-put short-call)
                                           rate
                                           vol
                                           divs))
@@ -67,7 +67,7 @@
   (define long-call-price (black-scholes underlying-price
                                          (/ (option-dte long-call) days-in-this-year)
                                          (option-strike long-call)
-                                         (string->symbol (option-call-put long-call))
+                                         (option-call-put long-call)
                                          rate
                                          vol
                                          divs))
@@ -75,7 +75,7 @@
   (define short-call-vega (black-scholes-vega underlying-price
                                               (/ (option-dte short-call) days-in-this-year)
                                               (option-strike short-call)
-                                              (string->symbol (option-call-put short-call))
+                                              (option-call-put short-call)
                                               rate
                                               vol
                                               divs))
@@ -83,7 +83,7 @@
   (define long-call-vega (black-scholes-vega underlying-price
                                              (/ (option-dte long-call) days-in-this-year)
                                              (option-strike long-call)
-                                             (string->symbol (option-call-put long-call))
+                                             (option-call-put long-call)
                                              rate
                                              vol
                                              divs))

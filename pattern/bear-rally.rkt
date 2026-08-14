@@ -65,8 +65,10 @@
                 (> (- sma-50 sma-20) (- sma-20 dc-20-low)))
            (let ([new-test (test 20
                                  (* low 999/1000)
+                                 #f
+                                 (- low (* satr 4))
                                  (+ low (* satr 2))
-                                 (- low (* satr 4)))])
+                                 #f)])
              (bear-rally (history (append (history-test h)
                                           (list (dv date new-test)))
                                   (history-trade h))
