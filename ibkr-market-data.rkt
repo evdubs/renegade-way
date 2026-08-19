@@ -85,7 +85,8 @@
                                                               [start-moment (execution-rsp-timestamp e)]
                                                               [end-moment (execution-rsp-timestamp e)]
                                                               [what-to-show 'bid-ask]
-                                                              [ignore-size #t]))])))))
+                                                              [ignore-size #t]))])))
+                    (void)))
 
 (ibkr-add-handler 'historical-ticks
                   (λ (ht)
