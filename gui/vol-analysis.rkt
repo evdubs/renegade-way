@@ -2,6 +2,7 @@
 
 (require gregor
          racket/class
+         racket/contract
          racket/gui/base
          racket/list
          "../db-queries.rkt"
@@ -9,9 +10,10 @@
          "chart.rkt"
          "option-strategy-frame.rkt")
 
-(provide vol-analysis-box
-         vol-analysis-filter
-         run-vol-analysis)
+(provide (contract-out
+          [vol-analysis-box (-> (is-a?/c tab-panel%) date? date? void?)]
+          [vol-analysis-filter (-> #:hide-large-spread boolean? #:hide-non-weekly boolean? void?)]
+          [run-vol-analysis (-> string? string? date? date? void?)]))
 
 (define vol-analysis-list (list))
 
@@ -54,8 +56,8 @@
           (map (λ (m) (if (vol-analysis-earnings-date m) (~t (vol-analysis-earnings-date m) "yy-MM-dd") "")) filter-weekly)
           (map (λ (m) (real->decimal-string (vol-analysis-option-spread m))) filter-weekly))
     ; We set data here so that we can retrieve it later with `get-data`
-    (map (λ (m i) (send analysis-box-ref set-data i m))
-         filter-weekly (range (length filter-weekly)))))
+    (for-each (λ (m i) (send analysis-box-ref set-data i m))
+              filter-weekly (range (length filter-weekly)))))
 
 (define analysis-box-columns (list "Market" "MktIv" "MktIvRnk" "Sector" "SctIv" "SctIvRnk" "Industry" "IndIv" "IndIvRnk"
                                    "Stock" "StkIv" "StkIvRnk" "ErnDt" "OptSprd"))

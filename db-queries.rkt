@@ -2,6 +2,7 @@
 
 (require db
          gregor
+         racket/contract
          racket/format
          racket/list
          racket/string
@@ -11,41 +12,43 @@
          "params.rkt"
          "structs.rkt")
 
-(provide get-1-month-rate
-         get-atm-curve
-         get-closest-vol
-         get-condor-analysis
-         get-date-ohlc
-         get-date-variance-history
-         get-date-vol-history
-         get-date-vol-curve-history
-         get-dividend-dates
-         get-dividend-estimates
-         get-earnings-dates
-         get-earnings-symbols-for-date
-         get-earnings-vibes-analysis
-         get-earnings-vol-premium
-         get-etf-vrp-analysis
-         get-execution-tick
-         get-forward-factor-analysis
-         get-is-etf
-         get-next-earnings-date
-         get-options
-         get-position-history
-         get-position-analysis
-         get-price-analysis
-         get-rank-analysis
-         get-security-name
-         get-vol-analysis
-         get-vol-surface
-         insert-commission-report
-         insert-condor-analysis
-         insert-contract
-         insert-execution
-         insert-execution-tick
-         insert-price-analysis
-         insert-order
-         insert-order-note)
+(provide (contract-out
+          [get-1-month-rate (-> date? rational?)]
+          [get-atm-curve (-> string? date? (listof (vectorof (or/c string? rational?))))]
+          [get-closest-vol (-> string? date? date? rational? (or/c 'call 'put) rational?)]
+          [get-condor-analysis (-> string? date? (listof condor-analysis?))]
+          [get-date-ohlc (-> string? date? date? (listof dohlc?))]
+          [get-date-variance-history (-> string? date? date? (listof dv?))]
+          [get-date-vol-history (-> string? date? date? (listof dv?))]
+          [get-date-vol-curve-history (-> string? date? date? (listof dv?))]
+          [get-dividend-dates (-> string? date? date? (listof integer?))]
+          [get-dividend-estimates (-> string? date? date? (listof (vectorof rational?)))]
+          [get-earnings-dates (-> string? date? date? (listof integer?))]
+          [get-earnings-symbols-for-date (-> date? (listof string?))]
+          [get-earnings-vibes-analysis (->* (date?) (#:live-prices (or/c (hash/c string? rational?) boolean?)) (listof earnings-vibes-analysis?))]
+          [get-earnings-vol-premium (-> date? string? rational?)]
+          [get-etf-vrp-analysis (-> date? (listof etf-vrp-analysis?))]
+          [get-execution-tick (-> string? (listof (vectorof (or/c string? moment? rational?))))]
+          [get-forward-factor-analysis (-> date? (listof forward-factor-analysis?))]
+          [get-is-etf (-> string? boolean?)]
+          [get-next-earnings-date (-> string? date? date? date?)]
+          [get-options (-> string? date? (listof option?))]
+          [get-position-history (-> date? string?)]
+          [get-position-analysis (-> date? (listof position-analysis?))]
+          [get-price-analysis (-> string? string? date? date? (listof price-analysis?))]
+          [get-rank-analysis (-> string? date? (listof rank-analysis?))]
+          [get-security-name (-> string? string?)]
+          [get-vol-analysis (-> string? date? (listof vol-analysis?))]
+          [get-vol-surface (-> string? date? (listof (vectorof (or/c string? rational?))))]
+          [insert-commission-report (-> commission-report-rsp? void?)]
+          [insert-condor-analysis (-> date? condor-analysis? (or/c rational? #f) (or/c rational? #f) (or/c rational? #f) (or/c rational? #f)
+                                      (or/c rational? #f) (or/c rational? #f) (or/c rational? #f) (or/c rational? #f) void?)]
+          [insert-contract (-> contract-details-rsp? void?)]
+          [insert-execution (-> execution-rsp? void?)]
+          [insert-execution-tick (-> string? historical-tick? void?)]
+          [insert-price-analysis (-> date? price-analysis? rational? rational? rational? string? void?)]
+          [insert-order (-> open-order-rsp? void?)]
+          [insert-order-note (-> string? integer? order? void?)]))
 
 (define dbc (postgresql-connect #:server (db-host) #:user (db-user) #:database (db-name) #:password (db-pass)))
 
@@ -75,10 +78,10 @@ limit
   1;
 "
                  symbol
-                 date
-                 expiration
+                 (date->iso8601 date)
+                 (date->iso8601 expiration)
                  strike
-                 call-put))
+                 (string-titlecase (symbol->string call-put))))
 
 (define (get-date-ohlc ticker-symbol start-date end-date)
   (let ([price-query (query-rows dbc "
@@ -99,8 +102,8 @@ from
     false);
 "
                                  ticker-symbol
-                                 start-date
-                                 end-date)])
+                                 (date->iso8601 start-date)
+                                 (date->iso8601 end-date))])
     (map (λ (row) (dohlc (->posix (iso8601->date (vector-ref row 0)))
                          (vector-ref row 1)
                          (vector-ref row 2)
@@ -124,8 +127,8 @@ order by
   date;
 "
                                             ticker-symbol
-                                            start-date
-                                            end-date)])
+                                            (date->iso8601 start-date)
+                                            (date->iso8601 end-date))])
     (map (λ (row) (dv (->posix (iso8601->date (vector-ref row 0))) (vector-ref row 1)))
          variance-history-query)))
 
@@ -145,8 +148,8 @@ order by
   date;
 "
                                        ticker-symbol
-                                       start-date
-                                       end-date)])
+                                       (date->iso8601 start-date)
+                                       (date->iso8601 end-date))])
     (map (λ (row) (dv (->posix (iso8601->date (vector-ref row 0))) (vector-ref row 1)))
          vol-history-query)))
 
@@ -188,8 +191,8 @@ order by
   ccp.date;
 "
                                              ticker-symbol
-                                             start-date
-                                             end-date)])
+                                             (date->iso8601 start-date)
+                                             (date->iso8601 end-date))])
     (map (λ (row) (dv (->posix (iso8601->date (vector-ref row 0))) (vector-ref row 1)))
          vol-curve-history-query)))
 
@@ -212,7 +215,7 @@ order by
   strike;
 "
               ticker-symbol
-              date))
+              (date->iso8601 date)))
 
 (define (get-atm-curve ticker-symbol date)
   (query-rows dbc "
@@ -266,7 +269,7 @@ where
 order by
   alc.expiration;
 "
-              date
+              (date->iso8601 date)
               ticker-symbol))
 
 (define (get-dividend-dates ticker-symbol start-date end-date)
@@ -291,8 +294,8 @@ order by
   coalesce(dc.ex_date, d.ex_date);
 "
                    ticker-symbol
-                   start-date
-                   end-date)))
+                   (date->iso8601 start-date)
+                   (date->iso8601 end-date))))
 
 (define (get-earnings-dates ticker-symbol start-date end-date)
   (map (λ (el) (->posix (iso8601->date el)))
@@ -309,8 +312,8 @@ order by
   date;
 "
                    ticker-symbol
-                   start-date
-                   end-date)))
+                   (date->iso8601 start-date)
+                   (date->iso8601 end-date))))
 
 (define (get-earnings-symbols-for-date date)
   (query-list dbc "
@@ -322,7 +325,7 @@ where
   ((ec.date = $1::text::date and ec.\"when\" = 'After market close'::zacks.\"when\") or
    (ec.date = $1::text::date + interval '1 day' and ec.\"when\" = 'Before market open'::zacks.\"when\"));
 "
-              date))
+              (date->iso8601 date)))
 
 (define (get-earnings-vol-premium date symbol)
   (query-value dbc "
@@ -554,8 +557,8 @@ order by
 "
                                 market
                                 sector
-                                start-date
-                                end-date)])
+                                (date->iso8601 start-date)
+                                (date->iso8601 end-date))])
     (map (λ (row) (price-analysis (vector-ref row 0)
                                   (vector-ref row 1)
                                   (vector-ref row 2)
@@ -697,7 +700,7 @@ order by
   component_rank.rank, zacks.to_integer_rank(component_rank.rank) - component_avg_rank.rank, market.component_symbol;
 "
                    market
-                   date)))
+                   (date->iso8601 date))))
 
 (define (get-vol-analysis market date)
   (map (λ (row) (vol-analysis (vector-ref row 0)
@@ -840,7 +843,7 @@ order by
   component_iv_rank desc;
 "
                    market
-                   date)))
+                   (date->iso8601 date))))
 
 (define (get-condor-analysis market date)
   (map (λ (row) (condor-analysis (vector-ref row 0)
@@ -912,7 +915,7 @@ where
   market.date = (select max(date) from spdr.etf_holding where date <= $2::text::date);
 "
                    market
-                   date)))
+                   (date->iso8601 date))))
 
 (define (get-earnings-vibes-analysis date #:live-prices [live-prices-arg #f])
   (define prices (if live-prices-arg live-prices-arg
@@ -932,7 +935,7 @@ where
   ((ec.date = $1::text::date and ec.\"when\" = 'After market close'::zacks.\"when\") or
    (ec.date = $1::text::date + interval '1 day' and ec.\"when\" = 'Before market open'::zacks.\"when\"));
 "
-                                                           date))))))
+                                                           (date->iso8601 date)))))))
 
   (map (λ (row) (earnings-vibes-analysis (vector-ref row 0)
                                          (iso8601->date (vector-ref row 1))
@@ -1142,7 +1145,7 @@ on
 order by
   coalesce((back_vol.vol - front_vol.vol) / nullif(exprs.max_expiration - exprs.min_expiration, 0), 0) asc;
 ")
-                   date)))
+                   (date->iso8601 date))))
 
 (define (get-etf-vrp-analysis date)
   (map (λ (row) (etf-vrp-analysis (vector-ref row 0)
@@ -1238,7 +1241,7 @@ on
 order by
   log_iv_hv.iv_hv desc;
 "
-                   date)))
+                   (date->iso8601 date))))
 
 (define (get-forward-factor-analysis date)
   (map (λ (row) (forward-factor-analysis (vector-ref row 0)
@@ -1402,7 +1405,7 @@ where
 order by
   forward_factor desc;
 "
-                   date)))
+                   (date->iso8601 date))))
 
 (define (get-position-analysis date)
   (map (λ (row) (position-analysis (vector-ref row 0)
@@ -1537,7 +1540,7 @@ order by
   strike,
   \"right\";
 "
-                   date)))
+                   (date->iso8601 date))))
 
 (define (get-position-history date)
   (query-value dbc "
@@ -1590,7 +1593,7 @@ join
 on
   n.order_id = oids.order_id;
 "
-               date))
+               (date->iso8601 date)))
 
 (define (get-security-name act-symbol)
   (query-value dbc "
@@ -1675,7 +1678,7 @@ from
 where
   date = (select max(date) from ust.yield_curve where date < $1::text::date)
 "
-               date))
+               (date->iso8601 date)))
 
 (define (get-dividend-estimates symbol start-date end-date)
   (query-rows dbc "
@@ -1897,28 +1900,25 @@ insert into renegade.condor_analysis (
   end,
   case
     when $14::text = '' then null
-    else to_date($14::text, 'YY-MM-DD')
+    else $14::text::date
   end,
-  case
-    when $15::text = '' then null
-    else $15::text::numeric
-  end
+  $15
 ) on conflict (date, stock_act_symbol) do nothing;
 "
-              date
+              (date->iso8601 date)
               (condor-analysis-market condor-analysis)
-              market-rating
-              market-risk-reward
+              (if market-rating market-rating 0)
+              (if market-risk-reward market-risk-reward 0)
               (condor-analysis-sector condor-analysis)
-              sector-rating
-              sector-risk-reward
+              (if sector-rating sector-rating 0)
+              (if sector-risk-reward sector-risk-reward 0)
               (condor-analysis-industry condor-analysis)
-              industry-rating
-              industry-risk-reward
+              (if industry-rating industry-rating 0)
+              (if industry-risk-reward industry-risk-reward 0)
               (condor-analysis-stock condor-analysis)
-              stock-rating
-              stock-risk-reward
-              (condor-analysis-earnings-date condor-analysis)
+              (if stock-rating stock-rating 0)
+              (if stock-risk-reward stock-risk-reward 0)
+              (if (condor-analysis-earnings-date condor-analysis) (date->iso8601 (condor-analysis-earnings-date condor-analysis)) "")
               (condor-analysis-option-spread condor-analysis)))
 
 (define (insert-contract contract)
@@ -2078,7 +2078,7 @@ insert into renegade.price_analysis (
   $15
 ) on conflict (date, stock_act_symbol) do nothing;
 "
-              date
+              (date->iso8601 date)
               (price-analysis-market price-analysis)
               market-rating
               (price-analysis-sector price-analysis)

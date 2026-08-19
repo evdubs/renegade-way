@@ -3,6 +3,7 @@
 (require gregor
          math/statistics
          racket/class
+         racket/contract
          racket/list
          racket/gui/base
          racket/string
@@ -12,9 +13,11 @@
          "chart.rkt"
          "option-strategy-frame.rkt")
 
-(provide price-analysis-box
-         price-analysis-filter
-         update-price-analysis-box)
+(provide (contract-out
+          [price-analysis-box (-> (is-a?/c tab-panel%) date? date? void?)]
+          [price-analysis-filter (-> #:hide-hold boolean? #:hide-no-pattern boolean?
+                                     #:hide-large-spread boolean? #:hide-non-weekly boolean? void?)]
+          [update-price-analysis-box (-> (listof price-analysis?) (hash/c string? integer?) void?)]))
 
 (define analysis-panel #f)
 
@@ -72,8 +75,8 @@
           (map (λ (m) (if (price-analysis-zacks-rank m) (string-replace (symbol->string (price-analysis-zacks-rank m)) "ong" "") "")) filter-weekly)
           (map (λ (m) (hash-ref price-analysis-hash (price-analysis-stock m))) filter-weekly))
     ; We set data here so that we can retrieve it later with `get-data`
-    (map (λ (m i) (send analysis-box-ref set-data i (list m (hash-ref price-analysis-hash (price-analysis-stock m)))))
-         filter-weekly (range (length filter-weekly)))
+    (for-each (λ (m i) (send analysis-box-ref set-data i (list m (hash-ref price-analysis-hash (price-analysis-stock m)))))
+              filter-weekly (range (length filter-weekly)))
 
     (define market-average (if (hash-empty? price-analysis-hash)
                                #f

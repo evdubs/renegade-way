@@ -1,15 +1,17 @@
 #lang racket/base
 
-(require racket/sequence
+(require racket/contract
+         racket/sequence
          racket/vector
          "structs.rkt")
 
-(provide simple-moving-average
-         simple-average-true-range
-         donchian-channel
-         delta
-         shift
-         crow-soldier-reversal)
+(provide (contract-out
+          [simple-moving-average (-> (vectorof dohlc?) integer? (vectorof dv?))]
+          [simple-average-true-range (-> (vectorof dohlc?) integer? (vectorof dv?))]
+          [donchian-channel (-> (vectorof dohlc?) integer? (values (vectorof dv?) (vectorof dv?)))]
+          [delta (-> (vectorof dv?) integer? (vectorof dv?))]
+          [shift (-> (vectorof dv?) integer? (vectorof dv?))]
+          [crow-soldier-reversal (-> (vectorof dohlc?) integer? (vectorof dv?))]))
 
 (define (vector-partition v period step)
   (if (> period (vector-length v)) (vector)

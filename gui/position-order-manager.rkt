@@ -5,6 +5,7 @@
          plot
          racket/async-channel
          racket/class
+         racket/contract
          racket/gui/base
          racket/list
          racket/string
@@ -20,8 +21,9 @@
          "../technical-indicators.rkt"
          "plot-util.rkt")
 
-(provide set-order-data
-         show-position-order-manager)
+(provide (contract-out
+          [set-order-data (-> (listof order?) date? rational? void?)]
+          [show-position-order-manager (-> void?)]))
 
 (define (vector-last v)
   (vector-ref v (- (vector-length v) 1)))
@@ -81,7 +83,9 @@
                    (set-order-data
                     (map (λ (i)
                            (define ord (send order-box get-data i))
-                           (define atr-50 (~> (get-date-ohlc (order-symbol ord) (date->iso8601 (-months (today) 3)) (date->iso8601 (today)))
+                           (define atr-50 (~> (get-date-ohlc (order-symbol ord)
+                                                             (-months (iso8601->date (send eval-date-field get-value)) 3)
+                                                             (iso8601->date (send eval-date-field get-value)))
                                               (list->vector _)
                                               (simple-average-true-range _ 50)
                                               (vector-last _)
@@ -385,11 +389,11 @@
                                         (foldl (λ (p res) (if (> (abs (- res p)) (abs (- ref-price p))) p res))
                                                (first prices) prices)))
   (define eval-date (iso8601->date (send eval-date-field get-value)))
-  (define 1-month-rate (get-1-month-rate (date->iso8601 (today))))
+  (define 1-month-rate (get-1-month-rate eval-date))
   (define latest-30d-vol (dv-value (last (get-date-vol-history (order-symbol (send order-box get-data 0))
                                                                ; eval date may be weeks into the future
-                                                               (date->iso8601 (-days eval-date 90))
-                                                               (date->iso8601 eval-date)))))
+                                                               (-days eval-date 90)
+                                                               eval-date))))
   (define (price-profit-loss vol-multiplier vol prices)
     (map (λ (p)
            (vector p (foldl (λ (i res)

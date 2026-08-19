@@ -1,6 +1,9 @@
 #lang racket/base
 
-(require racket/gui
+(require gregor
+         racket/class
+         racket/contract
+         racket/gui/base
          racket/list
          "../db-queries.rkt"
          "../etf-vrp-analysis.rkt"
@@ -8,9 +11,10 @@
          "chart.rkt"
          "option-strategy-frame.rkt")
 
-(provide etf-vrp-analysis-box
-         etf-vrp-analysis-filter
-         update-etf-vrp-analysis-box)
+(provide (contract-out
+          [etf-vrp-analysis-box (-> (is-a?/c tab-panel%) date? date? void?)]
+          [etf-vrp-analysis-filter (-> #:hide-no-pattern boolean? #:hide-large-spread boolean? void?)]
+          [update-etf-vrp-analysis-box (-> (listof etf-vrp-analysis?) void?)]))
 
 (define analysis-box-ref #f)
 
@@ -50,8 +54,8 @@
           (map (λ (m) (if (real? (etf-vrp-analysis-option-spread m)) (real->decimal-string (etf-vrp-analysis-option-spread m)) ""))
                filter-spread))
     ; We set data here so that we can retrieve it later with `get-data`
-    (map (λ (m i) (send analysis-box-ref set-data i m))
-         filter-spread (range (length filter-spread)))))
+    (for-each (λ (m i) (send analysis-box-ref set-data i m))
+              filter-spread (range (length filter-spread)))))
 
 (define analysis-box-columns (list "ETF" "IV/HV" "IVP" "FwdVol" "FFwdVol" "FFwd/Fwd" "OptSprd"))
 

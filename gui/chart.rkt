@@ -21,8 +21,8 @@
   (send chart-sector-field set-value sector)
   (send chart-industry-field set-value industry)
   (send chart-stock-field set-value stock)
-  (send chart-start-date-field set-value start-date)
-  (send chart-end-date-field set-value end-date)
+  (send chart-start-date-field set-value (date->iso8601 start-date))
+  (send chart-end-date-field set-value (date->iso8601 end-date))
   (cond [(equal? "Price" (send chart-type-choice get-string-selection))
          (send chart-market-canvas set-snip
                (chart-price-plot chart-market-field chart-market-canvas))
@@ -201,7 +201,7 @@
 
 (define (chart-vol-surface-plot symbol-field canvas)
   (define kvs (get-vol-surface (send symbol-field get-value)
-                               (send chart-end-date-field get-value)))
+                               (iso8601->date (send chart-end-date-field get-value))))
   (if (or (equal? (send symbol-field get-value) "")
           (= 0 (length kvs)))
       (plot-snip (lines (list #(0 0) #(1 0)))
@@ -242,21 +242,21 @@
                      #:legend-anchor 'outside-top)))))
 
 (define (chart-vol-history-plot symbol-field canvas)
-  (define adjusted-start-date-str (if (and (equal? "" (send chart-industry-field get-value))
+  (define adjusted-start-date (if (and (equal? "" (send chart-industry-field get-value))
                                            (equal? symbol-field chart-stock-field)
                                            (date>=? (iso8601->date (send chart-start-date-field get-value))
                                                     (-months (iso8601->date (send chart-end-date-field get-value)) 11)))
-                                      (date->iso8601 (-months (iso8601->date (send chart-end-date-field get-value)) 11))
-                                      (send chart-start-date-field get-value)))
+                                      (-months (iso8601->date (send chart-end-date-field get-value)) 11)
+                                      (iso8601->date (send chart-start-date-field get-value))))
   (define vol-dvs (get-date-vol-history (send symbol-field get-value)
-                                        adjusted-start-date-str
-                                        (send chart-end-date-field get-value)))
+                                        adjusted-start-date
+                                        (iso8601->date (send chart-end-date-field get-value))))
   (define vol-curve-dvs (get-date-vol-curve-history (send symbol-field get-value)
-                                                    adjusted-start-date-str
-                                                    (send chart-end-date-field get-value)))
+                                                    adjusted-start-date
+                                                    (iso8601->date (send chart-end-date-field get-value))))
   (define variance-dvs (get-date-variance-history (send symbol-field get-value)
-                                                  adjusted-start-date-str
-                                                  (send chart-end-date-field get-value)))
+                                                  adjusted-start-date
+                                                  (iso8601->date (send chart-end-date-field get-value))))
   (if (or (equal? (send symbol-field get-value) "")
           (and (= 0 (length vol-dvs))
                (= 0 (length vol-curve-dvs))
@@ -272,8 +272,8 @@
                              (apply min (map (λ (dv) (dv-value dv)) variance-dvs)))]
              [earnings-dates-points (map (λ (d) (point-label (vector d min-value) "E" #:anchor 'bottom))
                                          (get-earnings-dates (send symbol-field get-value)
-                                                             adjusted-start-date-str
-                                                             (send chart-end-date-field get-value)))]
+                                                             adjusted-start-date
+                                                             (iso8601->date (send chart-end-date-field get-value))))]
              [snip (parameterize ([plot-x-ticks (date-ticks)]
                                   [plot-width (- (send canvas get-width) 12)]
                                   [plot-height (- (send canvas get-height) 12)])
@@ -334,24 +334,24 @@
                  #:y-label "Price"
                  #:width (- (send canvas get-width) 12)
                  #:height (- (send canvas get-height) 12))
-      (let* ([adjusted-start-date-str (if (and (equal? "" (send chart-industry-field get-value))
+      (let* ([adjusted-start-date (if (and (equal? "" (send chart-industry-field get-value))
                                                (equal? symbol-field chart-stock-field)
                                                (date>=? (iso8601->date (send chart-start-date-field get-value))
                                                         (-months (iso8601->date (send chart-end-date-field get-value)) 11)))
-                                          (date->iso8601 (-months (iso8601->date (send chart-end-date-field get-value)) 11))
-                                          (send chart-start-date-field get-value))]
+                                          (-months (iso8601->date (send chart-end-date-field get-value)) 11)
+                                          (iso8601->date (send chart-start-date-field get-value)))]
              [dohlcs (get-date-ohlc (send symbol-field get-value)
-                                    adjusted-start-date-str
-                                    (send chart-end-date-field get-value))]
+                                    adjusted-start-date
+                                    (iso8601->date (send chart-end-date-field get-value)))]
              [min-low (apply min (map (λ (el) (dohlc-low el)) dohlcs))]
              [earnings-dates-points (map (λ (d) (point-label (vector d min-low) "E" #:anchor 'bottom))
                                          (get-earnings-dates (send symbol-field get-value)
-                                                             adjusted-start-date-str
-                                                             (send chart-end-date-field get-value)))]
+                                                             adjusted-start-date
+                                                             (iso8601->date (send chart-end-date-field get-value))))]
              [dividend-dates-points (map (λ (d) (point-label (vector d min-low) "D" #:anchor 'bottom))
                                          (get-dividend-dates (send symbol-field get-value)
-                                                             adjusted-start-date-str
-                                                             (send chart-end-date-field get-value)))]
+                                                             adjusted-start-date
+                                                             (iso8601->date (send chart-end-date-field get-value))))]
              [snip (parameterize ([plot-x-ticks (date-ticks)]
                                   [plot-y-ticks (currency-ticks #:kind 'USD)]
                                   [plot-width (- (send canvas get-width) 12)]
@@ -409,7 +409,7 @@
 
 (define (chart-atm-curve-plot symbol-field canvas)
   (define atm-curve (get-atm-curve (send symbol-field get-value)
-                                   (send chart-end-date-field get-value)))
+                                   (iso8601->date (send chart-end-date-field get-value))))
   (if (or (equal? (send symbol-field get-value) "")
           (= 0 (length atm-curve)))
       (plot-snip (lines (list #(0 0) #(1 0)))
@@ -422,8 +422,8 @@
                                                    (vector-ref el 4) (vector-ref el 5))) atm-curve))]
              [earnings-dates-points (map (λ (d) (point-label (vector d min-low) "E" #:anchor 'bottom))
                                          (get-earnings-dates (send symbol-field get-value)
-                                                             (send chart-end-date-field get-value)
-                                                             (date->iso8601 (+months (iso8601->date (send chart-end-date-field get-value)) 5))))]
+                                                             (iso8601->date (send chart-end-date-field get-value))
+                                                             (+months (iso8601->date (send chart-end-date-field get-value)) 5)))]
              [snip (parameterize ([plot-x-ticks (date-ticks)]
                                   [plot-width (- (send canvas get-width) 12)]
                                   [plot-height (- (send canvas get-height) 12)]

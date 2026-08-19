@@ -1,14 +1,24 @@
 #lang racket/base
 
-(require math/distributions)
+(require math/distributions
+         racket/contract)
 
-(provide black-scholes
-         black-scholes-delta
-         black-scholes-gamma
-         black-scholes-theta
-         black-scholes-vega
-         black-scholes-rho
-         black-scholes-implied-vol)
+(provide (contract-out
+          [black-scholes (-> rational? rational? rational? (or/c 'call 'put) rational?
+                             rational? (listof (vectorof rational?)) rational?)]
+          [black-scholes-delta (-> rational? rational? rational? (or/c 'call 'put) rational?
+                                   rational? (listof (vectorof rational?)) rational?)]
+          [black-scholes-gamma (-> rational? rational? rational? (or/c 'call 'put) rational?
+                                   rational? (listof (vectorof rational?)) rational?)]
+          [black-scholes-theta (-> rational? rational? rational? (or/c 'call 'put) rational?
+                                   rational? (listof (vectorof rational?)) rational?)]
+          [black-scholes-vega (-> rational? rational? rational? (or/c 'call 'put) rational?
+                                  rational? (listof (vectorof rational?)) rational?)]
+          [black-scholes-rho (-> rational? rational? rational? (or/c 'call 'put) rational?
+                                 rational? (listof (vectorof rational?)) rational?)]
+          [black-scholes-implied-vol (->* (rational? rational? rational? (or/c 'call 'put) rational?
+                                                     rational? (listof (vectorof rational?)) rational?)
+                                          (#:low-vol rational? #:high-vol rational?) rational?)]))
 
 (define (black-scholes price years-left strike call-put rate vol divs)
   (let* ([price (exact->inexact price)]
@@ -32,10 +42,10 @@
          [pv (* strike (exp (* -1 rate years-left)))])
     ; use (flnormal-cdf) instead of (cdf (normal-dist)) for performance.
     ; condor analysis takes 2 minutes instead of 3 with this optimization.
-    (cond [(or (equal? call-put 'Call) (equal? call-put 'call))
+    (cond [(equal? call-put 'call)
            (- (* (flnormal-cdf 0.0 1.0 d-1 #f #f) discounted-price)
               (* (flnormal-cdf 0.0 1.0 d-2 #f #f) pv))]
-          [(or (equal? call-put 'Put) (equal? call-put 'put))
+          [(equal? call-put 'put)
            (- (* (flnormal-cdf 0.0 1.0 (* d-2 -1) #f #f) pv)
               (* (flnormal-cdf 0.0 1.0 (* d-1 -1) #f #f) discounted-price))])))
 

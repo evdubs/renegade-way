@@ -2,6 +2,7 @@
 
 (require json
          net/http-easy
+         racket/contract
          racket/format
          racket/hash
          racket/list
@@ -12,7 +13,8 @@
          "params.rkt"
          "sim/list-partition.rkt")
 
-(provide get-prices)
+(provide (contract-out
+          [get-prices (-> (listof string?) (hash/c string? rational?))]))
 
 ; #:max-redirects is set to 0 here as login_submit.ashx will redirect after
 ; success on login, and http-easy will follow the redirect, but the cookie

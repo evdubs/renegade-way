@@ -82,6 +82,9 @@
                    (condor-analysis-filter #:hide-no-pattern (send hide-no-pattern-check-box get-value)
                                            #:hide-large-spread (send hide-spread-check-box get-value)
                                            #:hide-non-weekly (send hide-non-weekly-check-box get-value))
+                   (earnings-vibes-analysis-filter #:hide-no-pattern (send hide-no-pattern-check-box get-value)
+                                                   #:hide-large-spread (send hide-spread-check-box get-value)
+                                                   #:use-live-data (send use-live-data-check-box get-value))
                    (etf-vrp-analysis-filter #:hide-no-pattern (send hide-no-pattern-check-box get-value)
                                             #:hide-large-spread (send hide-spread-check-box get-value))
                    (forward-factor-analysis-filter #:hide-no-pattern (send hide-no-pattern-check-box get-value)
@@ -104,8 +107,8 @@
                    (condor-analysis-filter #:hide-no-pattern (send hide-no-pattern-check-box get-value)
                                            #:hide-large-spread (send hide-spread-check-box get-value)
                                            #:hide-non-weekly (send hide-non-weekly-check-box get-value))
-                   (earnings-vibes-analysis-filter #:hide-large-spread (send hide-spread-check-box get-value)
-                                                   #:hide-non-weekly (send hide-non-weekly-check-box get-value)
+                   (earnings-vibes-analysis-filter #:hide-no-pattern (send hide-no-pattern-check-box get-value)
+                                                   #:hide-large-spread (send hide-spread-check-box get-value)
                                                    #:use-live-data (send use-live-data-check-box get-value))
                    (etf-vrp-analysis-filter #:hide-no-pattern (send hide-no-pattern-check-box get-value)
                                             #:hide-large-spread (send hide-spread-check-box get-value))
@@ -135,8 +138,8 @@
        [parent filter-input-pane]
        [label "Use Live Data"]
        [callback (λ (b e)
-                   (earnings-vibes-analysis-filter #:hide-large-spread (send hide-spread-check-box get-value)
-                                                   #:hide-non-weekly (send hide-non-weekly-check-box get-value)
+                   (earnings-vibes-analysis-filter #:hide-no-pattern (send hide-no-pattern-check-box get-value)
+                                                   #:hide-large-spread (send hide-spread-check-box get-value)
                                                    #:use-live-data (send use-live-data-check-box get-value))
                    (forward-factor-analysis-filter #:hide-no-pattern (send hide-no-pattern-check-box get-value)
                                                    #:hide-large-spread (send hide-spread-check-box get-value)
@@ -157,14 +160,30 @@
 (define (refresh-tab-panel)
   (map (λ (c) (send analysis-tab-panel delete-child c)) (send analysis-tab-panel get-children))
   (match (send analysis-tab-panel get-item-label (send analysis-tab-panel get-selection))
-    ["Price" (price-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))]
-    ["Rank" (rank-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))]
-    ["Vol" (vol-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))]
-    ["Condor" (condor-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))]
-    ["Earnings Vibes" (earnings-vibes-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))]
-    ["ETF VRP" (etf-vrp-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))]
-    ["Forward Factor" (forward-factor-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))]
-    ["Position" (position-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))]))
+    ["Price" (price-analysis-box analysis-tab-panel
+                                 (iso8601->date (send start-date-field get-value))
+                                 (iso8601->date (send end-date-field get-value)))]
+    ["Rank" (rank-analysis-box analysis-tab-panel
+                               (iso8601->date (send start-date-field get-value))
+                               (iso8601->date (send end-date-field get-value)))]
+    ["Vol" (vol-analysis-box analysis-tab-panel
+                             (iso8601->date (send start-date-field get-value))
+                             (iso8601->date (send end-date-field get-value)))]
+    ["Condor" (condor-analysis-box analysis-tab-panel
+                                   (iso8601->date (send start-date-field get-value))
+                                   (iso8601->date (send end-date-field get-value)))]
+    ["Earnings Vibes" (earnings-vibes-analysis-box analysis-tab-panel
+                                                   (iso8601->date (send start-date-field get-value))
+                                                   (iso8601->date (send end-date-field get-value)))]
+    ["ETF VRP" (etf-vrp-analysis-box analysis-tab-panel
+                                     (iso8601->date (send start-date-field get-value))
+                                     (iso8601->date (send end-date-field get-value)))]
+    ["Forward Factor" (forward-factor-analysis-box analysis-tab-panel
+                                                   (iso8601->date (send start-date-field get-value))
+                                                   (iso8601->date (send end-date-field get-value)))]
+    ["Position" (position-analysis-box analysis-tab-panel
+                                       (iso8601->date (send start-date-field get-value))
+                                       (iso8601->date (send end-date-field get-value)))]))
 
 (define analyze-button
   (new button%
@@ -175,43 +194,65 @@
                    (match (send analysis-tab-panel get-item-label (send analysis-tab-panel get-selection))
                      ["Price" (refresh-tab-panel)
                               (run-price-analysis (send market-field get-value) (send sector-field get-value)
-                                                  (send start-date-field get-value) (send end-date-field get-value))
+                                                  (iso8601->date (send start-date-field get-value))
+                                                  (iso8601->date (send end-date-field get-value)))
                               (update-price-analysis-box price-analysis-list price-analysis-hash)]
                      ["Rank" (refresh-tab-panel)
                              (run-rank-analysis (send market-field get-value) (send sector-field get-value)
-                                                (send start-date-field get-value) (send end-date-field get-value))]
+                                                (iso8601->date (send start-date-field get-value))
+                                                (iso8601->date (send end-date-field get-value)))]
                      ["Vol" (refresh-tab-panel)
                             (run-vol-analysis (send market-field get-value) (send sector-field get-value)
-                                              (send start-date-field get-value) (send end-date-field get-value))]
+                                              (iso8601->date (send start-date-field get-value))
+                                              (iso8601->date (send end-date-field get-value)))]
                      ["Condor" (refresh-tab-panel)
                                (run-condor-analysis (send market-field get-value) (send sector-field get-value)
-                                                    (send start-date-field get-value) (send end-date-field get-value)
+                                                    (iso8601->date (send start-date-field get-value))
+                                                    (iso8601->date (send end-date-field get-value))
                                                     #:fit-vols (send fit-vols-check-box get-value))
                                (update-condor-analysis-box condor-analysis-list condor-analysis-hash)]
                      ["Earnings Vibes" (refresh-tab-panel)
                                 (run-earnings-vibes-analysis (send market-field get-value) (send sector-field get-value)
-                                                             (send start-date-field get-value) (send end-date-field get-value)
+                                                             (iso8601->date (send start-date-field get-value))
+                                                             (iso8601->date (send end-date-field get-value))
                                                              #:use-live-data (send use-live-data-check-box get-value))]
                      ["ETF VRP" (refresh-tab-panel)
-                                (run-etf-vrp-analysis (send end-date-field get-value))
+                                (run-etf-vrp-analysis (iso8601->date (send end-date-field get-value)))
                                 (update-etf-vrp-analysis-box etf-vrp-analysis-list)]
                      ["Forward Factor" (refresh-tab-panel)
-                                       (run-forward-factor-analysis (send end-date-field get-value))]
+                                       (run-forward-factor-analysis (iso8601->date (send end-date-field get-value)))]
                      ["Position" (refresh-tab-panel)
                                  (run-position-analysis (send market-field get-value) (send sector-field get-value)
-                                                        (send start-date-field get-value) (send end-date-field get-value))])
+                                                        (iso8601->date (send start-date-field get-value))
+                                                        (iso8601->date (send end-date-field get-value)))])
                    (send b enable #t))]))
 
 (define (show-analysis)
   ; init everything so we don't get errors when selecting elements to hide
-  (price-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))
-  (rank-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))
-  (vol-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))
-  (condor-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))
-  (earnings-vibes-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))
-  (etf-vrp-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))
-  (forward-factor-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))
-  (position-analysis-box analysis-tab-panel (send start-date-field get-value) (send end-date-field get-value))
+  (price-analysis-box analysis-tab-panel
+                      (iso8601->date (send start-date-field get-value))
+                      (iso8601->date (send end-date-field get-value)))
+  (rank-analysis-box analysis-tab-panel
+                     (iso8601->date (send start-date-field get-value))
+                     (iso8601->date (send end-date-field get-value)))
+  (vol-analysis-box analysis-tab-panel
+                    (iso8601->date (send start-date-field get-value))
+                    (iso8601->date (send end-date-field get-value)))
+  (condor-analysis-box analysis-tab-panel
+                       (iso8601->date (send start-date-field get-value))
+                       (iso8601->date (send end-date-field get-value)))
+  (earnings-vibes-analysis-box analysis-tab-panel
+                               (iso8601->date (send start-date-field get-value))
+                               (iso8601->date (send end-date-field get-value)))
+  (etf-vrp-analysis-box analysis-tab-panel
+                        (iso8601->date (send start-date-field get-value))
+                        (iso8601->date (send end-date-field get-value)))
+  (forward-factor-analysis-box analysis-tab-panel
+                               (iso8601->date (send start-date-field get-value))
+                               (iso8601->date (send end-date-field get-value)))
+  (position-analysis-box analysis-tab-panel
+                         (iso8601->date (send start-date-field get-value))
+                         (iso8601->date (send end-date-field get-value)))
 
   (refresh-tab-panel)
 

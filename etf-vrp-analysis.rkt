@@ -1,6 +1,7 @@
 #lang racket/base
 
 (require gregor
+         racket/contract
          racket/list
          "db-queries.rkt"
          "option-strategy.rkt"
@@ -8,7 +9,8 @@
          "structs.rkt")
 
 (provide etf-vrp-analysis-list
-         run-etf-vrp-analysis)
+         (contract-out
+          [run-etf-vrp-analysis (->* (date?) (#:fit-vols boolean?) void?)]))
 
 (define etf-vrp-analysis-list (list))
 
@@ -18,22 +20,21 @@
   (set! etf-vrp-analysis-list
         (map (λ (analysis-for-symbol)
                (define symbol (etf-vrp-analysis-etf analysis-for-symbol))
-               (define prices (get-date-ohlc symbol (date->iso8601 (-days (iso8601->date end-date) 7)) end-date))
-               (define options (get-updated-options symbol (iso8601->date end-date) (dohlc-close (last prices)) #:compute-all-greeks #f #:fit-vols fit-vols?))
+               (define prices (get-date-ohlc symbol (-days end-date 7) end-date))
+               (define options (get-updated-options symbol end-date (dohlc-close (last prices)) #:compute-all-greeks #f #:fit-vols fit-vols?))
                (define call-horizontal-options (hash-ref (suitable-options options "VR" (dohlc-close (last prices))) "Call Horizontal Spread"))
 
                (define short-call (first call-horizontal-options))
                (define long-call (second call-horizontal-options))
 
-               (define days-in-this-year (days-in-year (->year (iso8601->date end-date))))
+               (define days-in-this-year (days-in-year (->year end-date)))
                (define divs (map (λ (div) (vector (/ (vector-ref div 0) days-in-this-year)
                                                   (vector-ref div 1)))
                                  (get-dividend-estimates symbol
-                                                         (iso8601->date end-date)
-                                                         (+months (iso8601->date end-date) 2))))
+                                                         end-date
+                                                         (+months end-date 2))))
                (define 1-month-rate (get-1-month-rate end-date))
 
-               
                (define fwd-vol
                  (if (= (option-dte long-call) (option-dte short-call)) #f
                      (sqrt (/ (- (* (/ (option-dte long-call) days-in-this-year) (option-vol long-call) (option-vol long-call))
@@ -46,7 +47,7 @@
                  (if (= (option-dte long-call) (option-dte short-call)) #f
                      (flat-forward (option-vol long-call) spread-price short-call long-call
                                    (dohlc-close (last prices)) days-in-this-year 1-month-rate divs)))
-               
+
                (struct-copy etf-vrp-analysis analysis-for-symbol
                             [30d-60d-fwd-vol fwd-vol]
                             [30d-60d-flat-fwd-vol ffwd-vol]

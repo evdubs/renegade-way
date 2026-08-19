@@ -2,6 +2,7 @@
 
 (require gregor
          racket/class
+         racket/contract
          racket/gui/base
          racket/list
          "../db-queries.rkt"
@@ -10,9 +11,10 @@
          "chart.rkt"
          "option-strategy-frame.rkt")
 
-(provide forward-factor-analysis-box
-         forward-factor-analysis-filter
-         run-forward-factor-analysis)
+(provide (contract-out
+          [forward-factor-analysis-box (-> (is-a?/c tab-panel%) date? date? void?)]
+          [forward-factor-analysis-filter (-> #:hide-no-pattern boolean? #:hide-large-spread boolean? #:use-live-data boolean? void?)]
+          [run-forward-factor-analysis (-> date? void?)]))
 
 (define forward-factor-analysis-list (list))
 
@@ -54,8 +56,8 @@
           (map (λ (m) (if (forward-factor-analysis-earnings-date m) (~t (forward-factor-analysis-earnings-date m) "yy-MM-dd") "")) filter-pattern)
           (map (λ (m) (real->decimal-string (forward-factor-analysis-option-spread m))) filter-pattern))
     ; We set data here so that we can retrieve it later with `get-data`
-    (map (λ (m i) (send analysis-box-ref set-data i m))
-         filter-pattern (range (length filter-pattern)))))
+    (for-each (λ (m i) (send analysis-box-ref set-data i m))
+              filter-pattern (range (length filter-pattern)))))
 
 (define analysis-box-columns (list "Stock" "FrontExp" "FrontVol" "BackExp" "BackVol" "VolRt" "FwdVol" "FwdFctr" "ErnDt" "OptSprd"))
 

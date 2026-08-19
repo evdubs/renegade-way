@@ -3,6 +3,7 @@
 (require gregor
          gregor/period
          racket/class
+         racket/contract
          racket/gui/base
          racket/list
          racket/string
@@ -15,23 +16,24 @@
          "chart.rkt"
          "option-strategy-frame.rkt")
 
-(provide earnings-vibes-analysis-box
-         earnings-vibes-analysis-filter
-         run-earnings-vibes-analysis)
+(provide (contract-out
+          [earnings-vibes-analysis-box (-> (is-a?/c tab-panel%) date? date? void?)]
+          [earnings-vibes-analysis-filter (-> #:hide-no-pattern boolean? #:hide-large-spread boolean? #:use-live-data boolean? void?)]
+          [run-earnings-vibes-analysis (-> string? string? date? date? #:use-live-data boolean? void?)]))
 
 (define earnings-vibes-analysis-list (list))
 
 (define analysis-box-ref #f)
 
-(define hide-large-spread (make-parameter #f))
+(define hide-no-pattern (make-parameter #f))
 
-(define hide-non-weekly (make-parameter #f))
+(define hide-large-spread (make-parameter #f))
 
 (define use-live-data (make-parameter #f))
 
-(define (earnings-vibes-analysis-filter #:hide-large-spread large-spread #:hide-non-weekly non-weekly #:use-live-data live-data)
+(define (earnings-vibes-analysis-filter #:hide-no-pattern no-pattern #:hide-large-spread large-spread #:use-live-data live-data)
+  (hide-no-pattern no-pattern)
   (hide-large-spread large-spread)
-  (hide-non-weekly non-weekly)
   (use-live-data live-data)
   (update-analysis-box earnings-vibes-analysis-list))
 
@@ -69,7 +71,7 @@
          (set! earnings-vibes-analysis-list
                (map (λ (eva)
                       (define prices (get-date-ohlc (earnings-vibes-analysis-stock eva) start-date end-date))
-                      (define options (get-updated-options (earnings-vibes-analysis-stock eva) (iso8601->date end-date)
+                      (define options (get-updated-options (earnings-vibes-analysis-stock eva) end-date
                                                            (dohlc-close (last prices)) #:compute-all-greeks #f #:fit-vols #f))
                       (define call-horizontal-options (hash-ref (suitable-options options "EC" (dohlc-close (last prices)))
                                                                 "Call Horizontal Spread"))
@@ -86,25 +88,29 @@
   (update-analysis-box earnings-vibes-analysis-list))
 
 (define (update-analysis-box earnings-vibes-analysis-list)
-  (let* ([filter-spread (if (hide-large-spread)
+  (let* ([filter-pattern (if (hide-no-pattern)
+                             (filter (λ (m) (and (>= -0.0030 (earnings-vibes-analysis-vol-slope m))
+                                                 (>= 0.015 (earnings-vibes-analysis-price-strike-ratio m)))) earnings-vibes-analysis-list)
+                             earnings-vibes-analysis-list)]
+         [filter-spread (if (hide-large-spread)
                             (filter (λ (m) (and (>= 0.50 (earnings-vibes-analysis-option-spread m))
-                                                (<= 7.5 (earnings-vibes-analysis-30d-avg-volume m)))) earnings-vibes-analysis-list)
-                            earnings-vibes-analysis-list)])
+                                                (<= 7.5 (earnings-vibes-analysis-30d-avg-volume m)))) filter-pattern)
+                            filter-pattern)])
     (send analysis-box-ref set
           (map (λ (m) (earnings-vibes-analysis-stock m)) filter-spread)
           (map (λ (m) (~t (earnings-vibes-analysis-min-expiration m) "yy-MM-dd")) filter-spread)
           (map (λ (m) (~t (earnings-vibes-analysis-max-expiration m) "yy-MM-dd")) filter-spread)
           (map (λ (m) (real->decimal-string (earnings-vibes-analysis-strike m))) filter-spread)
-          (map (λ (m) (real->decimal-string (earnings-vibes-analysis-vol-slope m))) filter-spread)
+          (map (λ (m) (real->decimal-string (earnings-vibes-analysis-vol-slope m) 4)) filter-spread)
           (map (λ (m) (real->decimal-string (earnings-vibes-analysis-iv-hv m))) filter-spread)
-          (map (λ (m) (real->decimal-string (earnings-vibes-analysis-price-strike-ratio m))) filter-spread)
+          (map (λ (m) (real->decimal-string (earnings-vibes-analysis-price-strike-ratio m) 4)) filter-spread)
           (map (λ (m) (~t (earnings-vibes-analysis-earnings-date m) "yy-MM-dd")) filter-spread)
           (map (λ (m) (first (string-split (symbol->string (earnings-vibes-analysis-earnings-when m)) "-"))) filter-spread)
           (map (λ (m) (real->decimal-string (earnings-vibes-analysis-option-spread m))) filter-spread)
           (map (λ (m) (real->decimal-string (earnings-vibes-analysis-30d-avg-volume m))) filter-spread))
     ; We set data here so that we can retrieve it later with `get-data`
-    (map (λ (m i) (send analysis-box-ref set-data i m))
-         filter-spread (range (length filter-spread)))))
+    (for-each (λ (m i) (send analysis-box-ref set-data i m))
+              filter-spread (range (length filter-spread)))))
 
 (define analysis-box-columns (list "Stock" "FrntExp" "BckExp" "Strk" "VolSlp" "IvHv" "PxSrkRt" "ErnDt" "ErnWn" "OptSprd" "30dVlm"))
 

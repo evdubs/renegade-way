@@ -66,7 +66,7 @@
              (equal? "PUT CONDOR" strategy))
          'roo]))
 
-(define positions (get-position-analysis (date->iso8601 (today))))
+(define positions (get-position-analysis (today)))
 
 (define symbols (remove-duplicates (map (λ (p) (position-analysis-stock p))
                                         positions)))
@@ -132,10 +132,10 @@
                                 #f ; mid
                                 #f ; ask
                                 (get-closest-vol (position-analysis-stock pa)
-                                                 (date->iso8601 (today))
-                                                 (date->iso8601 (position-analysis-expiration pa))
+                                                 (today)
+                                                 (position-analysis-expiration pa)
                                                  (position-analysis-strike pa)
-                                                 (string-titlecase (symbol->string (position-analysis-call-put pa))))
+                                                 (position-analysis-call-put pa))
                                 #f ; delta
                                 #f ; gamma
                                 #f ; theta

@@ -32,7 +32,7 @@
                     (get-dividend-estimates (option-symbol opt)
                                             (option-date opt)
                                             (option-expiration opt))))
-  (define 1-month-rate (get-1-month-rate (date->iso8601 (option-date opt))))
+  (define 1-month-rate (get-1-month-rate (option-date opt)))
   (struct-copy option opt
                [mid (black-scholes ref-price
                                    (/ (option-dte opt) days-in-this-year)
@@ -96,7 +96,7 @@
                            (get-dividend-estimates symbol
                                                    date
                                                    (option-expiration o))))
-         (define 1-month-rate (get-1-month-rate (date->iso8601 date)))
+         (define 1-month-rate (get-1-month-rate date))
          (define vol (if fit-vols?
                          (+ (first (hash-ref coeffs (option-expiration o)))
                             (* (option-strike o) (second (hash-ref coeffs (option-expiration o))))

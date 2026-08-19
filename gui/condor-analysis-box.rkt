@@ -2,6 +2,7 @@
 
 (require gregor
          racket/class
+         racket/contract
          racket/list
          racket/gui/base
          "../condor-analysis.rkt"
@@ -10,9 +11,10 @@
          "chart.rkt"
          "option-strategy-frame.rkt")
 
-(provide condor-analysis-box
-         condor-analysis-filter
-         update-condor-analysis-box)
+(provide (contract-out
+          [condor-analysis-box (-> (is-a?/c tab-panel%) date? date? void?)]
+          [condor-analysis-filter (-> #:hide-no-pattern boolean? #:hide-large-spread boolean? #:hide-non-weekly boolean? void?)]
+          [update-condor-analysis-box (-> (listof condor-analysis?) (hash/c string? (listof rational?)) void?)]))
 
 (define analysis-box-ref #f)
 
@@ -45,19 +47,23 @@
           (map (λ (m) (real->decimal-string (first (hash-ref condor-analysis-hash (condor-analysis-market m))))) filter-weekly)
           (map (λ (m) (real->decimal-string (second (hash-ref condor-analysis-hash (condor-analysis-market m))))) filter-weekly)
           (map (λ (m) (if (condor-analysis-sector m) (condor-analysis-sector m) "")) filter-weekly)
-          (map (λ (m) (real->decimal-string (first (hash-ref condor-analysis-hash (condor-analysis-sector m))))) filter-weekly)
-          (map (λ (m) (real->decimal-string (second (hash-ref condor-analysis-hash (condor-analysis-sector m))))) filter-weekly)
+          (map (λ (m) (if (condor-analysis-sector m)
+                          (real->decimal-string (first (hash-ref condor-analysis-hash (condor-analysis-sector m)))) "")) filter-weekly)
+          (map (λ (m) (if (condor-analysis-sector m)
+                          (real->decimal-string (second (hash-ref condor-analysis-hash (condor-analysis-sector m)))) "")) filter-weekly)
           (map (λ (m) (if (condor-analysis-industry m) (condor-analysis-industry m) "")) filter-weekly)
-          (map (λ (m) (real->decimal-string (first (hash-ref condor-analysis-hash (condor-analysis-industry m))))) filter-weekly)
-          (map (λ (m) (real->decimal-string (second (hash-ref condor-analysis-hash (condor-analysis-industry m))))) filter-weekly)
+          (map (λ (m) (if (condor-analysis-industry m)
+                          (real->decimal-string (first (hash-ref condor-analysis-hash (condor-analysis-industry m)))) "")) filter-weekly)
+          (map (λ (m) (if (condor-analysis-industry m)
+                          (real->decimal-string (second (hash-ref condor-analysis-hash (condor-analysis-industry m)))) "")) filter-weekly)
           (map (λ (m) (condor-analysis-stock m)) filter-weekly)
           (map (λ (m) (real->decimal-string (first (hash-ref condor-analysis-hash (condor-analysis-stock m))))) filter-weekly)
           (map (λ (m) (real->decimal-string (second (hash-ref condor-analysis-hash (condor-analysis-stock m))))) filter-weekly)
           (map (λ (m) (if (condor-analysis-earnings-date m) (~t (condor-analysis-earnings-date m) "yy-MM-dd") "")) filter-weekly)
           (map (λ (m) (real->decimal-string (condor-analysis-option-spread m))) filter-weekly))
     ; We set data here so that we can retrieve it later with `get-data`
-    (map (λ (m i) (send analysis-box-ref set-data i (list m (hash-ref condor-analysis-hash (condor-analysis-stock m)))))
-         filter-weekly (range (length filter-weekly)))))
+    (for-each (λ (m i) (send analysis-box-ref set-data i (list m (hash-ref condor-analysis-hash (condor-analysis-stock m)))))
+              filter-weekly (range (length filter-weekly)))))
 
 (define analysis-box-columns (list "Market" "MktRtg" "MktRr" "Sector" "SctRtg" "SctRr" "Industry" "IndRtg" "IndRr" "Stock" "StkRtg"
                                    "StkRr" "ErnDt" "OptSprd"))

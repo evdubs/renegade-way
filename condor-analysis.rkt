@@ -2,6 +2,7 @@
 
 (require gregor
          math/statistics
+         racket/contract
          racket/list
          "db-queries.rkt"
          "option-strategy.rkt"
@@ -9,7 +10,8 @@
 
 (provide condor-analysis-hash
          condor-analysis-list
-         run-condor-analysis)
+         (contract-out
+          [run-condor-analysis (->* (string? string? date? date?) (#:fit-vols boolean?) void?)]))
 
 (define condor-analysis-list (list))
 
@@ -19,7 +21,7 @@
   (with-handlers ([exn:fail?
                    (λ (e) (displayln e) (list 0 0))])
     (let* ([prices (get-date-ohlc symbol start-date end-date)]
-           [options (get-updated-options symbol (iso8601->date end-date) (dohlc-close (last prices)) #:compute-all-greeks #f #:fit-vols fit-vols?)]
+           [options (get-updated-options symbol end-date (dohlc-close (last prices)) #:compute-all-greeks #f #:fit-vols fit-vols?)]
            [call-condor-options (hash-ref (suitable-options options "CC" (dohlc-close (last prices))) "Call Condor")]
            [call-low-strike (option-strike (second call-condor-options))]
            [call-high-strike (option-strike (third call-condor-options))]
@@ -69,15 +71,17 @@
   (let ([new-condor-analysis-list (get-condor-analysis market end-date)]
         [new-condor-analysis-hash (make-hash)])
     ; this lets us avoid calling (condor-score) with an empty symbol
-    (hash-set! new-condor-analysis-hash "" (list 0 0))
+    (hash-set! new-condor-analysis-hash "" (list 0.0 0.0))
     (for-each (λ (ca)
                 (cond [(not (hash-has-key? new-condor-analysis-hash (condor-analysis-market ca)))
                        (hash-set! new-condor-analysis-hash (condor-analysis-market ca)
                                   (condor-score (condor-analysis-market ca) start-date end-date #:fit-vols fit-vols?))])
-                (cond [(not (hash-has-key? new-condor-analysis-hash (condor-analysis-sector ca)))
+                (cond [(and (condor-analysis-sector ca)
+                            (not (hash-has-key? new-condor-analysis-hash (condor-analysis-sector ca))))
                        (hash-set! new-condor-analysis-hash (condor-analysis-sector ca)
                                   (condor-score (condor-analysis-sector ca) start-date end-date #:fit-vols fit-vols?))])
-                (cond [(not (hash-has-key? new-condor-analysis-hash (condor-analysis-industry ca)))
+                (cond [(and (condor-analysis-industry ca)
+                            (not (hash-has-key? new-condor-analysis-hash (condor-analysis-industry ca))))
                        (hash-set! new-condor-analysis-hash (condor-analysis-industry ca)
                                   (condor-score (condor-analysis-industry ca) start-date end-date #:fit-vols fit-vols?))])
                 (hash-set! new-condor-analysis-hash (condor-analysis-stock ca)
@@ -85,5 +89,5 @@
               new-condor-analysis-list)
     (set! condor-analysis-list (sort new-condor-analysis-list >
                                      #:key (λ (x) (let ([ref (hash-ref new-condor-analysis-hash (condor-analysis-stock x))])
-                                                    (* (first ref) (min 85 (second ref)))))))
+                                                    (* (first ref) (min 0.85 (second ref)))))))
     (set! condor-analysis-hash new-condor-analysis-hash)))

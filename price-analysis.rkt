@@ -2,6 +2,7 @@
 
 (require gregor
          math/statistics
+         racket/contract
          racket/list
          racket/string
          racket/vector
@@ -19,8 +20,9 @@
 
 (provide price-analysis-hash
          price-analysis-list
-         run-price-analysis
-         test-hash)
+         test-hash
+         (contract-out
+          [run-price-analysis (-> string? string? date? date? void?)]))
 
 (define (vector-first v)
   (vector-ref v 0))
@@ -31,10 +33,9 @@
 ;; Rating for market/sector/industry
 ;; Looks at price relative to moving averages
 ;; Scales from -3 to 3
-(define (msi-rating symbol end-date-str)
-  (let* ([end-date (iso8601->date end-date-str)]
-         [start-date (-months end-date 15)]
-         [dohlc (list->vector (get-date-ohlc symbol (date->iso8601 start-date) (date->iso8601 end-date)))]
+(define (msi-rating symbol end-date)
+  (let* ([start-date (-months end-date 15)]
+         [dohlc (list->vector (get-date-ohlc symbol start-date end-date))]
          [sma-20 (simple-moving-average dohlc 20)]
          [sma-50 (simple-moving-average dohlc 50)]
          [sma-20-distance (* 1/2 (statistics-stddev

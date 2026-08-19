@@ -4,6 +4,7 @@
          interactive-brokers-api/request-messages
          interactive-brokers-api/response-messages
          racket/class
+         racket/contract
          racket/list
          racket/set
          "db-queries.rkt"
@@ -11,9 +12,10 @@
 
 (provide ibkr
          ibkr-account
-         ibkr-add1-next-order-id
-         ibkr-add-handler
-         ibkr-next-order-id)
+         ibkr-next-order-id
+         (contract-out
+          [ibkr-add1-next-order-id (-> void?)]
+          [ibkr-add-handler (-> symbol? (-> any/c void?) void?)]))
 
 (define (ibkr-add-handler key handler)
   (hash-set! ibkr-handlers key (append (hash-ref ibkr-handlers key) (list handler))))

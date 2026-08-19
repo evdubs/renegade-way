@@ -4,6 +4,7 @@
          gregor/period
          racket/async-channel
          racket/class
+         racket/contract
          racket/gui/base
          racket/list
          racket/string
@@ -13,8 +14,9 @@
          "../structs.rkt"
          "chart.rkt")
 
-(provide position-analysis-box
-         run-position-analysis)
+(provide (contract-out
+          [position-analysis-box (-> (is-a?/c tab-panel%) date? date? void?)]
+          [run-position-analysis (-> string? string? date? date? void?)]))
 
 (define position-panel #f)
 
@@ -101,20 +103,20 @@
   (for-each (λ (pa)
               (define opt (option (position-analysis-stock pa)
                                   (position-analysis-expiration pa)
-                                  (period-ref (period-between (iso8601->date end-date)
+                                  (period-ref (period-between end-date
                                                               (position-analysis-expiration pa)
                                                               '(days)) 'days)
                                   (position-analysis-strike pa)
                                   (position-analysis-call-put pa)
-                                  (iso8601->date end-date)
+                                  end-date
                                   #f ; bid
                                   #f ; mid
                                   #f ; ask
                                   (get-closest-vol (position-analysis-stock pa)
                                                    end-date
-                                                   (date->iso8601 (position-analysis-expiration pa))
+                                                   (position-analysis-expiration pa)
                                                    (position-analysis-strike pa)
-                                                   (string-titlecase (symbol->string (position-analysis-call-put pa))))
+                                                   (position-analysis-call-put pa))
                                   #f ; delta
                                   #f ; gamma
                                   #f ; theta
@@ -188,7 +190,7 @@
              (remove* stop-position-analysis-list updated-position-analysis-list)))
 
   (set! expired-position-analysis-list (filter (λ (pa) (and (position-analysis-end-date pa)
-                                                            (date>=? (iso8601->date end-date)
+                                                            (date>=? end-date
                                                                      (position-analysis-end-date pa))))
                                                remaining-position-analysis-list))
 
@@ -228,8 +230,8 @@
         (map (λ (m) (real->decimal-string (position-analysis-stock-high-target m))) position-analysis-list)
         (map (λ (m) (~t (position-analysis-end-date m) "yy-MM-dd")) position-analysis-list))
   ; We set data here so that we can retrieve it later with `get-data`
-  (map (λ (m i) (send box-ref set-data i m))
-       position-analysis-list (range (length position-analysis-list))))
+  (for-each (λ (m i) (send box-ref set-data i m))
+            position-analysis-list (range (length position-analysis-list))))
 
 (define analysis-box-columns (list "Sector" "Stock" "Expiry" "Strike" "CallPut" "Account"
                                    "Qty" "StkLoStp" "StkLoTgt" "StkPrc" "StkHiStp" "StkHiTgt" "EndDt"))
@@ -245,8 +247,8 @@
         (map (λ (m) (real->decimal-string (position-greeks-vega m))) position-greeks-list)
         (map (λ (m) (real->decimal-string (position-greeks-rho m))) position-greeks-list))
 
-  (map (λ (m i) (send greeks-box-ref set-data i m))
-       position-greeks-list (range (length position-greeks-list))))
+  (for-each (λ (m i) (send greeks-box-ref set-data i m))
+            position-greeks-list (range (length position-greeks-list))))
 
 (define greeks-box-columns (list "Sector" "Stock" "Account" "Delta" "Gamma" "Theta" "Vega" "Rho"))
 

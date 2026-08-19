@@ -2,6 +2,7 @@
 
 (require gregor
          racket/class
+         racket/contract
          racket/gui/base
          racket/list
          racket/match
@@ -13,8 +14,9 @@
          "../structs.rkt"
          "position-order-manager.rkt")
 
-(provide show-option-strategy
-         refresh-option-strategy)
+(provide (contract-out
+          [show-option-strategy (-> void?)]
+          [refresh-option-strategy (-> string? date? rational? string? void?)]))
 
 (define strategy-frame
   (new frame% [label "Option Strategy"] [width 1050] [height 600]))
@@ -65,7 +67,7 @@
        [parent strategy-input-pane]
        [label "Refresh"]
        [callback (λ (c e) (refresh-option-strategy (send symbol-field get-value)
-                                                   (send date-field get-value)
+                                                   (iso8601->date (send date-field get-value))
                                                    (string->number (send ref-price-field get-value))
                                                    (send patterns-field get-value)))]))
 
@@ -80,11 +82,11 @@
                                      (send vp get-children)))
                    (drop (send strategy-frame get-children) 1))])
   (send symbol-field set-value symbol)
-  (send date-field set-value date)
+  (send date-field set-value (date->iso8601 date))
   (send ref-price-field set-value (real->decimal-string ref-price))
   (send patterns-field set-value patterns)
   (define pattern-options
-    (hash-map (suitable-options (get-updated-options symbol (iso8601->date date) ref-price #:fit-vols (send fit-vols-check-box get-value))
+    (hash-map (suitable-options (get-updated-options symbol date ref-price #:fit-vols (send fit-vols-check-box get-value))
                                 patterns ref-price)
               (λ (k options)
                 (cond [(send live-data-check-box get-value)
