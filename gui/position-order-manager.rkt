@@ -84,7 +84,7 @@
                     (map (λ (i)
                            (define ord (send order-box get-data i))
                            (define atr-50 (~> (get-date-ohlc (order-symbol ord)
-                                                             (-months (iso8601->date (send eval-date-field get-value)) 3)
+                                                             (-months (iso8601->date (send eval-date-field get-value)) 4)
                                                              (iso8601->date (send eval-date-field get-value)))
                                               (list->vector _)
                                               (simple-average-true-range _ 50)
