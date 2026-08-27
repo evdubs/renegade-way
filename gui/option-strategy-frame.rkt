@@ -158,7 +158,9 @@
                                                  (define eval-date (if (date<? (order-end-date (first order-data)) first-expiry)
                                                                        (order-end-date (first order-data))
                                                                        first-expiry))
-                                                 (define earnings-vol-premium (get-earnings-vol-premium eval-date (send symbol-field get-value)))
+                                                 (define earnings-vol-premium (if (equal? 'earnings-calendar pattern)
+                                                                                  (get-earnings-vol-premium eval-date (send symbol-field get-value))
+                                                                                  0.0000))
 
                                                  (set-order-data order-data eval-date earnings-vol-premium))])])
                      (send table set
