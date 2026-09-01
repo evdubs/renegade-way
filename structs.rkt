@@ -185,12 +185,14 @@
              (quantity (or/c rational? #f))
              (price rational?)
              (vol rational?)
+             (implied-vol (or/c rational? #f))
              (spread rational?)
              (stock-entry rational?)
              (stock-low-stop (or/c rational? #f))
              (stock-low-target (or/c rational? #f))
              (stock-high-stop (or/c rational? #f))
              (stock-high-target (or/c rational? #f))
+             (entry-date (or/c date? #f))
              (end-date (or/c date? #f)))]))
 
 (struct dv (date value)
@@ -283,6 +285,6 @@
 (struct option (symbol expiration dte strike call-put date bid mid ask vol delta gamma theta vega rho)
   #:transparent)
 
-(struct order (pattern strategy symbol expiration strike call-put quantity price vol spread stock-entry stock-low-stop stock-low-target
-                       stock-high-stop stock-high-target end-date)
+(struct order (pattern strategy symbol expiration strike call-put quantity price vol implied-vol spread stock-entry stock-low-stop stock-low-target
+                       stock-high-stop stock-high-target entry-date end-date)
   #:transparent)

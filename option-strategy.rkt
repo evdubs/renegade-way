@@ -12,6 +12,7 @@
          "structs.rkt")
 
 (provide (contract-out
+          [compute-implied-vol (-> option? rational? rational?)]
           [compute-price-greeks (-> option? rational? option?)]
           [get-updated-options (->* (string? date? rational?) (#:compute-all-greeks boolean? #:fit-vols boolean?) (listof option?))]
           [suitable-options (-> (listof option?) string? rational? (hash/c string? (listof option?)))]))
@@ -24,6 +25,23 @@
   (define x (matrix* x-matrix-transposed x-matrix))
   (define y (matrix* x-matrix-transposed y-matrix))
   (matrix->list (matrix-solve x y)))
+
+(define (compute-implied-vol opt ref-price)
+  (define days-in-this-year (days-in-year (->year (option-date opt))))
+  (define divs (map (λ (div) (vector (/ (vector-ref div 0) days-in-this-year)
+                                     (vector-ref div 1)))
+                    (get-dividend-estimates (option-symbol opt)
+                                            (option-date opt)
+                                            (option-expiration opt))))
+  (define 1-month-rate (get-1-month-rate (option-date opt)))
+  (black-scholes-implied-vol ref-price
+                             (/ (option-dte opt) days-in-this-year)
+                             (option-strike opt)
+                             (option-call-put opt)
+                             1-month-rate
+                             (option-mid opt)
+                             divs
+                             (option-vol opt)))
 
 (define (compute-price-greeks opt ref-price)
   (define days-in-this-year (days-in-year (->year (option-date opt))))

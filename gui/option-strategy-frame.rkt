@@ -139,12 +139,14 @@
                                                                  #f
                                                                  (option-mid o)
                                                                  (option-vol o)
+                                                                 #f
                                                                  (- (option-ask o) (option-bid o))
                                                                  (string->number (send ref-price-field get-value))
                                                                  #f
                                                                  #f
                                                                  #f
                                                                  #f
+                                                                 (iso8601->date (send date-field get-value))
                                                                  (+months (iso8601->date (send date-field get-value)) 1)))
                                                         v))
                                                  (define earnings-date (get-next-earnings-date (order-symbol (first order-data))

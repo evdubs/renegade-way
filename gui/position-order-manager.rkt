@@ -75,6 +75,11 @@
        [alignment '(center center)]
        [stretchable-height #f]))
 
+(define use-implied-vol-check-box
+  (new check-box%
+       [parent button-input-pane]
+       [label "Use Implied Vol"]))
+
 (define recalc-button
   (new button%
        [parent button-input-pane]
@@ -331,7 +336,7 @@
        [label ""]
        [auto-resize #t]))
 
-(define order-box-columns (list "Symbol" "Expiry" "Strike" "CallPut" "Qty" "Price" "StkEntry" "StkLoStp" "StkLoTgt" "StkHiStp" "StkHiTgt"))
+(define order-box-columns (list "Symbol" "Expiry" "Strike" "CallPut" "Qty" "Price" "Vol" "ImpVol" "StkEntry" "StkLoStp" "StkHiStp"))
 
 (define order-box
   (new list-box%
@@ -402,24 +407,56 @@
                                                (first prices) prices)))
   (define eval-date (iso8601->date (send eval-date-field get-value)))
   (define 1-month-rate (get-1-month-rate eval-date))
+  (define days-in-this-year (days-in-year (->year eval-date)))
   (define latest-30d-vol (dv-value (last (get-date-vol-history (order-symbol (send order-box get-data 0))
                                                                ; eval date may be weeks into the future
                                                                (-days eval-date 90)
                                                                eval-date))))
+  (set-order-data (map (λ (i) (define ord (send order-box get-data i))
+                         (define yte (/ (days-between (order-entry-date ord) (order-expiration ord)) days-in-this-year))
+                         (define divs (map (λ (div) (vector (/ (vector-ref div 0) days-in-this-year)
+                                                            (vector-ref div 1)))
+                                           (get-dividend-estimates (order-symbol ord)
+                                                                   (order-entry-date ord)
+                                                                   (order-expiration ord))))
+                         (define iv (black-scholes-implied-vol ref-price
+                                                               yte
+                                                               (order-strike ord)
+                                                               (order-call-put ord)
+                                                               1-month-rate
+                                                               (order-price ord)
+                                                               divs
+                                                               (order-vol ord)))
+                         (struct-copy order ord
+                                      [implied-vol iv]))
+                       (range (send order-box get-number)))
+                  (iso8601->date (send eval-date-field get-value))
+                  (string->number (send vol-premium-field get-value)))
   (define (price-profit-loss vol-multiplier vol prices)
+    (define divs-to-use (map (λ (i) (define order (send order-box get-data i))
+                               (map (λ (div) (vector (/ (vector-ref div 0) days-in-this-year)
+                                                     (vector-ref div 1)))
+                                    (get-dividend-estimates (order-symbol order)
+                                                            eval-date
+                                                            (order-expiration order))))
+                             (range (send order-box get-number))))
     (map (λ (p)
            (vector p (foldl (λ (i res)
                               (define order (send order-box get-data i))
                               (define yte (if (date=? eval-date (order-expiration order))
                                               1/1000000
-                                              (/ (days-between eval-date (order-expiration order)) 365)))
+                                              (/ (days-between eval-date (order-expiration order)) days-in-this-year)))
                               (+ res (* (- (black-scholes p
                                                           yte
                                                           (order-strike order)
                                                           (order-call-put order)
                                                           1-month-rate
-                                                          (if vol vol (* (order-vol order) vol-multiplier))
-                                                          (list))
+                                                          (if vol vol
+                                                              (* (if (send use-implied-vol-check-box get-value)
+                                                                     (order-implied-vol order)
+                                                                     (order-vol order))
+                                                                 vol-multiplier))
+                                                          (list-ref divs-to-use i))
                                            (order-price order))
                                         (order-quantity order) 100)))
                             0
@@ -709,10 +746,15 @@
                                                                            (condition 'price 'and 'less-than (- high-short-strike (* 1/4 difference))
                                                                                       underlying-contract-id "SMART" 'default #f #f)))]
                                                                   [(or (equal? 'long-straddle (order-strategy first-item))
-                                                                       (equal? 'long-strangle (order-strategy first-item))
-                                                                       (equal? 'call-horizontal-spread (order-strategy first-item))
-                                                                       (equal? 'put-horizontal-spread (order-strategy first-item)))
+                                                                       (equal? 'long-strangle (order-strategy first-item)))
                                                                    (list)]
+                                                                  [(or (equal? 'call-horizontal-spread (order-strategy first-item))
+                                                                       (equal? 'put-horizontal-spread (order-strategy first-item)))
+                                                                   (let* ([strike (order-strike (send order-box get-data 0))])
+                                                                     (list (condition 'price 'and 'greater-than (- strike (* strike 1/40))
+                                                                                      underlying-contract-id "SMART" 'default #f #f)
+                                                                           (condition 'price 'and 'less-than (+ strike (* strike 1/40))
+                                                                                      underlying-contract-id "SMART" 'default #f #f)))]
                                                                   [(or (equal? 'call-double-horizontal-spread (order-strategy first-item))
                                                                        (equal? 'put-double-horizontal-spread (order-strategy first-item)))
                                                                    (let* ([low-strike (min (order-strike (send order-box get-data 0))
@@ -753,11 +795,11 @@
         (map (λ (d) (symbol->string (order-call-put d))) order-data)
         (map (λ (d) (if (order-quantity d) (number->string (order-quantity d)) "")) order-data)
         (map (λ (d) (real->decimal-string (order-price d))) order-data)
+        (map (λ (d) (real->decimal-string (order-vol d) 3)) order-data)
+        (map (λ (d) (if (order-implied-vol d) (real->decimal-string (order-implied-vol d) 3) "")) order-data)
         (map (λ (d) (real->decimal-string (order-stock-entry d))) order-data)
         (map (λ (d) (if (order-stock-low-stop d) (real->decimal-string (order-stock-low-stop d)) "")) order-data)
-        (map (λ (d) (if (order-stock-low-target d) (real->decimal-string (order-stock-low-target d)) "")) order-data)
-        (map (λ (d) (if (order-stock-high-stop d) (real->decimal-string (order-stock-high-stop d)) "")) order-data)
-        (map (λ (d) (if (order-stock-high-target d) (real->decimal-string (order-stock-high-target d)) "")) order-data))
+        (map (λ (d) (if (order-stock-high-stop d) (real->decimal-string (order-stock-high-stop d)) "")) order-data))
   (for-each (λ (d i)
               (send order-box set-data i d))
             order-data (range (length order-data)))
@@ -778,6 +820,7 @@
           (new text-field% [parent editor-pane] [label "Qty"] [init-value (if (order-quantity row) (number->string (order-quantity row)) "")])
           (new text-field% [parent editor-pane] [label "Price"] [init-value (real->decimal-string (order-price row))])
           (new text-field% [parent editor-pane] [label "Vol"] [init-value (real->decimal-string (order-vol row))])
+          (new text-field% [parent editor-pane] [label "ImpVol"] [init-value (real->decimal-string (order-implied-vol row))])
           (new text-field% [parent editor-pane] [label "Spread"] [init-value (real->decimal-string (order-spread row))])
           (new text-field% [parent editor-pane] [label "StkEntry"] [init-value (real->decimal-string (order-stock-entry row))])
           (new text-field% [parent editor-pane] [label "StkLoStp"] [init-value (if (order-stock-low-stop row)
@@ -788,7 +831,8 @@
                                                                                    (real->decimal-string (order-stock-high-stop row)) "")])
           (new text-field% [parent editor-pane] [label "StkHiTgt"] [init-value (if (order-stock-high-target row)
                                                                                    (real->decimal-string (order-stock-high-target row)) "")])
-          (new text-field% [parent editor-pane] [label "EndDate"] [init-value (~t (order-end-date row) "yy-MM-dd")])))
+          (new text-field% [parent editor-pane] [label "EntryDt"] [init-value (~t (order-entry-date row) "yy-MM-dd")])
+          (new text-field% [parent editor-pane] [label "EndDt"] [init-value (~t (order-end-date row) "yy-MM-dd")])))
   (define save-button
     (new button%
          [label "Save"]
@@ -810,7 +854,9 @@
                                   (string->number (send (list-ref editor-fields 12) get-value))
                                   (string->number (send (list-ref editor-fields 13) get-value))
                                   (string->number (send (list-ref editor-fields 14) get-value))
-                                  (parse-date (send (list-ref editor-fields 15) get-value) "yy-MM-dd")))
+                                  (string->number (send (list-ref editor-fields 15) get-value))
+                                  (parse-date (send (list-ref editor-fields 16) get-value) "yy-MM-dd")
+                                  (parse-date (send (list-ref editor-fields 17) get-value) "yy-MM-dd")))
                      (set-order-data (map (λ (i) (send order-box get-data i))
                                           (range (send order-box get-number)))
                                      (iso8601->date (send eval-date-field get-value))
