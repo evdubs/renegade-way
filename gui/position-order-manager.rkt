@@ -760,11 +760,10 @@
                                                                    (let* ([low-strike (min (order-strike (send order-box get-data 0))
                                                                                            (order-strike (send order-box get-data 1)))]
                                                                           [high-strike (max (order-strike (send order-box get-data 2))
-                                                                                            (order-strike (send order-box get-data 3)))]
-                                                                          [difference (- high-strike low-strike)])
-                                                                     (list (condition 'price 'and 'greater-than (+ low-strike (* 1/4 difference))
+                                                                                            (order-strike (send order-box get-data 3)))])
+                                                                     (list (condition 'price 'and 'greater-than low-strike
                                                                                       underlying-contract-id "SMART" 'default #f #f)
-                                                                           (condition 'price 'and 'less-than (- high-strike (* 1/4 difference))
+                                                                           (condition 'price 'and 'less-than high-strike
                                                                                       underlying-contract-id "SMART" 'default #f #f)))])]
                                                 [use-price-management-algo #t])))
                    (ibkr-add1-next-order-id))]))
