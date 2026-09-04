@@ -220,7 +220,8 @@
                                 (run-etf-vrp-analysis (iso8601->date (send end-date-field get-value)))
                                 (update-etf-vrp-analysis-box etf-vrp-analysis-list)]
                      ["Forward Factor" (refresh-tab-panel)
-                                       (run-forward-factor-analysis (iso8601->date (send end-date-field get-value)))]
+                                       (run-forward-factor-analysis (iso8601->date (send end-date-field get-value))
+                                                                    #:use-live-data (send use-live-data-check-box get-value))]
                      ["Position" (refresh-tab-panel)
                                  (run-position-analysis (send market-field get-value) (send sector-field get-value)
                                                         (iso8601->date (send start-date-field get-value))

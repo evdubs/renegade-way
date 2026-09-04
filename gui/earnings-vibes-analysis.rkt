@@ -9,10 +9,10 @@
          racket/string
          interactive-brokers-api/response-messages
          "../db-queries.rkt"
-         "../web-prices.rkt"
          "../ibkr-market-data.rkt"
          "../option-strategy.rkt"
          "../structs.rkt"
+         "../web-prices.rkt"
          "chart.rkt"
          "option-strategy-frame.rkt")
 

@@ -15,6 +15,7 @@
 (provide (contract-out
           [get-1-month-rate (-> date? rational?)]
           [get-atm-curve (-> string? date? (listof (vectorof (or/c string? rational?))))]
+          [get-nearest-strike (-> date? string? date? date? rational? rational?)]
           [get-closest-vol (-> string? date? date? rational? (or/c 'call 'put) rational?)]
           [get-condor-analysis (-> string? date? (listof condor-analysis?))]
           [get-date-ohlc (-> string? date? date? (listof dohlc?))]
@@ -271,6 +272,73 @@ order by
 "
               (date->iso8601 date)
               ticker-symbol))
+
+(define (get-nearest-strike date ticker-symbol first-expiration second-expiration ref-price)
+  (query-value dbc "
+with closest_front_exp as (
+select
+  date,
+  act_symbol,
+  closest(expiration, $3::text::date) as expiration
+from
+  oic.option_chain
+where
+  date = (select max(date) from oic.option_chain where date <= $1::text::date) and
+  act_symbol = $2
+group by
+  date,
+  act_symbol
+), closest_back_exp as (
+select
+  oc.date,
+  oc.act_symbol,
+  closest(oc.expiration, $4::text::date) as expiration
+from
+  oic.option_chain oc
+join
+  closest_front_exp cfe
+on
+  oc.date = cfe.date and
+  oc.act_symbol = cfe.act_symbol and
+  oc.expiration > cfe.expiration
+group by
+  oc.date,
+  oc.act_symbol
+)
+select
+  closest(front.strike, $5)
+from
+  oic.option_chain front
+join
+  closest_front_exp cfe
+on
+  front.date = cfe.date and
+  front.act_symbol = cfe.act_symbol and
+  front.expiration = cfe.expiration
+join
+  oic.option_chain back
+on
+  front.date = back.date and
+  front.act_symbol = back.act_symbol and
+  front.expiration != back.expiration and
+  front.strike = back.strike and
+  front.call_put = back.call_put
+join
+  closest_back_exp cbe
+on
+  back.date = cbe.date and
+  back.act_symbol = cbe.act_symbol and
+  back.expiration = cbe.expiration
+where
+  front.date = (select max(date) from oic.option_chain where date <= $1::text::date) and
+  front.act_symbol = $2 and
+  front.call_put = 'Call';
+"
+               (date->iso8601 date)
+               ticker-symbol
+               (date->iso8601 first-expiration)
+               (date->iso8601 second-expiration)
+               ref-price))
 
 (define (get-dividend-dates ticker-symbol start-date end-date)
   (map (λ (el) (->posix (iso8601->date el)))

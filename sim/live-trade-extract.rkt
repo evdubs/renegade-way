@@ -214,10 +214,10 @@ on
                                                    0
                                                    (vector-ref r 21)
                                                    (vector-ref r 22)
-                                                   (vector-ref r 23)
-                                                   (vector-ref r 24)
-                                                   (vector-ref r 25)
-                                                   (vector-ref r 26)
+                                                   (if (sql-null? (vector-ref r 23)) #f (vector-ref r 23))
+                                                   (if (sql-null? (vector-ref r 24)) #f (vector-ref r 24))
+                                                   (if (sql-null? (vector-ref r 25)) #f (vector-ref r 25))
+                                                   (if (sql-null? (vector-ref r 26)) #f (vector-ref r 26))
                                                    #f
                                                    #f)) out))
               ; do the filter here because it can get messy in the query
