@@ -111,12 +111,13 @@
           (map (λ (m) (real->decimal-string (forward-factor-analysis-forward-vol m) 3)) filter-pattern)
           (map (λ (m) (real->decimal-string (forward-factor-analysis-forward-factor m) 3)) filter-pattern)
           (map (λ (m) (if (forward-factor-analysis-earnings-date m) (~t (forward-factor-analysis-earnings-date m) "yy-MM-dd") "")) filter-pattern)
+          (map (λ (m) (if (forward-factor-analysis-dividend-date m) (~t (forward-factor-analysis-dividend-date m) "yy-MM-dd") "")) filter-pattern)
           (map (λ (m) (real->decimal-string (forward-factor-analysis-option-spread m))) filter-pattern))
     ; We set data here so that we can retrieve it later with `get-data`
     (for-each (λ (m i) (send analysis-box-ref set-data i m))
               filter-pattern (range (length filter-pattern)))))
 
-(define analysis-box-columns (list "Stock" "FrontExp" "FrontVol" "BackExp" "BackVol" "VolRt" "FwdVol" "FwdFctr" "ErnDt" "OptSprd"))
+(define analysis-box-columns (list "Stock" "FrontExp" "FrontVol" "BackExp" "BackVol" "VolRt" "FwdVol" "FwdFctr" "ErnDt" "DivDt" "OptSprd"))
 
 (define (forward-factor-analysis-box parent-panel start-date end-date)
   (define analysis-box

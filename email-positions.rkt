@@ -189,6 +189,7 @@
   <td style=\"text-align: right; padding-right: 20px\">~a</td>
   <td style=\"padding-right: 20px\">~a</td>
   <td style=\"padding-right: 20px\">~a</td>
+  <td style=\"padding-right: 20px\">~a</td>
 </tr>"
           (cond [(and (equal? 'call (position-analysis-call-put position))
                       (<= (position-analysis-strike position) price))
@@ -215,6 +216,7 @@
           (real->decimal-string (position-analysis-stock-high-stop position))
           (real->decimal-string (position-analysis-stock-high-target position))
           (if (position-analysis-end-date position) (date->iso8601 (position-analysis-end-date position)) "")
+          (if (position-analysis-dividend-date position) (date->iso8601 (position-analysis-dividend-date position)) "")
           (position-analysis-strategy position)))
 
 (define (position-greeks->html-str position-greeks)
@@ -267,6 +269,7 @@
     <th style=\"padding-right: 20px\">High Stop</th>
     <th style=\"padding-right: 20px\">High Target</th>
     <th style=\"padding-right: 20px\">End Date</th>
+    <th style=\"padding-right: 20px\">Dividend Date</th>
     <th style=\"padding-right: 20px\">Strategy</th>
   </tr>
   <tr>

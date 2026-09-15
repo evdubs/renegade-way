@@ -96,9 +96,10 @@
                                                   (option-expiration o)
                                                   (option-strike o)
                                                   (option-call-put o)))
-                                (struct-copy option o
-                                             [mid (option-market-data-rsp-price omd)]
-                                             [vol (option-market-data-rsp-implied-volatility omd)]))
+                                (if omd (struct-copy option o
+                                                     [mid (option-market-data-rsp-price omd)]
+                                                     [vol (option-market-data-rsp-implied-volatility omd)])
+                                    o))
                               options))
                        (cons k updated-options)]
                       [else (cons k options)])

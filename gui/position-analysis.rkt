@@ -224,17 +224,16 @@
         (map (λ (m) (position-analysis-account m)) position-analysis-list)
         (map (λ (m) (real->decimal-string (position-analysis-signed-shares m))) position-analysis-list)
         (map (λ (m) (real->decimal-string (position-analysis-stock-low-stop m))) position-analysis-list)
-        (map (λ (m) (real->decimal-string (position-analysis-stock-low-target m))) position-analysis-list)
         (map (λ (m) (real->decimal-string (position-analysis-stock-close m))) position-analysis-list)
         (map (λ (m) (real->decimal-string (position-analysis-stock-high-stop m))) position-analysis-list)
-        (map (λ (m) (real->decimal-string (position-analysis-stock-high-target m))) position-analysis-list)
-        (map (λ (m) (~t (position-analysis-end-date m) "yy-MM-dd")) position-analysis-list))
+        (map (λ (m) (~t (position-analysis-end-date m) "yy-MM-dd")) position-analysis-list)
+        (map (λ (m) (if (position-analysis-dividend-date m) (~t (position-analysis-dividend-date m) "yy-MM-dd") "")) position-analysis-list))
   ; We set data here so that we can retrieve it later with `get-data`
   (for-each (λ (m i) (send box-ref set-data i m))
             position-analysis-list (range (length position-analysis-list))))
 
 (define analysis-box-columns (list "Sector" "Stock" "Expiry" "Strike" "CallPut" "Account"
-                                   "Qty" "StkLoStp" "StkLoTgt" "StkPrc" "StkHiStp" "StkHiTgt" "EndDt"))
+                                   "Qty" "StkLoStp" "StkPrc" "StkHiStp" "EndDt" "DivDt"))
 
 (define (update-greeks-box position-greeks-list)
   (send greeks-box-ref set

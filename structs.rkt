@@ -109,6 +109,7 @@
              (forward-vol rational?)
              (forward-factor rational?)
              (earnings-date (or/c date? #f))
+             (dividend-date (or/c date? #f))
              (option-spread rational?))]
           [struct position-analysis
             ((sector string?)
@@ -124,6 +125,7 @@
              (stock-high-stop (or/c rational? #f))
              (stock-high-target (or/c rational? #f))
              (end-date (or/c date? #f))
+             (dividend-date (or/c date? #f))
              (strategy (or/c 'long-call 'long-put
                              'bull-call-vertical-spread 'bear-call-vertical-spread
                              'bull-put-vertical-spread 'bear-put-vertical-spread
@@ -272,11 +274,11 @@
 (struct etf-vrp-analysis (etf iv-hv ivp-1yr 30d-60d-fwd-vol 30d-60d-flat-fwd-vol flat-fwd-to-fwd-ratio option-spread)
   #:transparent)
 
-(struct forward-factor-analysis (stock front-exp front-vol back-exp back-vol vol-ratio forward-vol forward-factor earnings-date option-spread)
+(struct forward-factor-analysis (stock front-exp front-vol back-exp back-vol vol-ratio forward-vol forward-factor earnings-date dividend-date option-spread)
   #:transparent)
 
 (struct position-analysis (sector stock expiration strike call-put account signed-shares stock-low-stop stock-low-target stock-close
-                                  stock-high-stop stock-high-target end-date strategy)
+                                  stock-high-stop stock-high-target end-date dividend-date strategy)
   #:transparent)
 
 (struct position-greeks (sector stock account delta gamma theta vega rho)

@@ -1321,7 +1321,8 @@ order by
                                          (vector-ref row 6)
                                          (vector-ref row 7)
                                          (if (equal? "" (vector-ref row 8)) #f (iso8601->date (vector-ref row 8)))
-                                         (vector-ref row 9)))
+                                         (if (equal? "" (vector-ref row 9)) #f (iso8601->date (vector-ref row 9)))
+                                         (vector-ref row 10)))
        (query-rows dbc "
 with vol_by_exp as (select
   act_symbol,
@@ -1347,6 +1348,18 @@ on
   vol_by_exp.act_symbol = ec.act_symbol and
   ec.date >= $1::text::date - '1 day'::interval and
   ec.date <= $1::text::date + '28 days'::interval),
+dividend_date as (
+select distinct
+  vol_by_exp.act_symbol,
+  dc.ex_date
+from
+  vol_by_exp
+left outer join
+  zacks.dividend_calendar dc
+on
+  vol_by_exp.act_symbol = dc.act_symbol and
+  dc.ex_date >= $1::text::date and
+  dc.ex_date <= $1::text::date + '28 days'::interval),
 max_front_vol as (select
   vol_by_exp.act_symbol,
   max(avg_vol) as vol
@@ -1419,6 +1432,7 @@ select
     ))
   ) - 1.0 as forward_factor,
   coalesce(earnings_date.actual::text, '') as earnings_date,
+  coalesce(dividend_date.ex_date::text, '') as dividend_date,
   sprds.spread as opt_spread
 from
   max_front_vol
@@ -1430,6 +1444,10 @@ join
   earnings_date
 on
   max_front_vol.act_symbol = earnings_date.act_symbol
+join
+  dividend_date
+on
+  max_front_vol.act_symbol = dividend_date.act_symbol
 join
   nasdaq.symbol as sym
 on
@@ -1489,7 +1507,8 @@ order by
                                    (if (equal? 0.00 (vector-ref row 10)) #f (vector-ref row 10))
                                    (if (equal? 0.00 (vector-ref row 11)) #f (vector-ref row 11))
                                    (if (equal? "" (vector-ref row 12)) #f (iso8601->date (vector-ref row 12)))
-                                   (string->symbol (string-replace (string-downcase (vector-ref row 13)) " " "-"))))
+                                   (if (equal? "" (vector-ref row 13)) #f (iso8601->date (vector-ref row 13)))
+                                   (string->symbol (string-replace (string-downcase (vector-ref row 14)) " " "-"))))
        (query-rows dbc "
 with earnings_end_date as (
   select
@@ -1526,6 +1545,14 @@ with earnings_end_date as (
   group by
     o.account,
     o.order_id
+), dividend_date as (
+  select
+    act_symbol,
+    ex_date
+  from
+    zacks.dividend_calendar
+  where
+    ex_date >= $1::text::date
 )
 select
   coalesce(spdr.to_sector_etf(eh.sector), '') as etf_symbol,
@@ -1546,6 +1573,16 @@ select
     else case when eed.expiry is not null and eed.expiry < n.end_date
       then eed.expiry else n.end_date end
   end)::text, '') as end_date,
+  coalesce((
+    case when dd.ex_date is not null and
+      eed.expiry is not null and
+      dd.ex_date < eed.expiry and
+      dd.ex_date < n.end_date
+    then
+      dd.ex_date
+    else
+      null
+    end)::text, '') as div_date,
   coalesce(n.order_strategy::text, '') as order_strategy
 from
   (select
@@ -1588,6 +1625,10 @@ left outer join
   earnings_end_date ed
 on
   c.symbol = ed.act_symbol
+left outer join
+  dividend_date dd
+on
+  c.symbol = dd.act_symbol
 left outer join
   polygon.ohlc ch
 on
