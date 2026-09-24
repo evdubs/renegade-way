@@ -8,12 +8,13 @@
          "../db-queries.rkt"
          "../etf-vrp-analysis.rkt"
          "../structs.rkt"
+         "../web-prices.rkt"
          "chart.rkt"
          "option-strategy-frame.rkt")
 
 (provide (contract-out
           [etf-vrp-analysis-box (-> (is-a?/c tab-panel%) date? date? void?)]
-          [etf-vrp-analysis-filter (-> #:hide-no-pattern boolean? #:hide-large-spread boolean? void?)]
+          [etf-vrp-analysis-filter (-> #:hide-no-pattern boolean? #:hide-large-spread boolean? #:use-live-data boolean? void?)]
           [update-etf-vrp-analysis-box (-> (listof etf-vrp-analysis?) void?)]))
 
 (define analysis-box-ref #f)
@@ -22,9 +23,12 @@
 
 (define hide-large-spread (make-parameter #f))
 
-(define (etf-vrp-analysis-filter #:hide-no-pattern no-pattern #:hide-large-spread large-spread)
+(define use-live-data (make-parameter #f))
+
+(define (etf-vrp-analysis-filter #:hide-no-pattern no-pattern #:hide-large-spread large-spread #:use-live-data live-data)
   (hide-no-pattern no-pattern)
   (hide-large-spread large-spread)
+  (use-live-data live-data)
   (update-etf-vrp-analysis-box etf-vrp-analysis-list))
 
 (define (update-etf-vrp-analysis-box etf-vrp-analysis-list)
@@ -74,7 +78,9 @@
                                       end-date)
                        (refresh-option-strategy stock
                                                 end-date
-                                                (dohlc-close (first (get-date-ohlc stock end-date end-date)))
+                                                (if (use-live-data)
+                                                  (hash-ref (get-prices (list stock)) stock)
+                                                  (dohlc-close (last (get-date-ohlc stock start-date end-date))))
                                                 "VR")))]
          [style (list 'single 'column-headers 'vertical-label)]
          [columns analysis-box-columns]
