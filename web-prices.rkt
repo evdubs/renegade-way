@@ -75,7 +75,7 @@
         (string->jsexpr _ #:null (hash))
         (hash-ref _ 'data (hash))
         (hash-ref _ 'rows (list))
-        (map (λ (row) (list (hash-ref row 'symbol) (string->number (string-replace (hash-ref row 'lastSale) "$" "")))) _)
+        (map (λ (row) (list (hash-ref row 'symbol) (string->number (string-replace (string-replace (hash-ref row 'lastSale) "$" "") "," "")))) _)
         (flatten _)
         (apply hash _)
         )))

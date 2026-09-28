@@ -92,8 +92,10 @@
                                  (get-price-from-position p))]
                       ['bear (<= (position-analysis-stock-high-stop p)
                                  (get-price-from-position p))]
-                      ['roo (or (and (or (string-contains? (position-analysis-strategy p) "BUTTERFLY")
-                                         (string-contains? (position-analysis-strategy p) "CONDOR"))
+                      ['roo (or (and (or (equal? 'call-butterfly (position-analysis-strategy p))
+                                         (equal? 'put-butterfly (position-analysis-strategy p))
+                                         (equal? 'call-condor (position-analysis-strategy p))
+                                         (equal? 'put-condor (position-analysis-strategy p)))
                                      (or (> (apply min (get-strikes-for-symbol (position-analysis-stock p)))
                                             (get-price-from-position p))
                                          (< (apply max (get-strikes-for-symbol (position-analysis-stock p)))
