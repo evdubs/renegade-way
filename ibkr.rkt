@@ -72,4 +72,4 @@
 
 (send ibkr connect)
 
-(send ibkr send-msg (new market-data-type-req% [market-data-type 'delayed-frozen]))
+(send ibkr send-msg (new market-data-type-req% [market-data-type 'frozen]))

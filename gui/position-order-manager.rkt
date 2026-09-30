@@ -562,7 +562,7 @@
        [parent button-pane]
        [callback (λ (b e)
                    (send ibkr connect)
-                   (send ibkr send-msg (new market-data-type-req% [market-data-type 'delayed-frozen])))]))
+                   (send ibkr send-msg (new market-data-type-req% [market-data-type 'frozen])))]))
 
 (define send-button
   (new button%

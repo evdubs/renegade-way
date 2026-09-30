@@ -85,7 +85,7 @@
   (foldl (λ (l res)
            ; remove entries that don't have prices
            (define prices (hash-filter (get-nasdaq-prices l) (λ (k v) v)))
-           (sleep 1)
+           (cond [(< 25 (length symbols)) (sleep 1)])
            (hash-union res prices
                        #:combine (λ (a b) a)))
          (hash)
