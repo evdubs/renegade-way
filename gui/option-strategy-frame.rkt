@@ -59,8 +59,7 @@
 (define fit-vols-check-box
   (new check-box%
        [parent strategy-input-pane]
-       [label "Fit Vols"]
-       [value #t]))
+       [label "Fit Vols"]))
 
 (define refresh-button
   (new button%

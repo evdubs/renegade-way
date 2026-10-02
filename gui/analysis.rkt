@@ -153,7 +153,6 @@
 (define fit-vols-check-box
   (new check-box%
        [parent filter-input-pane]
-       [value #t]
        [label "Fit Vols"]))
 
 (define analysis-tab-panel
