@@ -54,9 +54,10 @@
                             [flat-fwd-to-fwd-ratio (if (and ffwd-vol fwd-vol) (/ ffwd-vol fwd-vol) #f)]))
              eva)))
 
-; newton's method
+; newton's method with bisection
 ; the new-vol - (price difference / vega difference) ratio is divided by 100 as vega represents a 1% change of vol (not a 1 unit change).
-(define (flat-forward vol target-spread-price short-call long-call underlying-price days-in-this-year rate divs)
+(define (flat-forward vol target-spread-price short-call long-call underlying-price days-in-this-year rate divs
+                      #:low-vol [low-vol 1e-5] #:high-vol [high-vol 5.0] #:iteration [iteration 10])
   (define short-call-price (black-scholes underlying-price
                                           (/ (option-dte short-call) days-in-this-year)
                                           (option-strike short-call)
@@ -89,11 +90,22 @@
                                              vol
                                              divs))
 
-  (cond [(or (< (abs (- (- long-call-price short-call-price) target-spread-price)) 1e-6)
-             (< vol 0.0))
-         vol]
+  (define fixed-target-spread-price (if (> 0.0 target-spread-price) 0.01 target-spread-price))
+
+  (define next-vol-guess (if (< (- long-call-vega short-call-vega) 0) (/ (+ low-vol high-vol) 2.0)
+                             (- vol (/ (- (- long-call-price short-call-price) fixed-target-spread-price)
+                                       (- long-call-vega short-call-vega)
+                                       100))))
+
+  (set! next-vol-guess (max low-vol (min high-vol next-vol-guess)))
+
+  (cond [(or (< (abs (- (- long-call-price short-call-price) fixed-target-spread-price)) 1e-6)
+             (= low-vol next-vol-guess high-vol)
+             (< next-vol-guess 0.0)
+             (= iteration 0))
+         next-vol-guess]
         [else
-         (define new-vol (- vol (/ (- (- long-call-price short-call-price) target-spread-price)
-                                   (- long-call-vega short-call-vega)
-                                   100)))
-         (flat-forward new-vol target-spread-price short-call long-call underlying-price days-in-this-year rate divs)]))
+         (flat-forward next-vol-guess target-spread-price short-call long-call underlying-price days-in-this-year rate divs
+                       #:low-vol (if (> 0.0 (- (- long-call-price short-call-price) fixed-target-spread-price)) next-vol-guess low-vol)
+                       #:high-vol (if (< 0.0 (- (- long-call-price short-call-price) fixed-target-spread-price)) next-vol-guess high-vol)
+                       #:iteration (sub1 iteration))]))

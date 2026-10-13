@@ -736,9 +736,9 @@
                                                               res))
                                                (first options)
                                                options)]
-                      [closest-front-dte (foldl (λ (o res) (if (and (< (abs (- (- (option-dte closest-back-dte) 28) (option-dte o)))
-                                                                       (abs (- (- (option-dte closest-back-dte) 28) (option-dte res))))
-                                                                    (> (option-dte o) (- (option-dte closest-back-dte) 21)))
+                      [closest-front-dte (foldl (λ (o res) (if (and (< (option-dte o) (option-dte closest-back-dte))
+                                                                    (< (abs (- (- (option-dte closest-back-dte) 28) (option-dte o)))
+                                                                       (abs (- (- (option-dte closest-back-dte) 28) (option-dte res)))))
                                                                o
                                                                res))
                                                 (first options)
@@ -777,9 +777,9 @@
                                                  options)]
                         ; we first find the closest-back-dte to match the expiration found from the horizontal spread
                         ; once we expand risk per trade, we can reconsider a longer duration trade
-                        [closest-dte (foldl (λ (o res) (if (and (< (abs (- (- (option-dte closest-back-dte) 28) (option-dte o)))
-                                                                   (abs (- (- (option-dte closest-back-dte) 28) (option-dte res))))
-                                                                (> (option-dte o) (- (option-dte closest-back-dte) 21)))
+                        [closest-dte (foldl (λ (o res) (if (and (< (option-dte o) (option-dte closest-back-dte))
+                                                                (< (abs (- (- (option-dte closest-back-dte) 28) (option-dte o)))
+                                                                   (abs (- (- (option-dte closest-back-dte) 28) (option-dte res)))))
                                                            o
                                                            res))
                                             (first options)
