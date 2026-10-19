@@ -51,10 +51,12 @@
                            [strike strk]
                            [right rt]))
   (let loop ()
-    (define omd (async-channel-get option-market-data-channel))
+    (define omd (sync/timeout 10 option-market-data-channel))
     (cond [(hash-has-key? omd-hash omd-req-id)
            (hash-ref omd-hash omd-req-id)]
           [(and (number? omd) (= omd-req-id omd))
+           #f]
+          [(equal? #f omd)
            #f]
           [(and (struct? omd) (= omd-req-id (option-market-data-rsp-request-id omd)))
            omd]
