@@ -37,7 +37,9 @@
                    (cons 'historical-data (list))
                    (cons 'historical-ticks (list))
                    (cons 'market-data (list))
-                   (cons 'next-valid-id (list (λ (nvi) (set! ibkr-next-order-id (next-valid-id-rsp-order-id nvi)))))
+                   (cons 'next-valid-id (list (λ (nvi) (set! ibkr-next-order-id
+                                                             (max (next-valid-id-rsp-order-id nvi)
+                                                                  (get-next-order-id))))))
                    (cons 'open-order (list (λ (oo) (insert-order oo))))
                    (cons 'option-market-data (list))
                    (cons 'order-status (list))

@@ -33,6 +33,7 @@
           [get-forward-factor-analysis (-> date? (listof forward-factor-analysis?))]
           [get-is-etf (-> string? boolean?)]
           [get-next-earnings-date (-> string? date? date? date?)]
+          [get-next-order-id (-> integer?)]
           [get-options (-> string? date? (listof option?))]
           [get-position-history (-> date? string?)]
           [get-position-analysis (-> date? (listof position-analysis?))]
@@ -483,6 +484,14 @@ where
   execution_id = $1
 "
               execution-id))
+
+(define (get-next-order-id)
+  (query-value dbc "
+select
+  max(order_id) + 1
+from
+  ibkr.order;
+"))
 
 ;; Get market/sector/industry/stock breakdown for ETF components
 (define (get-price-analysis market sector start-date end-date)

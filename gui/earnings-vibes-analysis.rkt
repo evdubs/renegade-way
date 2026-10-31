@@ -90,6 +90,7 @@
 (define (update-analysis-box earnings-vibes-analysis-list)
   (let* ([filter-pattern (if (hide-no-pattern)
                              (filter (λ (m) (and (>= -0.0030 (earnings-vibes-analysis-vol-slope m))
+                                                 (earnings-vibes-analysis-price-strike-ratio m)
                                                  (>= 0.015 (earnings-vibes-analysis-price-strike-ratio m)))) earnings-vibes-analysis-list)
                              earnings-vibes-analysis-list)]
          [filter-spread (if (hide-large-spread)
