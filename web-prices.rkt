@@ -80,6 +80,24 @@
         (apply hash _)
         )))
 
+; this source of data seems more limited as the real time feed just uses prices from CBOE BZX
+; the latency and amount of symbols (100) that can be queried seems better than nasdaq
+(define (get-mstar-prices symbols)
+  (with-handlers ([exn:fail?
+                   (λ (error)
+                     (if (= 0 (length symbols))
+                         (displayln "Encountered an error retrieving no symbols")
+                         (displayln (string-append "Mstar: Encountered error for " (first symbols) "-" (last symbols))))
+                     (displayln error)
+                     (apply hash (flatten (map (λ (symbol) (list symbol 0.0)) symbols))))])
+    (~> (get (string-append "https://www.morningstar.com/api/v2/stores/realtime/quotes?securities="
+                            (string-join (map (λ (symbol) (string-append (get-exchange-code symbol) ":" symbol)) symbols) ",")))
+        (response-body _)
+        (bytes->string/utf-8 _)
+        (string->jsexpr _ #:null (hash))
+        (hash-map/copy _ (λ (k v) (values (last (string-split (symbol->string k) ":"))
+                                          (hash-ref (hash-ref v 'lastPrice) 'value)))))))
+
 (define (get-prices symbols)
   ; we only need to break apart symbols when querying the nasdaq endpoint as their response is limited to 25 results
   (foldl (λ (l res)

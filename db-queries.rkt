@@ -29,6 +29,7 @@
           [get-earnings-vibes-analysis (->* (date?) (#:live-prices (or/c (hash/c string? rational?) boolean?)) (listof earnings-vibes-analysis?))]
           [get-earnings-vol-premium (-> date? string? rational?)]
           [get-etf-vrp-analysis (-> date? (listof etf-vrp-analysis?))]
+          [get-exchange-code (-> string? string?)]
           [get-execution-tick (-> string? (listof (vectorof (or/c string? moment? rational?))))]
           [get-forward-factor-analysis (-> date? (listof forward-factor-analysis?))]
           [get-is-etf (-> string? boolean?)]
@@ -467,6 +468,26 @@ on
   povd.vol_date = vh_post.date;
 "
                (date->iso8601 date)
+               symbol))
+
+(define (get-exchange-code symbol)
+  (query-value dbc "
+select
+  case listing_exchange
+    when 'NYSE MKT' then 'xase'
+    when 'NYSE' then 'xnys'
+    when 'NYSE ARCA' then 'arcx'
+    when 'NASDAQ' then 'xnas'
+    when 'IEXG' then 'iexg'
+    when 'BATS' then 'bats'
+    when 'CHX' then 'xchi'
+    when 'TXSE' then 'txse'
+  end
+from
+  nasdaq.symbol
+where
+  act_symbol = $1;
+"
                symbol))
 
 (define (get-execution-tick execution-id)
@@ -1322,81 +1343,145 @@ order by
 
 (define (get-forward-factor-analysis date)
   (map (λ (row) (forward-factor-analysis (vector-ref row 0)
-                                         (iso8601->date (vector-ref row 1))
-                                         (vector-ref row 2)
-                                         (iso8601->date (vector-ref row 3))
-                                         (vector-ref row 4)
+                                         (vector-ref row 1)
+                                         (iso8601->date (vector-ref row 2))
+                                         (vector-ref row 3)
+                                         (iso8601->date (vector-ref row 4))
                                          (vector-ref row 5)
                                          (vector-ref row 6)
                                          (vector-ref row 7)
-                                         (if (equal? "" (vector-ref row 8)) #f (iso8601->date (vector-ref row 8)))
+                                         (vector-ref row 8)
                                          (if (equal? "" (vector-ref row 9)) #f (iso8601->date (vector-ref row 9)))
-                                         (vector-ref row 10)))
+                                         (if (equal? "" (vector-ref row 10)) #f (iso8601->date (vector-ref row 10)))
+                                         (vector-ref row 11)))
        (query-rows dbc "
-with vol_by_exp as (select
-  act_symbol,
-  expiration,
-  avg(vol) as avg_vol
+with prices as (
+select
+  o.act_symbol,
+  o.close
 from
-  oic.atm_curve ac
+  polygon.ohlc o
+join
+  nasdaq.symbol s
+on
+  o.act_symbol = s.act_symbol
 where
-  date = (select max(date) from oic.atm_curve where date <= $1::text::date)
+  o.date = (select max(date) from polygon.ohlc where date <= $1::text::date) and
+  s.is_etf = false
+),
+all_expirations as (
+select distinct
+  oc.act_symbol,
+  oc.expiration
+from
+  oic.option_chain oc
+where
+  date = (select max(date) from oic.option_chain where date <= $1::text::date) and
+  act_symbol in (select distinct act_symbol from prices)
+),
+exprs as (
+select
+  ae1.act_symbol,
+  closest(ae1.expiration, ($1::text::date + '14 days'::interval)::date) as front_expiration,
+  closest(ae2.expiration, ($1::text::date + '42 days'::interval)::date) as back_expiration
+from
+  all_expirations ae1
+join
+  all_expirations ae2
+on
+  ae1.act_symbol = ae2.act_symbol and
+  ae1.expiration + '21 days'::interval < ae2.expiration and
+  ae1.expiration >= $1::text::date
 group by
-  act_symbol,
-  expiration),
+  ae1.act_symbol
+),
+strks as (
+select
+  oc1.act_symbol,
+  closest(oc1.strike, p.close) as strike
+from
+  oic.option_chain oc1
+join
+  oic.option_chain oc2
+on
+  oc1.date = oc2.date and
+  oc1.act_symbol = oc2.act_symbol and
+  oc1.strike = oc2.strike and
+  oc1.call_put = oc2.call_put
+join
+  exprs e
+on
+  oc1.act_symbol = e.act_symbol and
+  oc2.act_symbol = e.act_symbol and
+  oc1.expiration = e.front_expiration and
+  oc2.expiration = e.back_expiration
+join
+  prices p
+on
+  oc1.act_symbol = p.act_symbol
+where
+  oc1.date = (select max(date) from oic.option_chain where date <= $1::text::date)
+group by
+  oc1.act_symbol
+),
+vols as (
+select
+  oc1.act_symbol,
+  avg(oc1.vol) as front_vol,
+  avg(oc2.vol) as back_vol
+from
+  oic.option_chain oc1
+join
+  oic.option_chain oc2
+on
+  oc1.date = oc2.date and
+  oc1.act_symbol = oc2.act_symbol and
+  oc1.strike = oc2.strike and
+  oc1.call_put = oc2.call_put
+join
+  exprs e
+on
+  oc1.act_symbol = e.act_symbol and
+  oc2.act_symbol = e.act_symbol and
+  oc1.expiration = e.front_expiration and
+  oc2.expiration = e.back_expiration
+join
+  strks s
+on
+  oc1.act_symbol = s.act_symbol and
+  oc2.act_symbol = s.act_symbol and
+  oc1.strike = s.strike and
+  oc2.strike = s.strike
+where
+  oc1.date = (select max(date) from oic.option_chain where date <= $1::text::date)
+group by
+  oc1.act_symbol
+),
 earnings_date as (
 select distinct
-  vol_by_exp.act_symbol,
+  strks.act_symbol,
   ec.date as actual,
   coalesce(ec.date, $1::text::date + '28 days'::interval) as pivot
 from
-  vol_by_exp
+  strks
 left outer join
   zacks.earnings_calendar ec
 on
-  vol_by_exp.act_symbol = ec.act_symbol and
+  strks.act_symbol = ec.act_symbol and
   ec.date >= $1::text::date - '1 day'::interval and
   ec.date <= $1::text::date + '28 days'::interval),
 dividend_date as (
 select distinct
-  vol_by_exp.act_symbol,
+  strks.act_symbol,
   dc.ex_date
 from
-  vol_by_exp
+  strks
 left outer join
   zacks.dividend_calendar dc
 on
-  vol_by_exp.act_symbol = dc.act_symbol and
+  strks.act_symbol = dc.act_symbol and
   dc.ex_date >= $1::text::date and
   dc.ex_date <= $1::text::date + '28 days'::interval),
-max_front_vol as (select
-  vol_by_exp.act_symbol,
-  max(avg_vol) as vol
-from
-  vol_by_exp
-join
-  earnings_date
-on
-  vol_by_exp.act_symbol = earnings_date.act_symbol
-where
-  expiration < pivot and
-  expiration >= $1::text::date + '7 days'::interval
-group by
-  vol_by_exp.act_symbol),
-min_back_vol as (select
-  vol_by_exp.act_symbol,
-  min(avg_vol) as vol
-from
-  vol_by_exp
-join
-  earnings_date
-on
-  vol_by_exp.act_symbol = earnings_date.act_symbol
-where
-  expiration > earnings_date.pivot + '7 days'::interval and
-  expiration <= earnings_date.pivot + '56 days'::interval
-group by
-  vol_by_exp.act_symbol),
 sprds as (
 select
   act_symbol,
@@ -1414,29 +1499,30 @@ where
 group by
   act_symbol)
 select
-  max_front_vol.act_symbol,
-  fvx.expiration::text as front_exp,
-  max_front_vol.vol as front_vol,
-  bvx.expiration::text as back_exp,
-  min_back_vol.vol as back_vol,
-  max_front_vol.vol / min_back_vol.vol as vol_ratio,
-  sqrt(greatest(0.0001, (((bvx.expiration - $1::text::date)::decimal /
+  strks.act_symbol,
+  strks.strike,
+  exprs.front_expiration::text as front_exp,
+  vols.front_vol as front_vol,
+  exprs.back_expiration::text as back_exp,
+  vols.back_vol as back_vol,
+  vols.front_vol / vols.back_vol as vol_ratio,
+  sqrt(greatest(0.0001, (((exprs.back_expiration - $1::text::date)::decimal /
         (make_date(date_part('year', $1::text::date)::integer + 1, 1, 1) - make_date(date_part('year', $1::text::date)::integer, 1, 1))::decimal
-        * min_back_vol.vol * min_back_vol.vol)
-      - ((fvx.expiration - $1::text::date)::decimal /
+        * vols.back_vol * vols.back_vol)
+      - ((exprs.front_expiration - $1::text::date)::decimal /
         (make_date(date_part('year', $1::text::date)::integer + 1, 1, 1) - make_date(date_part('year', $1::text::date)::integer, 1, 1))::decimal
-        * max_front_vol.vol * max_front_vol.vol))
-    / ((bvx.expiration - fvx.expiration)::decimal /
+        * vols.front_vol * vols.front_vol))
+    / ((exprs.back_expiration - exprs.front_expiration)::decimal /
       (make_date(date_part('year', $1::text::date)::integer + 1, 1, 1) - make_date(date_part('year', $1::text::date)::integer, 1, 1))::decimal)
     )) as forward_vol,
-  (max_front_vol.vol /
-  sqrt(greatest(0.0001, (((bvx.expiration - $1::text::date)::decimal /
+  (vols.front_vol /
+  sqrt(greatest(0.0001, (((exprs.back_expiration - $1::text::date)::decimal /
         (make_date(date_part('year', $1::text::date)::integer + 1, 1, 1) - make_date(date_part('year', $1::text::date)::integer, 1, 1))::decimal
-        * min_back_vol.vol * min_back_vol.vol)
-      - ((fvx.expiration - $1::text::date)::decimal /
+        * vols.back_vol * vols.back_vol)
+      - ((exprs.front_expiration - $1::text::date)::decimal /
         (make_date(date_part('year', $1::text::date)::integer + 1, 1, 1) - make_date(date_part('year', $1::text::date)::integer, 1, 1))::decimal
-        * max_front_vol.vol * max_front_vol.vol))
-    / ((bvx.expiration - fvx.expiration)::decimal /
+        * vols.front_vol * vols.front_vol))
+    / ((exprs.back_expiration - exprs.front_expiration)::decimal /
       (make_date(date_part('year', $1::text::date)::integer + 1, 1, 1) - make_date(date_part('year', $1::text::date)::integer, 1, 1))::decimal)
     ))
   ) - 1.0 as forward_factor,
@@ -1444,59 +1530,27 @@ select
   coalesce(dividend_date.ex_date::text, '') as dividend_date,
   sprds.spread as opt_spread
 from
-  max_front_vol
+  exprs
 join
-  min_back_vol
+  strks
 on
-  max_front_vol.act_symbol = min_back_vol.act_symbol
+  exprs.act_symbol = strks.act_symbol
+join
+  vols
+on
+  exprs.act_symbol = vols.act_symbol
 join
   earnings_date
 on
-  max_front_vol.act_symbol = earnings_date.act_symbol
+  exprs.act_symbol = earnings_date.act_symbol
 join
   dividend_date
 on
-  max_front_vol.act_symbol = dividend_date.act_symbol
-join
-  nasdaq.symbol as sym
-on
-  max_front_vol.act_symbol = sym.act_symbol
+  exprs.act_symbol = dividend_date.act_symbol
 join
   sprds
 on
-  max_front_vol.act_symbol = sprds.act_symbol
-join
-  (select
-    act_symbol,
-    min(expiration) as expiration,
-    avg_vol
-  from
-    vol_by_exp
-  where
-    expiration < $1::text::date + '28 days'::interval
-  group by
-    act_symbol,
-    avg_vol) fvx
-on
-  max_front_vol.act_symbol = fvx.act_symbol and
-  max_front_vol.vol = fvx.avg_vol
-join
-  (select
-    act_symbol,
-    max(expiration) as expiration,
-    avg_vol
-  from
-    vol_by_exp
-  where
-    expiration >= $1::text::date + '28 days'::interval
-  group by
-    act_symbol,
-    avg_vol) bvx
-on
-  min_back_vol.act_symbol = bvx.act_symbol and
-  min_back_vol.vol = bvx.avg_vol
-where
-  sym.is_etf = false
+  exprs.act_symbol = sprds.act_symbol
 order by
   forward_factor desc;
 "

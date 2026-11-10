@@ -462,6 +462,9 @@
                             0
                             (range (send order-box get-number)))))
          prices))
+
+  (define low-vol-profit-loss-min (apply min (map (λ (pl) (vector-ref pl 1)) (price-profit-loss 1/2 #f prices))))
+
   (define current-vol-profit-loss (price-profit-loss 1 #f prices))
   (define current-vol-profit-loss-values (map (λ (pl) (vector-ref pl 1)) current-vol-profit-loss))
   (define current-vol-value-near-target (max (vector-ref (first (filter (λ (pl) (= price-nearest-low-target (vector-ref pl 0)))
@@ -469,9 +472,9 @@
                                  (vector-ref (first (filter (λ (pl) (= price-nearest-high-target (vector-ref pl 0)))
                                                             current-vol-profit-loss)) 1)))
   (send current-vol-risk-message set-label
-        (string-append "Current Vol - Risk: " (if (rational? (apply min current-vol-profit-loss-values))
-                                                  (real->decimal-string (apply min current-vol-profit-loss-values))
-                                                  (format "~a" (apply min current-vol-profit-loss-values)))
+        (string-append "Current Vol - Risk: " (if (rational? low-vol-profit-loss-min)
+                                                  (real->decimal-string low-vol-profit-loss-min)
+                                                  (format "~a" low-vol-profit-loss-min))
                        " Reward (by Tgt): " (if (real? (apply max current-vol-profit-loss-values))
                                                 (real->decimal-string (apply max current-vol-profit-loss-values))
                                                 (format "~a" (apply max current-vol-profit-loss-values)))
@@ -479,17 +482,17 @@
                                 (real->decimal-string current-vol-value-near-target)
                                 (format "~a" current-vol-value-near-target)) ") "
                        " Ratio (by Tgt): " (if (rational? (abs (/ (apply max current-vol-profit-loss-values)
-                                                                  (apply min current-vol-profit-loss-values))))
+                                                                  low-vol-profit-loss-min)))
                                                (real->decimal-string (abs (/ (apply max current-vol-profit-loss-values)
-                                                                             (apply min current-vol-profit-loss-values))))
+                                                                             low-vol-profit-loss-min)))
                                                (format "~a" (abs (/ (apply max current-vol-profit-loss-values)
-                                                                    (apply min current-vol-profit-loss-values)))))
+                                                                    low-vol-profit-loss-min))))
                        " (" (if (rational? (abs (/ current-vol-value-near-target
-                                                   (apply min current-vol-profit-loss-values))))
+                                                   low-vol-profit-loss-min)))
                                 (real->decimal-string (abs (/ current-vol-value-near-target
-                                                              (apply min current-vol-profit-loss-values))))
+                                                              low-vol-profit-loss-min)))
                                 (format "~a" (abs (/ current-vol-value-near-target
-                                                     (apply min current-vol-profit-loss-values))))) ") "
+                                                     low-vol-profit-loss-min)))) ") "
                        " Reqmnt: " (hash-ref ratio-requirement (order-strategy (send order-box get-data 0)))))
 
   (define fixed-vol (- latest-30d-vol (string->number (send vol-premium-field get-value))))
@@ -500,9 +503,9 @@
                                            (vector-ref (first (filter (λ (pl) (= price-nearest-high-target (vector-ref pl 0)))
                                                                       fixed-vol-profit-loss)) 1)))
   (send fixed-vol-risk-message set-label
-        (string-append "Fixed Vol - Risk: " (if (rational? (apply min fixed-vol-profit-loss-values))
-                                                (real->decimal-string (apply min fixed-vol-profit-loss-values))
-                                    (format "~a" (apply min fixed-vol-profit-loss-values)))
+        (string-append "Fixed Vol - Risk: " (if (rational? low-vol-profit-loss-min)
+                                                (real->decimal-string low-vol-profit-loss-min)
+                                    (format "~a" low-vol-profit-loss-min))
                        " Reward (by Tgt): " (if (real? (apply max fixed-vol-profit-loss-values))
                                                 (real->decimal-string (apply max fixed-vol-profit-loss-values))
                                                 (format "~a" (apply max fixed-vol-profit-loss-values)))
@@ -510,17 +513,17 @@
                                 (real->decimal-string fixed-vol-value-near-target)
                                 (format "~a" fixed-vol-value-near-target)) ") "
                        " Ratio (by Tgt): " (if (rational? (abs (/ (apply max fixed-vol-profit-loss-values)
-                                                                  (apply min fixed-vol-profit-loss-values))))
+                                                                  low-vol-profit-loss-min)))
                                                (real->decimal-string (abs (/ (apply max fixed-vol-profit-loss-values)
-                                                                             (apply min fixed-vol-profit-loss-values))))
+                                                                             low-vol-profit-loss-min)))
                                                (format "~a" (abs (/ (apply max fixed-vol-profit-loss-values)
-                                                                    (apply min fixed-vol-profit-loss-values)))))
+                                                                    low-vol-profit-loss-min))))
                        " (" (if (rational? (abs (/ fixed-vol-value-near-target
-                                                   (apply min fixed-vol-profit-loss-values))))
+                                                   low-vol-profit-loss-min)))
                                 (real->decimal-string (abs (/ fixed-vol-value-near-target
-                                                              (apply min fixed-vol-profit-loss-values))))
+                                                              low-vol-profit-loss-min)))
                                 (format "~a" (abs (/ fixed-vol-value-near-target
-                                                     (apply min fixed-vol-profit-loss-values))))) ") "
+                                                     low-vol-profit-loss-min)))) ") "
                        " Reqmnt: " (hash-ref ratio-requirement (order-strategy (send order-box get-data 0)))))
 
   (send profit-loss-canvas set-snip
@@ -774,7 +777,7 @@
        [label "Save Trades"]
        [parent button-pane]
        [callback (λ (b e)
-                   (send ibkr send-msg (new executions-req% [timestamp (-period (now/moment) (days 7))])))]))
+                   (send ibkr send-msg (new executions-req% [timestamp (-period (now/moment) (days 28))])))]))
 
 (define update-risk-button
   (new button%

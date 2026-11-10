@@ -101,6 +101,7 @@
              (option-spread rational?))]
           [struct forward-factor-analysis
             ((stock string?)
+             (strike rational?)
              (front-exp date?)
              (front-vol rational?)
              (back-exp date?)
@@ -274,7 +275,7 @@
 (struct etf-vrp-analysis (etf iv-hv ivp-1yr 30d-60d-fwd-vol 30d-60d-flat-fwd-vol flat-fwd-to-fwd-ratio option-spread)
   #:transparent)
 
-(struct forward-factor-analysis (stock front-exp front-vol back-exp back-vol vol-ratio forward-vol forward-factor earnings-date dividend-date option-spread)
+(struct forward-factor-analysis (stock strike front-exp front-vol back-exp back-vol vol-ratio forward-vol forward-factor earnings-date dividend-date option-spread)
   #:transparent)
 
 (struct position-analysis (sector stock expiration strike call-put account signed-shares stock-low-stop stock-low-target stock-close

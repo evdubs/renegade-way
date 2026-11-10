@@ -103,6 +103,7 @@
                              filter-spread)])
     (send analysis-box-ref set
           (map (λ (m) (forward-factor-analysis-stock m)) filter-pattern)
+          (map (λ (m) (real->decimal-string (forward-factor-analysis-strike m))) filter-pattern)
           (map (λ (m) (~t (forward-factor-analysis-front-exp m) "yy-MM-dd")) filter-pattern)
           (map (λ (m) (real->decimal-string (forward-factor-analysis-front-vol m) 3)) filter-pattern)
           (map (λ (m) (~t (forward-factor-analysis-back-exp m) "yy-MM-dd")) filter-pattern)
@@ -117,7 +118,7 @@
     (for-each (λ (m i) (send analysis-box-ref set-data i m))
               filter-pattern (range (length filter-pattern)))))
 
-(define analysis-box-columns (list "Stock" "FrontExp" "FrontVol" "BackExp" "BackVol" "VolRt" "FwdVol" "FwdFctr" "ErnDt" "DivDt" "OptSprd"))
+(define analysis-box-columns (list "Stock" "Strike" "FrontExp" "FrontVol" "BackExp" "BackVol" "VolRt" "FwdVol" "FwdFctr" "ErnDt" "DivDt" "OptSprd"))
 
 (define (forward-factor-analysis-box parent-panel start-date end-date)
   (define analysis-box
