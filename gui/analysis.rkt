@@ -88,7 +88,8 @@
                    (etf-vrp-analysis-filter #:hide-no-pattern (send hide-no-pattern-check-box get-value)
                                             #:hide-large-spread (send hide-spread-check-box get-value)
                                             #:use-live-data (send use-live-data-check-box get-value))
-                   (forward-factor-analysis-filter #:hide-no-pattern (send hide-no-pattern-check-box get-value)
+                   (forward-factor-analysis-filter (iso8601->date (send end-date-field get-value))
+                                                   #:hide-no-pattern (send hide-no-pattern-check-box get-value)
                                                    #:hide-large-spread (send hide-spread-check-box get-value)
                                                    #:use-live-data (send use-live-data-check-box get-value)))]))
 
@@ -114,7 +115,8 @@
                    (etf-vrp-analysis-filter #:hide-no-pattern (send hide-no-pattern-check-box get-value)
                                             #:hide-large-spread (send hide-spread-check-box get-value)
                                             #:use-live-data (send use-live-data-check-box get-value))
-                   (forward-factor-analysis-filter #:hide-no-pattern (send hide-no-pattern-check-box get-value)
+                   (forward-factor-analysis-filter (iso8601->date (send end-date-field get-value))
+                                                   #:hide-no-pattern (send hide-no-pattern-check-box get-value)
                                                    #:hide-large-spread (send hide-spread-check-box get-value)
                                                    #:use-live-data (send use-live-data-check-box get-value)))]))
 
@@ -146,7 +148,8 @@
                    (etf-vrp-analysis-filter #:hide-no-pattern (send hide-no-pattern-check-box get-value)
                                             #:hide-large-spread (send hide-spread-check-box get-value)
                                             #:use-live-data (send use-live-data-check-box get-value))
-                   (forward-factor-analysis-filter #:hide-no-pattern (send hide-no-pattern-check-box get-value)
+                   (forward-factor-analysis-filter (iso8601->date (send end-date-field get-value))
+                                                   #:hide-no-pattern (send hide-no-pattern-check-box get-value)
                                                    #:hide-large-spread (send hide-spread-check-box get-value)
                                                    #:use-live-data (send use-live-data-check-box get-value)))]))
 

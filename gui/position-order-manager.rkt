@@ -527,31 +527,33 @@
                        " Reqmnt: " (hash-ref ratio-requirement (order-strategy (send order-box get-data 0)))))
 
   (send profit-loss-canvas set-snip
-        (plot-snip (flatten (list (tick-grid)
-                                  (if low-stop-price (inverse (λ (y) low-stop-price) #:color 4 #:label "Low Stop") (list))
-                                  (if low-target-price (inverse (λ (y) low-target-price) #:color 5 #:label "Low Target") (list))
-                                  (if high-stop-price (inverse (λ (y) high-stop-price) #:color 6 #:label "High Stop") (list))
-                                  (if high-target-price (inverse (λ (y) high-target-price) #:color 7 #:label "High Target") (list))
-                                  (lines (price-profit-loss 1.5 #f prices)
-                                         #:color 1
-                                         #:style 'long-dash
-                                         #:label "Vol * 1.5")
-                                  (lines current-vol-profit-loss
-                                         #:color 2
-                                         #:label "Vol")
-                                  (lines (price-profit-loss 0.5 #f prices)
-                                         #:color 3
-                                         #:style 'long-dash
-                                         #:label "Vol * 0.5")
-                                  (lines fixed-vol-profit-loss
-                                         #:color 4
-                                         #:style 'long-dash
-                                         #:label (string-append "Vol = " (real->decimal-string fixed-vol 3)))))
-                   #:title (string-append "Order Profit/Loss at " (date->iso8601 eval-date))
-                   #:x-label "Stock Price"
-                   #:y-label "Profit/Loss"
-                   #:width (- (send profit-loss-canvas get-width) 12)
-                   #:height (- (send profit-loss-canvas get-height) 12))))
+        (parameterize ([plot-x-ticks (currency-ticks #:kind 'USD)]
+                       [plot-y-ticks (currency-ticks #:kind 'USD)])
+          (plot-snip (flatten (list (tick-grid)
+                                    (if low-stop-price (inverse (λ (y) low-stop-price) #:color 4 #:label "Low Stop") (list))
+                                    (if low-target-price (inverse (λ (y) low-target-price) #:color 5 #:label "Low Target") (list))
+                                    (if high-stop-price (inverse (λ (y) high-stop-price) #:color 6 #:label "High Stop") (list))
+                                    (if high-target-price (inverse (λ (y) high-target-price) #:color 7 #:label "High Target") (list))
+                                    (lines (price-profit-loss 1.5 #f prices)
+                                           #:color 1
+                                           #:style 'long-dash
+                                           #:label "Vol * 1.5")
+                                    (lines current-vol-profit-loss
+                                           #:color 2
+                                           #:label "Vol")
+                                    (lines (price-profit-loss 0.5 #f prices)
+                                           #:color 3
+                                           #:style 'long-dash
+                                           #:label "Vol * 0.5")
+                                    (lines fixed-vol-profit-loss
+                                           #:color 4
+                                           #:style 'long-dash
+                                           #:label (string-append "Vol = " (real->decimal-string fixed-vol 3)))))
+                     #:title (string-append "Order Profit/Loss at " (date->iso8601 eval-date))
+                     #:x-label "Stock Price"
+                     #:y-label "Profit/Loss"
+                     #:width (- (send profit-loss-canvas get-width) 12)
+                     #:height (- (send profit-loss-canvas get-height) 12)))))
 
 (define button-pane
   (new horizontal-pane%

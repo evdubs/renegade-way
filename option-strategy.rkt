@@ -810,29 +810,27 @@
                    (list first-long-call first-short-call second-short-call second-long-call))))]
         [(or (string-contains? patterns "FF"))
          (hash "Call Horizontal Spread"
-               (let* ([exp-option-map (~> options
-                                          (group-by (λ (o) (option-dte o)) _)
-                                          (map (λ (os) (list (option-dte (first os))
-                                                             (mean (map (λ (o) (option-vol o)) os)))) _))]
-                      ; we should probably use the pivot (either 28 days out or the earnings date)
-                      [front-dte (first (foldl (λ (pair res)
-                                                 (if (and (> 28 (first pair))
-                                                          (>= (second pair) (second res))) pair res))
-                                               (list 0 0)
-                                               exp-option-map))]
-                      [back-dte (first (foldl (λ (pair res)
-                                                (if (and (<= 28 (first pair))
-                                                         (>= (second pair) (second res))) pair res))
-                                              (list 0 0)
-                                              exp-option-map))]
-                      [eligible-strikes (let* ([options-at-dtes (filter (λ (o) (or (= front-dte (option-dte o))
-                                                                                   (= back-dte (option-dte o))))
+               (let* ([closest-front-dte (foldl (λ (o res) (if (< (abs (- 14 (option-dte o)))
+                                                                  (abs (- 14 (option-dte res))))
+                                                               o
+                                                               res))
+                                                (first options)
+                                                options)]
+                      [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- (+ 28 (option-dte closest-front-dte)) (option-dte o)))
+                                                                      (abs (- (+ 28 (option-dte closest-front-dte)) (option-dte res))))
+                                                                   (>= (option-dte o) (+ 21 (option-dte closest-front-dte))))
+                                                              o
+                                                              res))
+                                               (first options)
+                                               options)]
+                      [eligible-strikes (let* ([options-at-dtes (filter (λ (o) (or (= (option-dte closest-front-dte) (option-dte o))
+                                                                                   (= (option-dte closest-back-dte) (option-dte o))))
                                                                         options)]
                                                [options-by-strike (group-by (λ (o) (option-strike o)) options-at-dtes)]
                                                [options-at-both-dtes (filter (λ (l) (<= 4 (length l))) options-by-strike)])
                                           (remove-duplicates (flatten (map (λ (l) (map (λ (o) (option-strike o)) l))
                                                                            options-at-both-dtes))))]
-                      [long-call (foldl (λ (o res) (if (and (= (option-dte o) back-dte)
+                      [long-call (foldl (λ (o res) (if (and (= (option-dte o) (option-dte closest-back-dte))
                                                             (index-of eligible-strikes (option-strike o))
                                                             (<= (abs (- underlying-price (option-strike o)))
                                                                 (abs (- underlying-price (option-strike res))))
@@ -841,7 +839,7 @@
                                                        res))
                                         (first options)
                                         options)]
-                      [short-call (foldl (λ (o res) (cond [(and (= (option-dte o) front-dte)
+                      [short-call (foldl (λ (o res) (cond [(and (= (option-dte o) (option-dte closest-front-dte))
                                                                 (= (option-strike o) (option-strike long-call))
                                                                 (equal? (option-call-put o) 'call))
                                                            o]
@@ -850,29 +848,27 @@
                                          options)])
                  (list short-call long-call))
                "Call Double Horizontal Spread"
-               (let* ([exp-option-map (~> options
-                                          (group-by (λ (o) (option-dte o)) _)
-                                          (map (λ (os) (list (option-dte (first os))
-                                                             (mean (map (λ (o) (option-vol o)) os)))) _))]
-                      ; we should probably use the pivot (either 28 days out or the earnings date)
-                      [front-dte (first (foldl (λ (pair res)
-                                                 (if (and (> 28 (first pair))
-                                                          (>= (second pair) (second res))) pair res))
-                                               (list 0 0)
-                                               exp-option-map))]
-                      [back-dte (first (foldl (λ (pair res)
-                                                (if (and (<= 28 (first pair))
-                                                         (>= (second pair) (second res))) pair res))
-                                              (list 0 0)
-                                              exp-option-map))]
-                      [eligible-strikes (let* ([options-at-dtes (filter (λ (o) (or (= front-dte (option-dte o))
-                                                                                   (= back-dte (option-dte o))))
+               (let* ([closest-front-dte (foldl (λ (o res) (if (< (abs (- 14 (option-dte o)))
+                                                                  (abs (- 14 (option-dte res))))
+                                                               o
+                                                               res))
+                                                (first options)
+                                                options)]
+                      [closest-back-dte (foldl (λ (o res) (if (and (< (abs (- (+ 28 (option-dte closest-front-dte)) (option-dte o)))
+                                                                      (abs (- (+ 28 (option-dte closest-front-dte)) (option-dte res))))
+                                                                   (>= (option-dte o) (+ 21 (option-dte closest-front-dte))))
+                                                              o
+                                                              res))
+                                               (first options)
+                                               options)]
+                      [eligible-strikes (let* ([options-at-dtes (filter (λ (o) (or (= (option-dte closest-front-dte) (option-dte o))
+                                                                                   (= (option-dte closest-back-dte) (option-dte o))))
                                                                         options)]
                                                [options-by-strike (group-by (λ (o) (option-strike o)) options-at-dtes)]
                                                [options-at-both-dtes (filter (λ (l) (<= 4 (length l))) options-by-strike)])
                                           (remove-duplicates (flatten (map (λ (l) (map (λ (o) (option-strike o)) l))
                                                                            options-at-both-dtes))))]
-                      [low-long-call (foldl (λ (o res) (if (and (= (option-dte o) back-dte)
+                      [low-long-call (foldl (λ (o res) (if (and (= (option-dte o) (option-dte closest-back-dte))
                                                                 (index-of eligible-strikes (option-strike o))
                                                                 (<= (abs (- 0.65 (option-delta o)))
                                                                     (abs (- 0.65 (option-delta res))))
@@ -881,14 +877,14 @@
                                                            res))
                                             (first options)
                                             options)]
-                      [low-short-call (foldl (λ (o res) (cond [(and (= (option-dte o) front-dte)
+                      [low-short-call (foldl (λ (o res) (cond [(and (= (option-dte o) (option-dte closest-front-dte))
                                                                     (= (option-strike o) (option-strike low-long-call))
                                                                     (equal? (option-call-put o) 'call))
                                                                o]
                                                               [else res]))
                                              (first options)
                                              options)]
-                      [high-long-call (foldl (λ (o res) (if (and (= (option-dte o) back-dte)
+                      [high-long-call (foldl (λ (o res) (if (and (= (option-dte o) (option-dte closest-back-dte))
                                                                  (index-of eligible-strikes (option-strike o))
                                                                  (<= (abs (- 0.35 (option-delta o)))
                                                                      (abs (- 0.35 (option-delta res))))
@@ -897,7 +893,7 @@
                                                             res))
                                              (first options)
                                              options)]
-                      [high-short-call (foldl (λ (o res) (cond [(and (= (option-dte o) front-dte)
+                      [high-short-call (foldl (λ (o res) (cond [(and (= (option-dte o) (option-dte closest-front-dte))
                                                                      (= (option-strike o) (option-strike high-long-call))
                                                                      (equal? (option-call-put o) 'call))
                                                                 o]

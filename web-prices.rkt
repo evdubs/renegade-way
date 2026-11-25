@@ -102,9 +102,9 @@
   ; we only need to break apart symbols when querying the nasdaq endpoint as their response is limited to 25 results
   (foldl (λ (l res)
            ; remove entries that don't have prices
-           (define prices (hash-filter (get-nasdaq-prices l) (λ (k v) v)))
-           (cond [(< 25 (length symbols)) (sleep 1)])
+           (define prices (hash-filter (get-mstar-prices l) (λ (k v) v)))
+           (cond [(< 100 (length symbols)) (sleep 1)])
            (hash-union res prices
                        #:combine (λ (a b) a)))
          (hash)
-         (list-partition symbols 25 25)))
+         (list-partition symbols 100 100)))

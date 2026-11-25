@@ -16,7 +16,7 @@
 
 (provide (contract-out
           [forward-factor-analysis-box (-> (is-a?/c tab-panel%) date? date? void?)]
-          [forward-factor-analysis-filter (-> #:hide-no-pattern boolean? #:hide-large-spread boolean? #:use-live-data boolean? void?)]
+          [forward-factor-analysis-filter (-> date? #:hide-no-pattern boolean? #:hide-large-spread boolean? #:use-live-data boolean? void?)]
           [run-forward-factor-analysis (-> date? #:use-live-data boolean? void?)]))
 
 (define forward-factor-analysis-list (list))
@@ -29,18 +29,22 @@
 
 (define use-live-data (make-parameter #f))
 
-(define (forward-factor-analysis-filter #:hide-no-pattern no-pattern #:hide-large-spread large-spread #:use-live-data live-data)
+(define (forward-factor-analysis-filter end-date #:hide-no-pattern no-pattern #:hide-large-spread large-spread #:use-live-data live-data)
   (hide-no-pattern no-pattern)
   (hide-large-spread large-spread)
   (use-live-data live-data)
-  (update-analysis-box forward-factor-analysis-list))
+  (update-analysis-box forward-factor-analysis-list end-date))
 
 (define (run-forward-factor-analysis end-date #:use-live-data live-data)
   (set! forward-factor-analysis-list (get-forward-factor-analysis end-date))
 
   (cond [live-data
          (define candidate-forward-factors (filter (λ (ff) (and (> 0.30 (forward-factor-analysis-option-spread ff))
-                                                                (<= 0.00 (forward-factor-analysis-forward-factor ff))))
+                                                                (<= 0.00 (forward-factor-analysis-forward-factor ff))
+                                                                (<= 7 (period-ref (period-between end-date
+                                                                                                  (forward-factor-analysis-front-exp ff)
+                                                                                                  '(days))
+                                                                                  'days))))
                                                    forward-factor-analysis-list))
          (define ref-prices (get-prices (map (λ (ff) (forward-factor-analysis-stock ff))
                                              candidate-forward-factors)))
@@ -92,14 +96,18 @@
 
   (set! forward-factor-analysis-list (sort forward-factor-analysis-list (λ (ff-1 ff-2) (> (forward-factor-analysis-forward-factor ff-1)
                                                                                           (forward-factor-analysis-forward-factor ff-2)))))
-  (update-analysis-box forward-factor-analysis-list))
+  (update-analysis-box forward-factor-analysis-list end-date))
 
-(define (update-analysis-box forward-factor-analysis-list)
+(define (update-analysis-box forward-factor-analysis-list end-date)
   (let* ([filter-spread (if (hide-large-spread)
                             (filter (λ (m) (> 0.30 (forward-factor-analysis-option-spread m))) forward-factor-analysis-list)
                             forward-factor-analysis-list)]
          [filter-pattern (if (hide-no-pattern)
-                             (filter (λ (m) (<= 0.23 (forward-factor-analysis-forward-factor m))) filter-spread)
+                             (filter (λ (m) (and (<= 0.23 (forward-factor-analysis-forward-factor m))
+                                                 (<= 7 (period-ref (period-between end-date
+                                                                                   (forward-factor-analysis-front-exp m)
+                                                                                   '(days))
+                                                                   'days)))) filter-spread)
                              filter-spread)])
     (send analysis-box-ref set
           (map (λ (m) (forward-factor-analysis-stock m)) filter-pattern)
@@ -148,4 +156,4 @@
     (for-each (λ (i) (send analysis-box set-column-width i 100 100 100))
               (range num-cols)))
   (set! analysis-box-ref analysis-box)
-  (update-analysis-box forward-factor-analysis-list))
+  (update-analysis-box forward-factor-analysis-list end-date))
