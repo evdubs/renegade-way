@@ -36,14 +36,15 @@
    high-stop-price
    high-target-price
    vol-slope
-   iv-hv)
+   iv-hv
+   max-profit-estimate)
   #:transparent)
 
 (define (trade->tsv t)
   (string-append (trade-symbol t) "\t"
                  (string-join (map (λ (e) (date->iso8601 e)) (trade-expirations t)) " ") "\t"
                  (string-join (map (λ (s) (real->decimal-string s)) (trade-strikes t)) " ") "\t"
-                 (string-join (trade-rights t) " ") "\t"
+                 (string-join (map (λ (r) (symbol->string r)) (trade-rights t)) " ") "\t"
                  (date->iso8601 (trade-open-date t)) "\t"
                  (real->decimal-string (trade-open-price t)) "\t"
                  (number->string (trade-open-contracts t)) "\t"
@@ -68,14 +69,15 @@
                  (if (trade-high-stop-price t) (real->decimal-string (trade-high-stop-price t)) "") "\t"
                  (if (trade-high-target-price t) (real->decimal-string (trade-high-target-price t)) "") "\t"
                  (if (trade-vol-slope t) (real->decimal-string (trade-vol-slope t)) "") "\t"
-                 (if (trade-iv-hv t) (real->decimal-string (trade-iv-hv t)) "") "\t"))
+                 (if (trade-iv-hv t) (real->decimal-string (trade-iv-hv t)) "") "\t"
+                 (if (trade-max-profit-estimate t) (real->decimal-string (trade-max-profit-estimate t)) "") "\t"))
 
 (define (tsv->trade t)
   (define s (string-split t "\t"))
   (trade (list-ref s 0) ; symbol
          (map (λ (e) (iso8601->date e)) (string-split (list-ref s 1) " ")) ; expirations
          (map (λ (s) (string->number s)) (string-split (list-ref s 2) " ")) ; strikes
-         (string-split (list-ref s 3) " ") ; rights
+         (map (λ (s) (string->symbol s)) (string-split (list-ref s 3) " ")) ; rights
          (iso8601->date (list-ref s 4)) ; open-date
          (string->number (list-ref s 5)) ; open-price
          (string->number (list-ref s 6)) ; open-contracts
@@ -101,4 +103,5 @@
          (if (equal? "" (list-ref s 26)) #f (string->number (list-ref s 26))) ; high-target-price
          (if (equal? "" (list-ref s 27)) #f (string->number (list-ref s 27))) ; vol-slope
          (if (equal? "" (list-ref s 28)) #f (string->number (list-ref s 28))) ; iv-hv
+         (if (equal? "" (list-ref s 29)) #f (string->number (list-ref s 29))) ; max-profit-estimate
          ))

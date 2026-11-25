@@ -8,9 +8,9 @@
 
 (provide price-option)
 
-(define (price-option dbc option date stock-price)
-  (define closest-vol
-    (query-value dbc "
+(define (price-option dbc option date stock-price #:vol [vol #f])
+  (define closest-vol (if vol vol
+                          (query-value dbc "
 select
   vol
 from
@@ -34,11 +34,12 @@ from
 limit 
   1;
 "
-                 (option-symbol option)
-                 date
-                 (date->iso8601 (parse-date (option-expiration option) "yy-MM-dd"))
-                 (option-strike option)
-                 (option-call-put option)))
+                                       (option-symbol option)
+                                       (date->iso8601 date)
+                                       (date->iso8601 (option-expiration option))
+                                       (option-strike option)
+                                       (string-titlecase (symbol->string (option-call-put option))))))
+
   (define interest-rate
     (query-value dbc "
 select
@@ -48,7 +49,8 @@ from
 where
   date = (select max(date) from ust.yield_curve where date < $1::text::date)
 "
-                 date))
+                 (date->iso8601 date)))
+
   (define dividends
     (query-rows dbc "
 select
@@ -66,14 +68,12 @@ where
   previous.ex_date between $2::text::date - interval '1 year' and $3::text::date - interval '1 year';
 "
                 (option-symbol option)
-                date
-                (date->iso8601 (parse-date (option-expiration option) "yy-MM-dd"))))
-  (define yte (if (date=? (iso8601->date date) (parse-date (option-expiration option) "yy-MM-dd"))
+                (date->iso8601 date)
+                (date->iso8601 (option-expiration option))))
+
+  (define yte (if (date=? date (option-expiration option))
                   1/1000000
-                  (/ (period-ref (date-period-between (iso8601->date date)
-                                                      (parse-date (option-expiration option) "yy-MM-dd")
-                                                      '(days))
-                                 'days)
+                  (/ (period-ref (date-period-between date (option-expiration option) '(days)) 'days)
                      365)))
   ;; (printf "bs: ~s ~s ~s ~s ~s ~s ~s\n"
   ;;         stock-price
@@ -87,7 +87,7 @@ where
     (black-scholes stock-price
                    yte
                    (option-strike option)
-                   (string->symbol (option-call-put option))
+                   (option-call-put option)
                    interest-rate
                    closest-vol
                    dividends))

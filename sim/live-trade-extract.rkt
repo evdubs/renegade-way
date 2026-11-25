@@ -194,7 +194,7 @@ on
     (for-each (λ (r) (displayln (trade->tsv (trade (vector-ref r 0)
                                                    (map (λ (d) (iso8601->date d)) (pg-array->list (vector-ref r 1)))
                                                    (pg-array->list (vector-ref r 2))
-                                                   (pg-array->list (vector-ref r 3))
+                                                   (map (λ (rt) (string->symbol (string-downcase rt))) (pg-array->list (vector-ref r 3)))
                                                    (iso8601->date (vector-ref r 4))
                                                    (vector-ref r 5)
                                                    (vector-ref r 6)
@@ -218,6 +218,7 @@ on
                                                    (if (sql-null? (vector-ref r 24)) #f (vector-ref r 24))
                                                    (if (sql-null? (vector-ref r 25)) #f (vector-ref r 25))
                                                    (if (sql-null? (vector-ref r 26)) #f (vector-ref r 26))
+                                                   #f
                                                    #f
                                                    #f)) out))
               ; do the filter here because it can get messy in the query

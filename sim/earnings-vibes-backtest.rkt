@@ -59,7 +59,7 @@
    (filter-map
     (λ (i)
       (define date (+days (sim-start-date) i))
-      (define rows (get-earnings-vibes-analysis (date->iso8601 date)))
+      (define rows (get-earnings-vibes-analysis date))
       (filter-map
        (λ (r i)
          (printf "~a ~a\n" (earnings-vibes-analysis-stock r) date)
@@ -77,17 +77,24 @@ where
                                           (date->iso8601 date)
                                           symbol))
            (define horizontal-spread-strategies (~> (get-updated-options symbol
-                                                                         (date->iso8601 date)
+                                                                         date
                                                                          ref-price
                                                                          #:compute-all-greeks #f
                                                                          #:fit-vols #f)
                                                     (suitable-options _ "EC" ref-price)))
            (define horizontal-spread (hash-ref horizontal-spread-strategies "Call Horizontal Spread"))
            (define horizontal-spread-price (max 0.01 (+ (- (option-mid (first horizontal-spread)))
-                                                     (option-mid (second horizontal-spread)))))
+                                                        (option-mid (second horizontal-spread)))))
            (printf "Stock Price at Entry:\t~a\tSpread Price:\t~a\n"
                    (real->decimal-string ref-price)
                    (real->decimal-string horizontal-spread-price))
+
+           (define vol-premium (get-earnings-vol-premium date symbol))
+           (define latest-30d-vol (dv-value (last (get-date-vol-history symbol
+                                                                        ; eval date may be weeks into the future
+                                                                        (-days date 90)
+                                                                        date))))
+
            ; can we assume earnings and splits don't overlap?
            (define end-price (query-value dbc "
 select
@@ -100,7 +107,7 @@ where
 "
                                           (date->iso8601 date)
                                           symbol))
-           (define end-date (query-value dbc "
+           (define end-date (iso8601->date (query-value dbc "
 select
   date::text
 from
@@ -109,8 +116,16 @@ where
   date = (select min(date) from polygon.ohlc where date > $1::text::date) and
   act_symbol = $2;
 "
-                                         (date->iso8601 date)
-                                         symbol))
+                                                        (date->iso8601 date)
+                                                        symbol)))
+
+           (define max-spread-value-estimate (max 0.0001 (+ (- (price-option dbc (first horizontal-spread) end-date
+                                                                             (option-strike (first horizontal-spread))
+                                                                             #:vol (- latest-30d-vol vol-premium)))
+                                                            (price-option dbc (second horizontal-spread) end-date
+                                                                          (option-strike (first horizontal-spread))
+                                                                          #:vol (- latest-30d-vol vol-premium)))))
+
            (printf "End Date ~a Price ~a\n" end-date (real->decimal-string end-price 2))
            (define horizontal-spread-value (max 0.0001 (+ (- (price-option dbc (first horizontal-spread) end-date end-price))
                                                           (price-option dbc (second horizontal-spread) end-date end-price))))
@@ -119,14 +134,14 @@ where
                    (real->decimal-string horizontal-spread-value)
                    (real->decimal-string (* 100 (/ (- horizontal-spread-value horizontal-spread-price) horizontal-spread-price))))
            (trade symbol
-                  (remove-duplicates (map (λ (l) (parse-date (option-expiration l) "yy-MM-dd")) horizontal-spread))
+                  (remove-duplicates (map (λ (l) (option-expiration l)) horizontal-spread))
                   (remove-duplicates (map (λ (l) (option-strike l)) horizontal-spread))
                   (remove-duplicates (map (λ (l) (option-call-put l)) horizontal-spread))
                   date
                   horizontal-spread-price
                   (truncate (/ trade-risk (* 100 horizontal-spread-price)))
                   (* 65/100 2 (truncate (/ trade-risk (* 100 horizontal-spread-price))))
-                  (iso8601->date end-date)
+                  end-date
                   horizontal-spread-value
                   (truncate (/ trade-risk (* 100 horizontal-spread-price)))
                   (* 65/100 2 (truncate (/ trade-risk (* 100 horizontal-spread-price))))
@@ -136,15 +151,18 @@ where
                   #f
                   #f
                   #f
-                  (parse-date (regexp-replace* #rx"[AB]" (earnings-vibes-analysis-earnings-date r) "") "yy-MM-dd")
+                  (earnings-vibes-analysis-earnings-date r)
                   (earnings-vibes-analysis-option-spread r)
                   i
+                  "EC"
+                  #f
                   #f
                   #f
                   #f
                   #f
                   (earnings-vibes-analysis-vol-slope r)
-                  (earnings-vibes-analysis-iv-hv r))))
+                  (earnings-vibes-analysis-iv-hv r)
+                  (* 100 max-spread-value-estimate (truncate (/ trade-risk (* 100 horizontal-spread-price)))))))
        rows (range (length rows))))
     (range (period-ref (period-between (sim-start-date)
                                        (sim-end-date)
